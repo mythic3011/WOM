@@ -1,0 +1,153 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer components {
+  .btn-primary {
+    @apply px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors shadow-md hover:shadow-lg font-medium;
+  }
+
+  .btn-secondary {
+    @apply px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors shadow-md hover:shadow-lg font-medium;
+  }
+
+  .btn-success {
+    @apply px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors shadow-md hover:shadow-lg font-medium;
+  }
+
+  .btn-danger {
+    @apply px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors shadow-md hover:shadow-lg font-medium;
+  }
+
+  .card {
+    @apply bg-white rounded-lg shadow-md p-6 border border-gray-200 hover:shadow-lg transition-shadow;
+  }
+
+  .card-header {
+    @apply text-xl font-bold text-gray-900 mb-4;
+  }
+
+  .card-body {
+    @apply text-gray-700;
+  }
+
+  .input-field {
+    @apply w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors;
+  }
+
+  .badge {
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold;
+  }
+
+  .badge-primary {
+    @apply badge bg-indigo-100 text-indigo-800;
+  }
+
+  .badge-success {
+    @apply badge bg-green-100 text-green-800;
+  }
+
+  .badge-warning {
+    @apply badge bg-yellow-100 text-yellow-800;
+  }
+
+  .badge-danger {
+    @apply badge bg-red-100 text-red-800;
+  }
+
+  .badge-info {
+    @apply badge bg-blue-100 text-blue-800;
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.3s ease-out;
+}
+
+.text-shadow {
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.text-shadow-sm {
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+.stall-card {
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.stall-card:hover {
+  transform: translateY(-4px);
+}
+
+.interactive-seat {
+  cursor: pointer;
+  transition: opacity 0.2s ease;
+}
+
+.interactive-seat:hover {
+  opacity: 0.8;
+}
+
+.interactive-seat:hover rect {
+  filter: brightness(1.2);
+}
+
+.interactive-seat:active {
+  opacity: 0.6;
+}
+
+svg g.interactive-seat {
+  pointer-events: all;
+}
+
+svg g.interactive-seat * {
+  pointer-events: none;
+}
+
+button[disabled],
+button.cursor-not-allowed {
+  pointer-events: none;
+  user-select: none;
+}
+
+.delete-ticket-type-btn[disabled] {
+  pointer-events: none !important;
+  cursor: not-allowed !important;
+}
+
+.group\/tooltip:hover .hidden {
+  display: block;
+}
+
+@keyframes bounce-in {
+  0% {
+    transform: scale(0);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.1);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.card-valid-icon:not(.hidden),
+.expiry-valid-icon:not(.hidden),
+.cvv-valid-icon:not(.hidden),
+.name-valid-icon:not(.hidden) {
+  animation: bounce-in 0.3s ease-out;
+}
