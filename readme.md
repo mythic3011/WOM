@@ -1,14 +1,5 @@
 # WOM - Western Orchestral Music Performance Booking System
 
-## 📚 Quick Links
-
-- **[Quick Start Guide](./docs/QUICK_START.md)** - Get started in 5 minutes
-- **[Frontend Documentation](./frontend/README.md)** - Frontend-specific details
-- **[Project Structure](./docs/PROJECT_STRUCTURE.md)** - File organization guide
-- **[Contributing Guide](./docs/CONTRIBUTING.md)** - How to contribute
-- **[Utils Organization](./docs/UTILS_ORGANIZATION.md)** - Utility functions guide
-- **[All Documentation](./docs/README.md)** - Complete documentation index
-
 ## Quick Start
 
 ### 1. First Time Setup
