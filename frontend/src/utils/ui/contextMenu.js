@@ -1,103 +1,61 @@
+import ContextMenu from "vanilla-context-menu";
+import "vanilla-context-menu/dist/vanilla-context-menu.css";
+
 export class ContextMenuManager {
   constructor() {
-    this.activeMenu = null;
-    this.menuItems = [];
-    this.init();
-  }
-
-  init() {
-    document.addEventListener("click", () => this.hide());
-    document.addEventListener("contextmenu", (e) => {
-      if (!e.target.closest("[data-context-menu]")) {
-        this.hide();
-      }
-    });
+    this.instances = new Map();
   }
 
   show(x, y, items, target) {
-    this.hide();
+    const normalizedItems = items.map((item) => {
+      if (item.divider) {
+        return { isDivider: true };
+      }
 
-    const menu = document.createElement("div");
-    menu.className =
-      "context-menu fixed bg-white rounded-lg shadow-xl border border-gray-200 py-2 z-50 min-w-48 animate-fadeIn";
-    menu.style.left = `${x}px`;
-    menu.style.top = `${y}px`;
-
-    menu.innerHTML = items
-      .map((item) => {
-        if (item.divider) {
-          return '<div class="border-t border-gray-200 my-2"></div>';
-        }
-
-        return `
-          <button 
-            class="context-menu-item w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-3 transition-colors ${
-              item.disabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer"
-            } ${item.danger ? "text-red-600 hover:bg-red-50" : "text-gray-700"}"
-            data-action="${item.action}"
-            ${item.disabled ? "disabled" : ""}
-          >
-            ${
-              item.icon
-                ? `<i class="fas ${item.icon} w-4"></i>`
-                : '<span class="w-4"></span>'
-            }
-            <span class="flex-1">${item.label}</span>
-            ${
-              item.shortcut
-                ? `<span class="text-xs text-gray-400">${item.shortcut}</span>`
-                : ""
-            }
-          </button>
-        `;
-      })
-      .join("");
-
-    document.body.appendChild(menu);
-    this.activeMenu = menu;
-
-    const rect = menu.getBoundingClientRect();
-    if (rect.right > window.innerWidth) {
-      menu.style.left = `${x - rect.width}px`;
-    }
-    if (rect.bottom > window.innerHeight) {
-      menu.style.top = `${y - rect.height}px`;
-    }
-
-    menu.querySelectorAll(".context-menu-item").forEach((btn) => {
-      btn.addEventListener("click", (e) => {
-        e.stopPropagation();
-        if (!btn.disabled) {
-          const action = btn.dataset.action;
-          const item = items.find((i) => i.action === action);
-          if (item && item.handler) {
+      return {
+        label: item.label,
+        icon: item.icon ? `<i class="fas ${item.icon} mr-2"></i>` : "",
+        isDisabled: item.disabled || false,
+        className: item.danger ? "text-red-600" : "",
+        shortcut: item.shortcut || "",
+        callback: () => {
+          if (item.handler) {
             item.handler(target);
           }
-          this.hide();
-        }
-      });
+        },
+      };
     });
+
+    const menu = new ContextMenu({
+      items: normalizedItems,
+      position: { x, y },
+      theme: "default",
+    });
+
+    menu.show();
+    return menu;
   }
 
-  hide() {
-    if (this.activeMenu) {
-      this.activeMenu.remove();
-      this.activeMenu = null;
-    }
-  }
-
-  attachToElement(element, menuItems) {
-    element.dataset.contextMenu = "true";
-
+  attachToElement(element, menuItemsOrCallback) {
     element.addEventListener("contextmenu", (e) => {
       e.preventDefault();
-      this.show(e.pageX, e.pageY, menuItems, element);
+      
+      const items = typeof menuItemsOrCallback === "function" 
+        ? menuItemsOrCallback(element, e) 
+        : menuItemsOrCallback;
+
+      this.show(e.pageX, e.pageY, items, element);
     });
+
+    this.instances.set(element, menuItemsOrCallback);
+  }
+
+  detach(element) {
+    this.instances.delete(element);
   }
 
   destroy() {
-    this.hide();
-    document.removeEventListener("click", () => this.hide());
+    this.instances.clear();
   }
 }
 
@@ -199,4 +157,11 @@ export const contextMenuUtils = {
     const manager = this.init();
     manager.show(x, y, items, performance);
   },
+
+  showCustomMenu(x, y, items, target) {
+    const manager = this.init();
+    manager.show(x, y, items, target);
+  },
 };
+
+export const contextMenu = new ContextMenuManager();

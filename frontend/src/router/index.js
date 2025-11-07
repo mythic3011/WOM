@@ -17,6 +17,26 @@ import {
   Auth,
 } from "/src/pages/index.js";
 
+const LOADING_HTML = `
+  <div class="flex items-center justify-center min-h-screen">
+    <div class="animate-spin rounded-full h-16 w-16 border-b-4 border-indigo-600"></div>
+  </div>
+`;
+
+const ERROR_HTML = (message) => `
+  <div class="container mx-auto px-4 py-16 text-center">
+    <i class="fas fa-exclamation-triangle text-6xl text-red-500 mb-4"></i>
+    <h1 class="text-2xl font-bold text-gray-900 mb-2">Error Loading Page</h1>
+    <p class="text-gray-600 mb-6">${message || "An error occurred"}</p>
+    <button
+      onclick="window.location.reload()"
+      class="px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-semibold"
+    >
+      <i class="fas fa-redo mr-2"></i>Reload Page
+    </button>
+  </div>
+`;
+
 function checkAuth(ctx, next) {
   const user = storage.getUser();
   if (!user) {
@@ -24,6 +44,7 @@ function checkAuth(ctx, next) {
     page.redirect(ROUTES.AUTH.LOGIN);
     return;
   }
+  ctx.user = user;
   next();
 }
 
@@ -34,102 +55,108 @@ function checkAdminAuth(ctx, next) {
     page.redirect(ROUTES.AUTH.LOGIN);
     return;
   }
+  ctx.user = user;
   next();
 }
 
-async function loadPage(PageModule, params = {}) {
+export function updateNavigation() {
+  $("#navbar").html(renderNavbar());
+  initNavbar();
+  $("#footer").html(renderFooter());
+  initFooter();
+}
+
+async function loadPage(PageModule, params = {}, seoUpdate = null) {
   const $app = $("#app");
 
-  $app.html(`
-    <div class="loading">
-      <div class="loading-spinner"></div>
-    </div>
-  `);
+  $app.html(LOADING_HTML);
 
   try {
+    if (seoUpdate) {
+      seoUpdate();
+    }
+
     const html = await PageModule.render(params);
     $app.html(html).addClass("page-transition");
 
-    $("#navbar").html(renderNavbar());
-    initNavbar();
-
-    $("#footer").html(renderFooter());
-    initFooter();
+    updateNavigation();
 
     if (PageModule.afterRender) {
       await PageModule.afterRender(params);
     }
 
-    window.scrollTo(0, 0);
+    window.scrollTo({ top: 0, behavior: "smooth" });
 
     document.title = PageModule.title || "Western Orchestral Music Performance";
   } catch (error) {
     console.error("Page load error:", error);
-    $app.html(`
-      <div class="container mx-auto px-4 py-8 text-center">
-        <i class="fas fa-exclamation-triangle text-6xl text-red-500 mb-4"></i>
-        <h1 class="text-2xl font-bold text-gray-900 mb-2">Error Loading Page</h1>
-        <p class="text-gray-600">${error.message || "An error occurred"}</p>
-        <button onclick="window.location.reload()" class="mt-4 px-6 py-2 bg-indigo-600 text-white rounded-lg">
-          Reload Page
-        </button>
-      </div>
-    `);
+    $app.html(ERROR_HTML(error.message));
+    updateNavigation();
   }
 }
 
 export function setupRouter() {
-  page(ROUTES.HOME, () => {
-    SEO.setHomePage();
-    loadPage(HomePage);
-  });
-  page(ROUTES.PUBLIC.PERFORMANCES, () => {
-    SEO.setPerformancesPage();
-    loadPage(PerformancesListPage);
-  });
-  page(ROUTES.PUBLIC.PERFORMANCE_DETAIL, (ctx) => {
-    loadPage(PerformanceDetailPage, { id: ctx.params.id });
-  });
+  page(ROUTES.HOME, () => loadPage(HomePage, {}, () => SEO.setHomePage()));
+
+  page(ROUTES.PUBLIC.PERFORMANCES, () =>
+    loadPage(PerformancesListPage, {}, () => SEO.setPerformancesPage())
+  );
+
+  page(ROUTES.PUBLIC.PERFORMANCE_DETAIL, (ctx) =>
+    loadPage(PerformanceDetailPage, { id: ctx.params.id })
+  );
 
   page(ROUTES.PUBLIC.DEV_TOOLS, () => loadPage(DevToolsPage));
+
   page(ROUTES.AUTH.LOGIN, () => loadPage(Auth.LoginPage));
   page(ROUTES.AUTH.REGISTER, () => loadPage(Auth.RegisterPage));
 
-  page(ROUTES.USER.DASHBOARD, checkAuth, () => {
-    SEO.setUserDashboard();
-    loadPage(User.DashboardPage);
-  });
+  page(ROUTES.USER.DASHBOARD, checkAuth, () =>
+    loadPage(User.DashboardPage, {}, () => SEO.setUserDashboard())
+  );
+
   page(ROUTES.USER.BOOKINGS, checkAuth, () => loadPage(User.BookingsPage));
+
   page(ROUTES.USER.BOOKING, (ctx) => {
     const urlParams = new URLSearchParams(ctx.querystring);
-    const performance = urlParams.get("performance");
-    const showtime = urlParams.get("showtime");
-    loadPage(User.BookingPage, { performance, showtime });
+    loadPage(User.BookingPage, {
+      performance: urlParams.get("performance") || urlParams.get("p"),
+      showtime: urlParams.get("showtime"),
+    });
   });
+
   page(ROUTES.USER.BOOKING_DETAIL, (ctx) =>
     loadPage(User.BookingPage, { id: ctx.params.id })
   );
+
   page(ROUTES.USER.PROFILE, checkAuth, () => loadPage(User.ProfilePage));
+
   page(ROUTES.USER.PAYMENT, checkAuth, () => loadPage(User.PaymentPage));
+
   page(ROUTES.USER.CONFIRMATION, checkAuth, () =>
     loadPage(User.ConfirmationPage)
   );
 
-  page(ROUTES.ADMIN.DASHBOARD, checkAdminAuth, () => {
-    SEO.setAdminDashboard();
-    loadPage(Admin.DashboardPage);
-  });
+  page(ROUTES.ADMIN.DASHBOARD, checkAdminAuth, () =>
+    loadPage(Admin.DashboardPage, {}, () => SEO.setAdminDashboard())
+  );
+
   page(ROUTES.ADMIN.PERFORMANCES, checkAdminAuth, () =>
     loadPage(Admin.PerformancesPage)
   );
+
   page(ROUTES.ADMIN.VENUES, checkAdminAuth, () => loadPage(Admin.VenuesPage));
+
   page(ROUTES.ADMIN.BOOKINGS, checkAdminAuth, () =>
     loadPage(Admin.BookingsPage)
   );
+
   page(ROUTES.ADMIN.USERS, checkAdminAuth, () => loadPage(Admin.UsersPage));
+
   page(ROUTES.ADMIN.SEAT_MANAGEMENT, checkAdminAuth, () =>
     loadPage(Admin.SeatsManagementPage)
   );
+
   page(ROUTES.ADMIN.SETTINGS, checkAdminAuth, () =>
     loadPage(Admin.SettingsPage)
   );

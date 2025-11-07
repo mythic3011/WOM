@@ -4,8 +4,15 @@ import { ticketTypeService } from "/src/services/ticketTypeService.js";
 import { FormComponents } from "/src/components/FormComponents.js";
 import { notify } from "/src/utils/ui/notification.js";
 import { ROUTES, ROUTE_METADATA } from "/src/config/routes.js";
+import { SwalColors } from "/src/utils/colors.js";
 import Swal from "sweetalert2";
 import dayjs from "dayjs";
+import {
+  MOCK_BOOKINGS,
+  formatBookingForDisplay,
+  formatSeatsDisplay,
+  getBookingStatusLabel,
+} from "/src/data/mockData.js";
 
 export default {
   title: "Developer Tools | WOM",
@@ -568,7 +575,7 @@ export default {
       showCancelButton: true,
       confirmButtonText: "Yes, Clear All",
       cancelButtonText: "Cancel",
-      confirmButtonColor: "#ef4444",
+      confirmButtonColor: SwalColors.danger,
     });
 
     if (result.isConfirmed) {
@@ -688,63 +695,46 @@ export default {
   },
 
   createMockBookings() {
-    const users = storage.getItem("registeredUsers", []);
-    const performances = statsService.getPerformances();
     const existingBookings = storage.getItem("bookings", []);
+    const newBookings = MOCK_BOOKINGS.filter(
+      (mb) => !existingBookings.some((eb) => eb.id === mb.id)
+    );
 
-    if (users.length === 0 || performances.length === 0) {
-      this.log("Need users and performances to create bookings", "error");
-      notify.error("Create users and performances first");
-      return;
+    if (newBookings.length > 0) {
+      storage.setItem("bookings", [...existingBookings, ...newBookings]);
+      this.log(
+        `Created ${newBookings.length} mock bookings with proper data structure`,
+        "success"
+      );
+      notify.success(
+        `${newBookings.length} bookings generated with seats, amounts, and status`
+      );
+    } else {
+      this.log("Mock bookings already exist", "warn");
+      notify.info("Mock bookings already exist");
     }
 
-    const mockBookings = [];
-    const statuses = ["confirmed", "pending", "cancelled"];
-    const seats = ["A1", "A2", "B1", "B2", "C1", "C2", "D1", "D2"];
-
-    for (let i = 0; i < 10; i++) {
-      const user = users[Math.floor(Math.random() * users.length)];
-      const perf =
-        performances[Math.floor(Math.random() * performances.length)];
-      const status = statuses[Math.floor(Math.random() * statuses.length)];
-      const selectedSeats = [
-        seats[Math.floor(Math.random() * seats.length)],
-        seats[Math.floor(Math.random() * seats.length)],
-      ];
-
-      mockBookings.push({
-        id: `BK${Date.now()}${i}`,
-        performanceId: perf.id,
-        userId: user.id,
-        customerInfo: {
-          id: user.id,
-          name: user.name,
-          email: user.email,
-          isGuest: false,
-        },
-        seats: selectedSeats,
-        ticketType: "Standard",
-        amount: (perf.price || 500) * selectedSeats.length,
-        status: status,
-        date: new Date().toISOString(),
-        performanceDate: perf.date,
-        performanceTitle: perf.title,
-        venue: perf.venue,
-      });
-    }
-
-    storage.setItem("bookings", [...existingBookings, ...mockBookings]);
-    this.log(`Created ${mockBookings.length} mock bookings`, "success");
-    notify.success(`${mockBookings.length} bookings generated`);
     this.updateStats();
   },
 
   async viewBookings() {
     const bookings = storage.getItem("bookings", []);
+    const formattedBookings = bookings.map((booking) => ({
+      id: booking.id,
+      performance: booking.performanceTitle || "Unknown",
+      customer: booking.userName || booking.customerInfo?.name || "Unknown",
+      seats: formatSeatsDisplay(booking.seats),
+      amount: `HKD ${(booking.amount || 0).toLocaleString()}`,
+      status: getBookingStatusLabel(booking.status),
+      date: dayjs(booking.bookingDate || booking.date).format(
+        "YYYY-MM-DD HH:mm"
+      ),
+    }));
+
     await Swal.fire({
-      title: "Bookings",
+      title: `Bookings (${bookings.length} total)`,
       html: `<pre class="text-left text-xs bg-gray-900 text-green-400 p-4 rounded-lg overflow-auto max-h-96">${JSON.stringify(
-        bookings,
+        formattedBookings,
         null,
         2
       )}</pre>`,
@@ -773,15 +763,18 @@ export default {
         "Status",
         "Date",
       ],
-      ...bookings.map((b) => [
-        b.id,
-        b.performanceTitle,
-        b.customerInfo.name,
-        b.seats.join(" "),
-        b.amount,
-        b.status,
-        dayjs(b.date).format("YYYY-MM-DD HH:mm"),
-      ]),
+      ...bookings.map((b) => {
+        const formatted = formatBookingForDisplay(b);
+        return [
+          b.id,
+          formatted.performanceTitle,
+          formatted.userName,
+          formatSeatsDisplay(b.seats),
+          b.amount || 0,
+          getBookingStatusLabel(b.status),
+          dayjs(b.bookingDate || b.date).format("YYYY-MM-DD HH:mm"),
+        ];
+      }),
     ]
       .map((row) => row.join(","))
       .join("\n");

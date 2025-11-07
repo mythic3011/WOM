@@ -6,6 +6,31 @@ import {
 } from "/src/data/mockData.js";
 
 export const statsService = {
+  migrateShowtimes(performances) {
+    return performances.map((p) => {
+      if (!p.showtimes || p.showtimes.length === 0) {
+        return p;
+      }
+
+      const firstShowtime = p.showtimes[0];
+      if (typeof firstShowtime === "string") {
+        const migratedShowtimes = p.showtimes.map((dateTime, index) => ({
+          id: `showtime_${p.id}_${Date.now()}_${index}`,
+          dateTime: dateTime,
+          venueName: p.venue || p.venueName || "Concert Hall",
+          venueId: p.venueId || 1,
+        }));
+
+        return {
+          ...p,
+          showtimes: migratedShowtimes,
+        };
+      }
+
+      return p;
+    });
+  },
+
   async getAdminStats() {
     const performances = this.getPerformances();
     const bookings = this.getBookings();
@@ -16,18 +41,26 @@ export const statsService = {
       totalPerformances: performances.length,
       upcomingPerformances: performances.filter((p) => p.status === "upcoming")
         .length,
+      performancesTrend: this.calculatePerformancesTrend(performances),
       totalBookings: bookings.length,
       pendingBookings: bookings.filter((b) => b.status === "pending").length,
+      bookingsTrend: this.calculateBookingsTrend(bookings),
       totalUsers: users.length,
       activeUsers: users.filter((u) => u.status === "active").length,
+      usersTrend: this.calculateUsersTrend(users),
       revenue: revenue,
       monthlyRevenue: this.getMonthlyRevenue(bookings),
+      revenueTrend: this.calculateRevenueTrend(bookings),
     };
   },
 
   getPerformances() {
-    const stored = storage.getItem("performances", []);
-    if (stored.length > 0) return stored;
+    let stored = storage.getItem("performances", []);
+    if (stored.length > 0) {
+      stored = this.migrateShowtimes(stored);
+      storage.setItem("performances", stored);
+      return stored;
+    }
     return MOCK_SIMPLE_PERFORMANCES;
   },
 
@@ -58,6 +91,103 @@ export const statsService = {
       return bookingMonth === currentMonth && b.status === "confirmed";
     });
     return this.calculateRevenue(monthlyBookings);
+  },
+
+  calculatePerformancesTrend(performances) {
+    const now = new Date();
+    const currentMonth = now.getMonth();
+    const lastMonth = currentMonth === 0 ? 11 : currentMonth - 1;
+
+    const currentMonthPerf = performances.filter((p) => {
+      const date = new Date(p.date || p.createdAt);
+      return date.getMonth() === currentMonth;
+    }).length;
+
+    const lastMonthPerf = performances.filter((p) => {
+      const date = new Date(p.date || p.createdAt);
+      return date.getMonth() === lastMonth;
+    }).length;
+
+    return this.calculateTrendPercentage(currentMonthPerf, lastMonthPerf);
+  },
+
+  calculateBookingsTrend(bookings) {
+    const now = new Date();
+    const currentMonth = now.getMonth();
+    const lastMonth = currentMonth === 0 ? 11 : currentMonth - 1;
+
+    const currentMonthBookings = bookings.filter((b) => {
+      const date = new Date(b.date);
+      return date.getMonth() === currentMonth;
+    }).length;
+
+    const lastMonthBookings = bookings.filter((b) => {
+      const date = new Date(b.date);
+      return date.getMonth() === lastMonth;
+    }).length;
+
+    return this.calculateTrendPercentage(
+      currentMonthBookings,
+      lastMonthBookings
+    );
+  },
+
+  calculateUsersTrend(users) {
+    const now = new Date();
+    const currentMonth = now.getMonth();
+    const lastMonth = currentMonth === 0 ? 11 : currentMonth - 1;
+
+    const currentMonthUsers = users.filter((u) => {
+      const date = new Date(u.createdAt);
+      return date.getMonth() === currentMonth;
+    }).length;
+
+    const lastMonthUsers = users.filter((u) => {
+      const date = new Date(u.createdAt);
+      return date.getMonth() === lastMonth;
+    }).length;
+
+    return this.calculateTrendPercentage(currentMonthUsers, lastMonthUsers);
+  },
+
+  calculateRevenueTrend(bookings) {
+    const now = new Date();
+    const currentMonth = now.getMonth();
+    const lastMonth = currentMonth === 0 ? 11 : currentMonth - 1;
+
+    const currentMonthRevenue = bookings
+      .filter((b) => {
+        const date = new Date(b.date);
+        return date.getMonth() === currentMonth && b.status === "confirmed";
+      })
+      .reduce((total, b) => total + b.amount, 0);
+
+    const lastMonthRevenue = bookings
+      .filter((b) => {
+        const date = new Date(b.date);
+        return date.getMonth() === lastMonth && b.status === "confirmed";
+      })
+      .reduce((total, b) => total + b.amount, 0);
+
+    return this.calculateTrendPercentage(currentMonthRevenue, lastMonthRevenue);
+  },
+
+  calculateTrendPercentage(current, previous) {
+    if (previous === 0 && current === 0) {
+      return { value: "0%", isUp: false };
+    }
+    if (previous === 0) {
+      return { value: "100%", isUp: true };
+    }
+
+    const percentage = ((current - previous) / previous) * 100;
+    const isUp = percentage >= 0;
+    const absPercentage = Math.abs(percentage);
+
+    return {
+      value: `${isUp ? "+" : "-"}${absPercentage.toFixed(1)}%`,
+      isUp: isUp,
+    };
   },
 
   async getRecentActivity() {

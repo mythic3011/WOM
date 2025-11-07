@@ -6,7 +6,7 @@ import { createDebounceSearch } from "/src/utils/data/filters.js";
 import { MOCK_VENUES, MOCK_PERFORMANCES } from "/src/data/mockData.js";
 import { seatUtils } from "/src/utils/booking/seatUtils.js";
 import { reportingUtils } from "/src/utils/reports/reporting.js";
-import { globalShortcuts, showShortcutsHelp } from "/src/utils/ui/keyboard.js";
+import { keyboard, registerGlobalShortcuts } from "/src/utils/ui/keyboard.js";
 import { seatMapGenerator } from "/src/utils/booking/seatMapGenerator.js";
 import { performanceOptimizer } from "/src/utils/performance.js";
 import dayjs from "dayjs";
@@ -39,14 +39,14 @@ export default {
               <div class="space-y-4">
                 <div>
                   <label class="block text-sm font-medium text-gray-700 mb-2">Performance</label>
-                  <select id="performanceSelect" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500">
+                  <select id="performanceSelect" class="text-black w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500">
                     <option value="">Select a performance...</option>
                   </select>
                 </div>
 
                 <div id="showtimeSelectContainer" class="hidden">
                   <label class="block text-sm font-medium text-gray-700 mb-2">Showtime</label>
-                  <select id="showtimeSelect" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500">
+                  <select id="showtimeSelect" class="text-black w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500">
                     <option value="">Select a showtime...</option>
                   </select>
                 </div>
@@ -126,38 +126,44 @@ export default {
   },
 
   setupKeyboardShortcuts() {
-    globalShortcuts.clear();
+    keyboard.unbindAll();
 
-    globalShortcuts.register("?", () => {
-      showShortcutsHelp();
+    keyboard.bind("shift+/", () => {
+      notify.info(
+        "Keyboard shortcuts: Ctrl+S (Save), Ctrl+F (Focus Search), Ctrl+P (Report), ESC (Close)"
+      );
     });
 
-    globalShortcuts.register("ctrl+s", (e) => {
+    keyboard.bind("ctrl+s, command+s", (e) => {
+      e.preventDefault();
       if (this.selectedShowtime) {
         this.saveChanges();
         notify.success("Changes saved");
       }
     });
 
-    globalShortcuts.register("ctrl+z", () => {
+    keyboard.bind("ctrl+z, command+z", (e) => {
+      e.preventDefault();
       notify.info("Undo not implemented yet");
     });
 
-    globalShortcuts.register("ctrl+f", () => {
+    keyboard.bind("ctrl+f, command+f", (e) => {
+      e.preventDefault();
       $("#performanceSelect").focus();
     });
 
-    globalShortcuts.register("ctrl+p", () => {
+    keyboard.bind("ctrl+p, command+p", (e) => {
+      e.preventDefault();
       if (this.selectedShowtime) {
         this.generateReport();
       }
     });
 
-    globalShortcuts.register(["delete", "backspace"], () => {
+    keyboard.bind("delete, backspace", () => {
       notify.info("Select seats in Edit Seats mode to block them");
     });
 
-    globalShortcuts.register("escape", () => {
+    keyboard.bind("esc", () => {
       Swal.close();
     });
   },
@@ -340,7 +346,7 @@ export default {
         (type) => `
         <div class="flex items-center gap-2">
           <div class="w-4 h-4 rounded" style="background-color: ${type.color}"></div>
-          <span>${type.label}</span>
+          <span class="text-black">${type.label}</span>
         </div>
       `
       )

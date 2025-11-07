@@ -1,3 +1,9 @@
+import {
+  PerformanceStatusColors,
+  getPerformanceStatusClass,
+  getPerformanceStatusLabel,
+} from "/src/utils/colors.js";
+
 export const TICKET_CATEGORIES = {
   VIP: {
     name: "VIP",
@@ -31,25 +37,21 @@ export const PERFORMANCE_STATUS = {
   COMPLETED: "completed",
 };
 
-export const STATUS_LABELS = {
-  draft: "Coming Soon",
-  pre_order: "Pre-Order Available",
-  early_bird: "Early Bird Special",
-  on_sale: "On Sale Now",
-  sold_out: "Sold Out",
-  cancelled: "Cancelled",
-  completed: "Completed",
-};
+export const STATUS_LABELS = Object.keys(PerformanceStatusColors).reduce(
+  (acc, key) => {
+    acc[key] = PerformanceStatusColors[key].name;
+    return acc;
+  },
+  {}
+);
 
-export const STATUS_COLORS = {
-  draft: "bg-gray-500",
-  pre_order: "bg-purple-500",
-  early_bird: "bg-green-500",
-  on_sale: "bg-blue-500",
-  sold_out: "bg-red-500",
-  cancelled: "bg-gray-700",
-  completed: "bg-gray-600",
-};
+export const STATUS_COLORS = Object.keys(PerformanceStatusColors).reduce(
+  (acc, key) => {
+    acc[key] = PerformanceStatusColors[key].class;
+    return acc;
+  },
+  {}
+);
 
 export function calculatePrice(seat, performance, groupSize = 1) {
   let basePrice = seat.price;
@@ -86,8 +88,8 @@ export function calculatePrice(seat, performance, groupSize = 1) {
 
 export function getStatusBadge(status) {
   return {
-    label: STATUS_LABELS[status] || status,
-    color: STATUS_COLORS[status] || "bg-gray-500",
+    label: getPerformanceStatusLabel(status),
+    color: getPerformanceStatusClass(status),
   };
 }
 

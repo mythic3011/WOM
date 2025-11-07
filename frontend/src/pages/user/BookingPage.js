@@ -1,8 +1,12 @@
 import { storage } from "/src/services/storageService.js";
 import { statsService } from "/src/services/statsService.js";
+import { performanceService } from "/src/services/dataService.js";
 import { ticketTypeService } from "/src/services/ticketTypeService.js";
 import { FormComponents } from "/src/components/FormComponents.js";
+import { createLoadingState } from "/src/components/LoadingState.js";
 import { notify } from "/src/utils/ui/notification.js";
+import { SwalColors } from "/src/utils/colors.js";
+import { ZonePricing } from "/src/utils/booking/zonePricing.js";
 import Swal from "sweetalert2";
 import dayjs from "dayjs";
 
@@ -12,6 +16,7 @@ export default {
   selectedSeats: [],
   seatTicketTypes: {},
   bookingStep: 1,
+  selectedShowtimeId: null,
 
   async render(params) {
     return `
@@ -30,10 +35,7 @@ export default {
           </div>
 
           <div id="bookingContent">
-            <div class="text-center py-20">
-              <div class="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
-              <p class="mt-4 text-gray-600">Loading booking form...</p>
-            </div>
+            ${createLoadingState({ message: "Loading booking form..." })}
           </div>
         </div>
       </main>
@@ -43,22 +45,39 @@ export default {
   async afterRender(params) {
     this.resetState();
 
-    const performanceId = params?.performance || params?.showtime || params?.id;
+    const performanceId = params?.performance || params?.id || params?.p;
+    const showtimeId = params?.showtime;
 
-    if (!performanceId) {
+    if (!performanceId && !showtimeId) {
       this.showError("No performance selected");
       return;
     }
 
-    const performances = statsService.getPerformances();
-    this.performanceData = performances.find((p) => p.id === performanceId);
+    try {
+      if (showtimeId && showtimeId !== "undefined") {
+        const performances = await performanceService.getAll();
+        this.performanceData = performances.find((p) => {
+          if (!p.showtimes || !Array.isArray(p.showtimes)) return false;
+          return p.showtimes.some((st) => st && st.id === showtimeId);
+        });
 
-    if (!this.performanceData) {
-      this.showError("Performance not found");
-      return;
+        if (this.performanceData) {
+          this.selectedShowtimeId = showtimeId;
+        }
+      } else if (performanceId && performanceId !== "undefined") {
+        this.performanceData = await performanceService.getById(performanceId);
+      }
+
+      if (!this.performanceData) {
+        this.showError("Performance not found");
+        return;
+      }
+
+      this.renderBookingForm();
+    } catch (error) {
+      console.error("Error loading performance:", error);
+      this.showError("Failed to load performance data");
     }
-
-    this.renderBookingForm();
   },
 
   resetState() {
@@ -66,6 +85,7 @@ export default {
     this.selectedSeats = [];
     this.seatTicketTypes = {};
     this.bookingStep = 1;
+    this.selectedShowtimeId = null;
   },
 
   detectCardType(number) {
@@ -185,11 +205,15 @@ export default {
     if (type && iconMap[type]) {
       $icon.attr(
         "class",
-        `fab ${iconMap[type].icon} text-3xl ${iconMap[type].color}`
+        `fab ${iconMap[type].icon} text-3xl block leading-none ${iconMap[type].color}`
       );
-      $cardBrand.removeClass("hidden");
+      $cardBrand
+        .removeClass("hidden")
+        .addClass("flex items-center justify-center");
     } else {
-      $cardBrand.addClass("hidden");
+      $cardBrand
+        .addClass("hidden")
+        .removeClass("flex items-center justify-center");
     }
   },
 
@@ -337,6 +361,63 @@ export default {
           type: "info",
         })}
 
+        ${
+          this.performanceData.pricingSections &&
+          this.performanceData.pricingSections.length > 0
+            ? `
+        <div class="mt-6 bg-gray-50 rounded-lg p-4 border border-gray-200">
+          <h3 class="text-lg font-semibold text-gray-900 mb-3">
+            <i class="fas fa-tags mr-2"></i>Pricing Zones
+          </h3>
+          <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+              <thead>
+                <tr class="border-b border-gray-300">
+                  <th class="text-left py-2 px-3 text-gray-700 font-semibold">Section</th>
+                  <th class="text-left py-2 px-3 text-gray-700 font-semibold">Zone</th>
+                  <th class="text-left py-2 px-3 text-gray-700 font-semibold">Rows</th>
+                  <th class="text-right py-2 px-3 text-gray-700 font-semibold">Base Price</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${ZonePricing.getZoneSummary(
+                  this.performanceData.pricingSections
+                )
+                  .map(
+                    (zone) => `
+                  <tr class="border-b border-gray-200 hover:bg-gray-100">
+                    <td class="py-2 px-3 font-medium text-gray-900">${
+                      zone.sectionName
+                    }</td>
+                    <td class="py-2 px-3">
+                      <span class="px-2 py-1 rounded text-xs font-semibold ${
+                        zone.tier === "premium"
+                          ? "bg-purple-100 text-purple-700"
+                          : zone.tier === "economy"
+                          ? "bg-blue-100 text-blue-700"
+                          : "bg-green-100 text-green-700"
+                      }">
+                        ${zone.tierLabel}
+                      </span>
+                    </td>
+                    <td class="py-2 px-3 text-gray-600">${zone.rowsDisplay}</td>
+                    <td class="py-2 px-3 text-right font-bold text-gray-900">HKD ${zone.basePrice.toLocaleString()}</td>
+                  </tr>
+                `
+                  )
+                  .join("")}
+              </tbody>
+            </table>
+          </div>
+          <p class="text-xs text-gray-600 mt-3">
+            <i class="fas fa-info-circle mr-1"></i>
+            Final prices vary based on ticket type (Student, Senior, etc.) which apply discounts to the base price.
+          </p>
+        </div>
+        `
+            : ""
+        }
+
         <div class="mt-6">
           <div class="mb-6">
             <h3 class="text-lg font-semibold text-gray-900 mb-4">
@@ -410,35 +491,59 @@ export default {
   },
 
   generateSeatMapWithZones() {
-    const zones = [
-      {
-        name: "Orchestra Stalls",
-        rows: ["A", "B", "C", "D"],
-        seatsPerRow: 12,
-        tier: "premium",
-        color: "blue",
-      },
-      {
-        name: "Dress Circle",
-        rows: ["E", "F", "G"],
-        seatsPerRow: 10,
-        tier: "standard",
-        color: "green",
-      },
-      {
-        name: "Grand Circle",
-        rows: ["H", "I"],
-        seatsPerRow: 8,
-        tier: "economy",
-        color: "amber",
-      },
-    ];
+    const pricingSections = this.performanceData.pricingSections || [];
+
+    const zones =
+      pricingSections.length > 0
+        ? pricingSections.map((section) => ({
+            name: section.sectionName,
+            rows: section.rows || [],
+            seatsPerRow: 12,
+            tier: section.tier,
+            color:
+              section.tier === "premium"
+                ? "blue"
+                : section.tier === "economy"
+                ? "amber"
+                : section.tier === "vip"
+                ? "purple"
+                : "green",
+          }))
+        : [
+            {
+              name: "Orchestra Stalls",
+              rows: ["A", "B", "C", "D"],
+              seatsPerRow: 12,
+              tier: "premium",
+              color: "blue",
+            },
+            {
+              name: "Dress Circle",
+              rows: ["E", "F", "G"],
+              seatsPerRow: 10,
+              tier: "standard",
+              color: "green",
+            },
+            {
+              name: "Grand Circle",
+              rows: ["H", "I"],
+              seatsPerRow: 8,
+              tier: "economy",
+              color: "amber",
+            },
+          ];
 
     const bookedSeats = this.getBookedSeats();
 
     return zones
       .map((zone) => {
         const tierColors = {
+          vip: {
+            bg: "bg-purple-50",
+            border: "border-purple-300",
+            text: "text-purple-700",
+            badge: "bg-purple-100 text-purple-800",
+          },
           premium: {
             bg: "bg-blue-50",
             border: "border-blue-300",
@@ -607,21 +712,7 @@ export default {
       `;
     }
 
-    const basePrice = this.performanceData.price || 500;
-    const ticketTypesWithPrices = ticketTypes.map((type) => {
-      let finalPrice = basePrice;
-      if (type.pricing) {
-        if (type.pricing.type === "percentage") {
-          finalPrice = basePrice * (type.pricing.value / 100);
-        } else if (type.pricing.type === "fixed") {
-          finalPrice = type.pricing.value;
-        } else if (type.pricing.type === "modifier") {
-          finalPrice = basePrice + type.pricing.value;
-        }
-      }
-      return { ...type, price: finalPrice };
-    });
-
+    const pricingSections = this.performanceData.pricingSections || [];
     const allAssigned = this.selectedSeats.every(
       (seat) => this.seatTicketTypes[seat]
     );
@@ -659,12 +750,32 @@ export default {
                     </div>
                     <div>
                       <p class="font-bold text-gray-900">Seat ${seat}</p>
+                      ${(() => {
+                        const zone = ZonePricing.getSeatZone(
+                          seat,
+                          pricingSections
+                        );
+                        const zoneName = zone
+                          ? zone.tier.toUpperCase()
+                          : "STANDARD";
+                        const zoneColor =
+                          zone?.tier === "premium"
+                            ? "text-purple-600"
+                            : zone?.tier === "economy"
+                            ? "text-blue-600"
+                            : "text-green-600";
+                        return `<p class="text-xs ${zoneColor} font-semibold">${
+                          zone?.sectionName || "Unknown"
+                        } - ${zoneName}</p>`;
+                      })()}
                       <p class="text-sm ${
                         assigned ? "text-green-600" : "text-gray-500"
                       }">
                         ${
                           assigned
-                            ? `${assigned.name} - $${assigned.price}`
+                            ? `${
+                                assigned.name
+                              } - HKD ${assigned.price.toLocaleString()}`
                             : "No ticket assigned"
                         }
                       </p>
@@ -674,7 +785,7 @@ export default {
                     assigned
                       ? `
                     <div class="text-right">
-                      <p class="text-2xl font-bold text-green-600">$${assigned.price}</p>
+                      <p class="text-2xl font-bold text-green-600">HKD ${assigned.price.toLocaleString()}</p>
                       <button class="change-ticket-btn text-xs text-indigo-600 hover:text-indigo-800 mt-1" data-seat="${seat}">
                         Change
                       </button>
@@ -688,7 +799,11 @@ export default {
                   !assigned
                     ? `
                   <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
-                    ${ticketTypesWithPrices
+                    ${ZonePricing.getTicketTypesWithPrices(
+                      seat,
+                      ticketTypes,
+                      pricingSections
+                    )
                       .map(
                         (type) => `
                       <button class="assign-ticket-btn text-left p-3 border-2 border-gray-200 rounded-lg hover:border-indigo-500 hover:bg-indigo-50 transition-all"
@@ -704,10 +819,22 @@ export default {
                                 ? `<p class="text-xs text-gray-600 mt-0.5">${type.description}</p>`
                                 : ""
                             }
+                            ${
+                              type.basePrice && type.price < type.basePrice
+                                ? `<p class="text-xs text-green-600 font-semibold mt-0.5">Save HKD ${(
+                                    type.basePrice - type.price
+                                  ).toLocaleString()}</p>`
+                                : ""
+                            }
                           </div>
-                          <p class="text-lg font-bold text-indigo-600">$${
-                            type.price
-                          }</p>
+                          <div class="text-right">
+                            ${
+                              type.basePrice && type.price < type.basePrice
+                                ? `<p class="text-xs text-gray-400 line-through">HKD ${type.basePrice.toLocaleString()}</p>`
+                                : ""
+                            }
+                            <p class="text-lg font-bold text-indigo-600">HKD ${type.price.toLocaleString()}</p>
+                          </div>
                         </div>
                       </button>
                     `
@@ -727,7 +854,7 @@ export default {
           <div class="flex items-center justify-between">
             <div>
               <p class="text-sm opacity-90">Total Amount</p>
-              <p class="text-2xl font-bold">$${totalPrice}</p>
+              <p class="text-2xl font-bold">HKD ${totalPrice.toLocaleString()}</p>
               <p class="text-xs opacity-75 mt-1">
                 ${Object.keys(this.seatTicketTypes).length} of ${
       this.selectedSeats.length
@@ -972,7 +1099,7 @@ export default {
                       <p class="text-xs text-gray-500">Visa, Mastercard</p>
                     </div>
                   </div>
-                  <div class="payment-check hidden flex items-center justify-center">
+                  <div class="payment-check hidden w-6 h-6 flex items-center justify-center shrink-0">
                     <i class="fas fa-check-circle block text-lg leading-none text-indigo-600"></i>
                   </div>
                 </div>
@@ -989,7 +1116,7 @@ export default {
                       <p class="text-xs text-gray-500">Mobile</p>
                     </div>
                   </div>
-                  <div class="payment-check hidden flex items-center justify-center">
+                  <div class="payment-check hidden w-6 h-6 flex items-center justify-center shrink-0">
                     <i class="fas fa-check-circle block text-lg leading-none text-blue-600"></i>
                   </div>
                 </div>
@@ -1006,7 +1133,7 @@ export default {
                       <p class="text-xs text-gray-500">Mobile</p>
                     </div>
                   </div>
-                  <div class="payment-check hidden flex items-center justify-center">
+                  <div class="payment-check hidden w-6 h-6 flex items-center justify-center shrink-0">
                     <i class="fas fa-check-circle block text-lg leading-none text-green-600"></i>
                   </div>
                 </div>
@@ -1023,7 +1150,7 @@ export default {
                       <p class="text-xs text-gray-500">Online</p>
                     </div>
                   </div>
-                  <div class="payment-check hidden flex items-center justify-center">
+                  <div class="payment-check hidden w-6 h-6 flex items-center justify-center shrink-0">
                     <i class="fas fa-check-circle block text-lg leading-none text-yellow-600"></i>
                   </div>
                 </div>
@@ -1043,14 +1170,14 @@ export default {
                   placeholder="1234 5678 9012 3456"
                   maxlength="23"
                   autocomplete="cc-number"
-                  class="w-full px-4 py-3.5 pr-20 border-2 border-gray-300 rounded-xl bg-white text-lg font-mono tracking-wide text-gray-900 placeholder:text-gray-400 placeholder:opacity-100 transition-all duration-150 ease-in-out outline-none hover:border-gray-400 focus:border-[#635bff] focus:ring-4 focus:ring-purple-100/50 focus:shadow-sm disabled:bg-gray-50 disabled:text-gray-500 disabled:cursor-not-allowed"
+                  class="w-full px-4 py-3.5 pr-20 border-2 border-gray-300 rounded-xl bg-white text-lg font-mono tracking-wide text-gray-900 placeholder:text-gray-400 placeholder:opacity-100 transition-all duration-150 ease-in-out outline-none hover:border-gray-400 focus:border-indigo-600 focus:ring-4 focus:ring-purple-100/50 focus:shadow-sm disabled:bg-gray-50 disabled:text-gray-500 disabled:cursor-not-allowed"
                 />
                 <div class="absolute right-3 top-1/2 -translate-y-1/2 flex items-center justify-end gap-2 h-10">
-                  <div id="cardBrand" class="hidden transition-all duration-200 flex items-center justify-center">
-                    <i class="fab text-3xl leading-none"></i>
+                  <div id="cardBrand" class="hidden transition-all duration-200">
+                    <i class="fab text-3xl block leading-none"></i>
                   </div>
-                  <div class="card-valid-icon hidden flex items-center justify-center">
-                    <i class="fas fa-check-circle text-green-500 text-xl leading-none"></i>
+                  <div class="card-valid-icon hidden">
+                    <i class="fas fa-check-circle text-green-500 text-xl block leading-none"></i>
                   </div>
                 </div>
               </div>
@@ -1072,7 +1199,7 @@ export default {
                     placeholder="MM / YY"
                     maxlength="9"
                     autocomplete="cc-exp"
-                    class="w-full px-4 py-3.5 border-2 border-gray-300 rounded-xl bg-white text-lg font-mono text-gray-900 placeholder:text-gray-400 placeholder:opacity-100 transition-all duration-150 ease-in-out outline-none hover:border-gray-400 focus:border-[#635bff] focus:ring-4 focus:ring-purple-100/50 focus:shadow-sm disabled:bg-gray-50 disabled:text-gray-500 disabled:cursor-not-allowed"
+                    class="w-full px-4 py-3.5 border-2 border-gray-300 rounded-xl bg-white text-lg font-mono text-gray-900 placeholder:text-gray-400 placeholder:opacity-100 transition-all duration-150 ease-in-out outline-none hover:border-gray-400 focus:border-indigo-600 focus:ring-4 focus:ring-purple-100/50 focus:shadow-sm disabled:bg-gray-50 disabled:text-gray-500 disabled:cursor-not-allowed"
                   />
                   <div class="expiry-valid-icon hidden absolute right-3 top-1/2 -translate-y-1/2">
                     <i class="fas fa-check-circle text-green-500 text-lg"></i>
@@ -1600,8 +1727,8 @@ export default {
       showCancelButton: true,
       confirmButtonText: "Yes, Book Now",
       cancelButtonText: "Cancel",
-      confirmButtonColor: "#4f46e5",
-      cancelButtonColor: "#6b7280",
+      confirmButtonColor: SwalColors.primary,
+      cancelButtonColor: SwalColors.cancel,
     });
 
     if (result.isConfirmed) {
@@ -1646,7 +1773,7 @@ export default {
         `,
         icon: "success",
         confirmButtonText: user ? "View My Bookings" : "Go to Homepage",
-        confirmButtonColor: "#10b981",
+        confirmButtonColor: SwalColors.success,
       }).then(() => {
         window.location.href = user ? "/user/bookings" : "/";
       });

@@ -2,10 +2,10 @@ import { createBadge } from "/src/components/Badge.js";
 
 export const STATUS_CONFIGS = {
   performance: {
-    upcoming: { variant: "default", text: "Upcoming" },
+    upcoming: { variant: "info", text: "Upcoming" },
     on_sale: { variant: "success", text: "On Sale" },
-    pre_order: { variant: "info", text: "Pre-Order" },
-    early_bird: { variant: "primary", text: "Early Bird" },
+    pre_order: { variant: "primary", text: "Pre-Order" },
+    early_bird: { variant: "warning", text: "Early Bird" },
     sold_out: { variant: "danger", text: "Sold Out" },
   },
   booking: {

@@ -1,4 +1,5 @@
 import dayjs from "dayjs";
+import { DEFAULT_TICKET_TYPES } from "./mockDataConfig.js";
 
 export const DataFactory = {
   generateId(prefix = "") {
@@ -159,12 +160,11 @@ export const DataFactory = {
       return `${row}${num}`;
     });
 
-    const ticketTypes = [
-      { id: "standard", name: "Standard", price: 500 },
-      { id: "student", name: "Student", price: 250 },
-      { id: "senior", name: "Senior Citizen", price: 250 },
-      { id: "pwd", name: "People with Disabilities", price: 200 },
-    ];
+    const ticketTypes = DEFAULT_TICKET_TYPES.map((tt, index) => ({
+      id: tt.id,
+      name: tt.name,
+      price: index === 0 ? 500 : 250,
+    }));
 
     const seatTicketTypes = {};
     seats.forEach((seat) => {
@@ -235,9 +235,10 @@ export const DataFactory = {
   },
 
   generateTicketType(overrides = {}) {
+    const defaultType = DEFAULT_TICKET_TYPES[0];
     return {
       id: this.generateId("ticket_"),
-      name: "Standard",
+      name: defaultType.name,
       description: "Standard admission ticket",
       isDefault: false,
       order: 0,

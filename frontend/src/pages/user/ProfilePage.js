@@ -10,6 +10,7 @@ import {
   getImageDataURL,
 } from "/src/components/ImageUpload.js";
 import { FormComponents } from "/src/components/FormComponents.js";
+import { SwalColors } from "/src/utils/colors.js";
 import Swal from "sweetalert2";
 import dayjs from "dayjs";
 
@@ -447,8 +448,8 @@ export default {
       showCancelButton: true,
       confirmButtonText: "Yes, Delete My Account",
       cancelButtonText: "Cancel",
-      confirmButtonColor: "#dc2626",
-      cancelButtonColor: "#6b7280",
+      confirmButtonColor: SwalColors.dangerDark,
+      cancelButtonColor: SwalColors.cancel,
     });
 
     if (result.isConfirmed) {
@@ -460,8 +461,8 @@ export default {
         showCancelButton: true,
         confirmButtonText: "Confirm Deletion",
         cancelButtonText: "Cancel",
-        confirmButtonColor: "#dc2626",
-        cancelButtonColor: "#6b7280",
+        confirmButtonColor: SwalColors.dangerDark,
+        cancelButtonColor: SwalColors.cancel,
         inputValidator: (value) => {
           if (!value) {
             return "Password is required";

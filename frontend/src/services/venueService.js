@@ -82,12 +82,17 @@ export const venueService = {
     const dataStr = JSON.stringify(venue, null, 2);
     const dataBlob = new Blob([dataStr], { type: "application/json" });
     const url = URL.createObjectURL(dataBlob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `venue-${venue.name
-      .replace(/\s+/g, "-")
-      .toLowerCase()}.json`;
-    link.click();
+
+    const $link = $("<a>")
+      .attr("href", url)
+      .attr(
+        "download",
+        `venue-${venue.name.replace(/\s+/g, "-").toLowerCase()}.json`
+      )
+      .appendTo("body");
+
+    $link[0].click();
+    $link.remove();
     URL.revokeObjectURL(url);
 
     return true;

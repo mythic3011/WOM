@@ -2,7 +2,6 @@ import forms from "@tailwindcss/forms";
 import typography from "@tailwindcss/typography";
 import aspectRatio from "@tailwindcss/aspect-ratio";
 import containerQueries from "@tailwindcss/container-queries";
-import daisyui from "daisyui";
 
 /** @type {import('tailwindcss').Config} */
 export default {
@@ -58,27 +57,5 @@ export default {
       },
     },
   },
-  plugins: [forms, typography, aspectRatio, containerQueries, daisyui],
-  daisyui: {
-    themes: [
-      {
-        light: {
-          primary: "#4f46e5",
-          secondary: "#7c3aed",
-          accent: "#0891b2",
-          neutral: "#1f2937",
-          "base-100": "#ffffff",
-          info: "#3b82f6",
-          success: "#10b981",
-          warning: "#f59e0b",
-          error: "#ef4444",
-        },
-      },
-    ],
-    styled: true,
-    base: true,
-    utils: true,
-    logs: false,
-    rtl: false,
-  },
+  plugins: [forms, typography, aspectRatio, containerQueries],
 };

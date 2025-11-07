@@ -22,8 +22,8 @@ export default {
         icon: "fa-music",
         iconColor: "text-blue-500",
         bgColor: "bg-blue-50",
-        trend: "+12%",
-        trendUp: true,
+        trend: statsData.performancesTrend.value,
+        trendUp: statsData.performancesTrend.isUp,
       },
       {
         title: "Total Bookings",
@@ -32,8 +32,8 @@ export default {
         icon: "fa-ticket-alt",
         iconColor: "text-green-500",
         bgColor: "bg-green-50",
-        trend: "+8%",
-        trendUp: true,
+        trend: statsData.bookingsTrend.value,
+        trendUp: statsData.bookingsTrend.isUp,
       },
       {
         title: "Total Users",
@@ -42,8 +42,8 @@ export default {
         icon: "fa-users",
         iconColor: "text-purple-500",
         bgColor: "bg-purple-50",
-        trend: "+5%",
-        trendUp: true,
+        trend: statsData.usersTrend.value,
+        trendUp: statsData.usersTrend.isUp,
       },
       {
         title: "Total Revenue",
@@ -54,8 +54,8 @@ export default {
         icon: "fa-dollar-sign",
         iconColor: "text-indigo-500",
         bgColor: "bg-indigo-50",
-        trend: "+15%",
-        trendUp: true,
+        trend: statsData.revenueTrend.value,
+        trendUp: statsData.revenueTrend.isUp,
       },
     ];
 
@@ -94,13 +94,6 @@ export default {
         label: "Bookings",
         color: "orange",
         description: "View all bookings",
-      },
-      {
-        href: "/admin/seats",
-        icon: "fa-chair",
-        label: "Seats",
-        color: "pink",
-        description: "Manage seating arrangements",
       },
       {
         href: "/admin/settings",
@@ -184,9 +177,9 @@ export default {
           ${quickActions
             .map(
               (action) => `
-            <a 
-              href="${action.href}" 
-              data-link 
+            <a
+              href="${action.href}"
+              data-link
               class="group flex items-start gap-3 p-4 bg-${action.color}-50 border-2 border-${action.color}-100 rounded-lg hover:bg-${action.color}-100 hover:border-${action.color}-300 transition-all duration-200 hover:shadow-md"
             >
               <div class="w-10 h-10 bg-${action.color}-500 rounded-lg flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">

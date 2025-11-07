@@ -2,6 +2,8 @@ import { storage } from "/src/services/storageService.js";
 import { statsService } from "/src/services/statsService.js";
 import { FormComponents } from "/src/components/FormComponents.js";
 import { createEmptyState } from "/src/components/EmptyState.js";
+import { createLoadingState } from "/src/components/LoadingState.js";
+import { BookingCard } from "/src/components/BookingCard.js";
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
 
@@ -15,10 +17,7 @@ export default {
       <main class="container mx-auto px-4 py-8">
         <div class="max-w-7xl mx-auto">
           <div id="dashboardContent">
-            <div class="text-center py-20">
-              <div class="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
-              <p class="mt-4 text-gray-600">Loading dashboard...</p>
-            </div>
+            ${createLoadingState({ message: "Loading dashboard..." })}
           </div>
         </div>
       </main>
@@ -151,61 +150,7 @@ export default {
           <div class="space-y-4">
             ${bookings
               .slice(0, 3)
-              .map(
-                (booking) => `
-              <div class="border-l-4 border-indigo-600 bg-gradient-to-r from-indigo-50 to-white p-4 rounded-lg hover:shadow-md transition-shadow">
-                <div class="flex items-start justify-between">
-                  <div class="flex-1">
-                    <h3 class="font-bold text-gray-900 text-lg mb-1">${
-                      booking.performanceTitle
-                    }</h3>
-                    <div class="space-y-1 text-sm text-gray-600">
-                      <p>
-                        <i class="fas fa-calendar text-indigo-600 w-5"></i>
-                        ${dayjs(booking.performanceDate).format(
-                          "dddd, MMMM D, YYYY"
-                        )}
-                      </p>
-                      <p>
-                        <i class="fas fa-clock text-indigo-600 w-5"></i>
-                        ${dayjs(booking.performanceDate).format("h:mm A")} 
-                        <span class="text-gray-400">• ${dayjs(
-                          booking.performanceDate
-                        ).fromNow()}</span>
-                      </p>
-                      <p>
-                        <i class="fas fa-map-marker-alt text-indigo-600 w-5"></i>
-                        ${booking.venue}
-                      </p>
-                      <p>
-                        <i class="fas fa-chair text-indigo-600 w-5"></i>
-                        ${booking.seats.join(", ")}
-                      </p>
-                    </div>
-                  </div>
-                  <div class="text-right ml-4">
-                    ${FormComponents.badge({
-                      text: booking.status,
-                      color: "green",
-                    })}
-                    <p class="text-2xl font-bold text-indigo-600 mt-2">$${
-                      booking.amount
-                    }</p>
-                    <p class="text-xs text-gray-500">${booking.ticketType}</p>
-                  </div>
-                </div>
-                <div class="mt-3 flex gap-2">
-                  <a href="/user/bookings" data-link class="flex-1 px-3 py-1.5 bg-indigo-600 text-white text-center text-sm rounded hover:bg-indigo-700 transition-colors">
-                    <i class="fas fa-ticket-alt mr-1"></i>
-                    View Ticket
-                  </a>
-                  <button class="px-3 py-1.5 bg-gray-200 text-gray-700 text-sm rounded hover:bg-gray-300 transition-colors">
-                    <i class="fas fa-calendar-plus"></i>
-                  </button>
-                </div>
-              </div>
-            `
-              )
+              .map((booking) => BookingCard.renderCompact(booking))
               .join("")}
             ${
               bookings.length > 3
@@ -225,7 +170,81 @@ export default {
     `;
   },
 
+  getQuickActions() {
+    return [
+      {
+        title: "Browse Performances",
+        description: "Discover upcoming shows",
+        icon: "fa-search",
+        gradient: "from-indigo-500 to-purple-600",
+        href: "/performances",
+      },
+      {
+        title: "My Bookings",
+        description: "View all tickets",
+        icon: "fa-ticket-alt",
+        gradient: "from-green-500 to-teal-600",
+        href: "/user/bookings",
+      },
+      {
+        title: "My Profile",
+        description: "Update information",
+        icon: "fa-user",
+        gradient: "from-blue-500 to-cyan-600",
+        href: "/user/profile",
+      },
+    ];
+  },
+
+  getHelpLinks() {
+    return [
+      {
+        title: "FAQs",
+        icon: "fa-question-circle",
+        href: "#",
+      },
+      {
+        title: "Contact Support",
+        icon: "fa-headset",
+        href: "#",
+      },
+      {
+        title: "User Guide",
+        icon: "fa-book",
+        href: "#",
+      },
+    ];
+  },
+
+  renderQuickActionCard(action) {
+    return `
+      <a href="${action.href}" data-link class="block p-4 bg-gradient-to-r ${action.gradient} text-white rounded-lg hover:shadow-lg transition-all transform hover:scale-105">
+        <div class="flex items-center gap-3">
+          <div class="w-12 h-12 bg-white bg-opacity-20 rounded-lg flex items-center justify-center">
+            <i class="fas ${action.icon} text-2xl"></i>
+          </div>
+          <div>
+            <p class="font-bold">${action.title}</p>
+            <p class="text-xs opacity-90">${action.description}</p>
+          </div>
+        </div>
+      </a>
+    `;
+  },
+
+  renderHelpLink(link) {
+    return `
+      <a href="${link.href}" class="flex items-center text-gray-600 hover:text-indigo-600 transition-colors">
+        <i class="fas ${link.icon} mr-2 text-indigo-600"></i>
+        ${link.title}
+      </a>
+    `;
+  },
+
   renderQuickActions() {
+    const actions = this.getQuickActions();
+    const helpLinks = this.getHelpLinks();
+
     return `
       <div class="bg-white rounded-lg shadow-md border border-gray-200 p-6">
         <h2 class="text-xl font-bold text-gray-900 mb-4">
@@ -233,58 +252,15 @@ export default {
           Quick Actions
         </h2>
         <div class="space-y-3">
-          <a href="/performances" data-link class="block p-4 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-lg hover:shadow-lg transition-all transform hover:scale-105">
-            <div class="flex items-center gap-3">
-              <div class="w-12 h-12 bg-white bg-opacity-20 rounded-lg flex items-center justify-center">
-                <i class="fas fa-search text-2xl"></i>
-              </div>
-              <div>
-                <p class="font-bold">Browse Performances</p>
-                <p class="text-xs opacity-90">Discover upcoming shows</p>
-              </div>
-            </div>
-          </a>
-
-          <a href="/user/bookings" data-link class="block p-4 bg-gradient-to-r from-green-500 to-teal-600 text-white rounded-lg hover:shadow-lg transition-all transform hover:scale-105">
-            <div class="flex items-center gap-3">
-              <div class="w-12 h-12 bg-white bg-opacity-20 rounded-lg flex items-center justify-center">
-                <i class="fas fa-ticket-alt text-2xl"></i>
-              </div>
-              <div>
-                <p class="font-bold">My Bookings</p>
-                <p class="text-xs opacity-90">View all tickets</p>
-              </div>
-            </div>
-          </a>
-
-          <a href="/user/profile" data-link class="block p-4 bg-gradient-to-r from-blue-500 to-cyan-600 text-white rounded-lg hover:shadow-lg transition-all transform hover:scale-105">
-            <div class="flex items-center gap-3">
-              <div class="w-12 h-12 bg-white bg-opacity-20 rounded-lg flex items-center justify-center">
-                <i class="fas fa-user text-2xl"></i>
-              </div>
-              <div>
-                <p class="font-bold">My Profile</p>
-                <p class="text-xs opacity-90">Update information</p>
-              </div>
-            </div>
-          </a>
+          ${actions
+            .map((action) => this.renderQuickActionCard(action))
+            .join("")}
         </div>
 
         <div class="mt-6 pt-6 border-t border-gray-200">
           <h3 class="text-sm font-semibold text-gray-700 mb-3">Need Help?</h3>
           <div class="space-y-2 text-sm">
-            <a href="#" class="flex items-center text-gray-600 hover:text-indigo-600 transition-colors">
-              <i class="fas fa-question-circle mr-2 text-indigo-600"></i>
-              FAQs
-            </a>
-            <a href="#" class="flex items-center text-gray-600 hover:text-indigo-600 transition-colors">
-              <i class="fas fa-headset mr-2 text-indigo-600"></i>
-              Contact Support
-            </a>
-            <a href="#" class="flex items-center text-gray-600 hover:text-indigo-600 transition-colors">
-              <i class="fas fa-book mr-2 text-indigo-600"></i>
-              User Guide
-            </a>
+            ${helpLinks.map((link) => this.renderHelpLink(link)).join("")}
           </div>
         </div>
       </div>

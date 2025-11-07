@@ -167,11 +167,11 @@ export const seatUtils = {
 
   getSeatColor(seat) {
     const colors = {
-      available: "#10b981",
-      blocked: "#ef4444",
-      reserved: "#f59e0b",
-      vip: "#8b5cf6",
-      wheelchair: "#3b82f6",
+      available: "rgb(16, 185, 129)",
+      blocked: "rgb(239, 68, 68)",
+      reserved: "rgb(245, 158, 11)",
+      vip: "rgb(139, 92, 246)",
+      wheelchair: "rgb(59, 130, 246)",
     };
 
     return colors[seat.status] || colors.available;

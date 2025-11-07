@@ -1,12 +1,6 @@
-const STORAGE_KEY = "ticketTypes";
+import { DEFAULT_TICKET_TYPES } from "/src/data/mockData.js";
 
-const DEFAULT_TICKET_TYPES = [
-  { id: "standard", name: "Standard", order: 1 },
-  { id: "student", name: "Student", order: 2 },
-  { id: "senior", name: "Senior Citizen", order: 3 },
-  { id: "pwd", name: "People with Disabilities and the Minder", order: 4 },
-  { id: "cssa", name: "CSSA Recipient", order: 5 },
-];
+const STORAGE_KEY = "ticketTypes";
 
 export const ticketTypeService = {
   getAll() {

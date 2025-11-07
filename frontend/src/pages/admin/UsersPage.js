@@ -1,4 +1,6 @@
 import { createEmptyState } from "/src/components/EmptyState.js";
+import { createLoadingState } from "/src/components/LoadingState.js";
+import { createTable } from "/src/components/Table.js";
 import { storage } from "/src/services/storageService.js";
 import { FormComponents } from "/src/components/FormComponents.js";
 import { statsService } from "/src/services/statsService.js";
@@ -6,9 +8,12 @@ import { userService } from "/src/services/userService.js";
 import { phoneUtils } from "/src/utils/forms/phoneFormat.js";
 import { notify } from "/src/utils/ui/notification.js";
 import { hashPassword } from "/src/utils/core/crypto.js";
+import { SwalColors } from "/src/utils/colors.js";
+import { scrollbarUtils } from "/src/utils/ui/scrollbar.js";
 import Swal from "sweetalert2";
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
+import Papa from "papaparse";
 
 dayjs.extend(relativeTime);
 
@@ -16,6 +21,7 @@ export default {
   title: "User Management | Admin",
   allUsers: [],
   filteredUsers: [],
+  selectedUsers: new Set(),
 
   async render() {
     return `
@@ -53,6 +59,12 @@ export default {
             ],
             actions: [
               {
+                id: "importUsers",
+                text: "Import CSV",
+                icon: "fa-upload",
+                color: "cyan",
+              },
+              {
                 id: "exportUsers",
                 text: "Export CSV",
                 icon: "fa-download",
@@ -68,10 +80,7 @@ export default {
           })}
 
           <div id="usersTable" class="bg-white rounded-lg shadow-md border border-gray-200 overflow-hidden">
-            <div class="text-center py-20">
-              <div class="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
-              <p class="mt-4 text-gray-600">Loading users...</p>
-            </div>
+            ${createLoadingState({ message: "Loading users..." })}
           </div>
         </div>
       </main>
@@ -149,17 +158,6 @@ export default {
   },
 
   renderUsersTable() {
-    if (this.filteredUsers.length === 0) {
-      $("#usersTable").html(
-        createEmptyState({
-          icon: "fa-users",
-          title: "No users found",
-          message: "Try adjusting your search or filters",
-        })
-      );
-      return;
-    }
-
     const columns = [
       {
         key: "profile",
@@ -265,73 +263,131 @@ export default {
           </div>
         `,
       },
-      {
-        key: "actions",
-        label: "Actions",
-        render: (user) => `
-          <div class="flex items-center gap-2">
-            ${FormComponents.actionButton({
-              icon: "fa-eye",
-              color: "blue",
-              size: "sm",
-              title: "View Details",
-              onClick: `viewUser(${user.userId})`,
-            })}
-            ${FormComponents.actionButton({
-              icon: "fa-edit",
-              color: "yellow",
-              size: "sm",
-              title: "Edit User",
-              onClick: `editUser(${user.userId})`,
-            })}
-            ${
-              user.role !== "admin"
-                ? FormComponents.actionButton({
-                    icon: user.status === "active" ? "fa-ban" : "fa-check",
-                    color: user.status === "active" ? "orange" : "green",
-                    size: "sm",
-                    title: user.status === "active" ? "Suspend" : "Activate",
-                    onClick: `toggleUserStatus(${user.userId})`,
-                  })
-                : ""
-            }
-            ${
-              user.userId !== storage.getUser()?.userId && user.role !== "admin"
-                ? FormComponents.actionButton({
-                    icon: "fa-trash",
-                    color: "red",
-                    size: "sm",
-                    title: "Delete User",
-                    onClick: `deleteUser(${user.userId})`,
-                  })
-                : ""
-            }
-          </div>
-        `,
-      },
     ];
 
-    const tableHTML = FormComponents.dataTable({
+    const tableHTML = createTable({
       columns,
       data: this.filteredUsers,
+      title: "Users List",
+      icon: "fa-users",
+      subtitle: `Showing <span class="font-semibold text-indigo-600">${this.filteredUsers.length}</span> of <span class="font-semibold">${this.allUsers.length}</span> users`,
+      rowActions: (user) => [
+        `
+        <div class="flex items-center gap-2">
+          <button
+            class="user-action-btn px-3 py-2 rounded-lg text-white bg-blue-500 hover:bg-blue-600 transition-colors cursor-pointer"
+            data-action="view"
+            data-user-id="${user.userId}"
+            title="View Details"
+            type="button"
+          >
+            <i class="fas fa-eye pointer-events-none"></i>
+          </button>
+          <button
+            class="user-action-btn px-3 py-2 rounded-lg text-white bg-yellow-500 hover:bg-yellow-600 transition-colors cursor-pointer"
+            data-action="edit"
+            data-user-id="${user.userId}"
+            title="Edit User"
+            type="button"
+          >
+            <i class="fas fa-edit pointer-events-none"></i>
+          </button>
+          ${
+            user.role !== "admin"
+              ? `<button
+                  class="user-action-btn px-3 py-2 rounded-lg text-white ${
+                    user.status === "active"
+                      ? "bg-orange-500 hover:bg-orange-600"
+                      : "bg-green-500 hover:bg-green-600"
+                  } transition-colors cursor-pointer"
+                  data-action="toggle-status"
+                  data-user-id="${user.userId}"
+                  title="${user.status === "active" ? "Suspend" : "Activate"}"
+                  type="button"
+                >
+                  <i class="fas ${
+                    user.status === "active" ? "fa-ban" : "fa-check"
+                  } pointer-events-none"></i>
+                </button>`
+              : ""
+          }
+          ${
+            user.userId !== storage.getUser()?.userId && user.role !== "admin"
+              ? `<button
+                  class="user-action-btn px-3 py-2 rounded-lg text-white bg-red-500 hover:bg-red-600 transition-colors cursor-pointer"
+                  data-action="delete"
+                  data-user-id="${user.userId}"
+                  title="Delete User"
+                  type="button"
+                >
+                  <i class="fas fa-trash pointer-events-none"></i>
+                </button>`
+              : ""
+          }
+        </div>
+      `,
+      ],
+      emptyState: {
+        icon: "fa-users",
+        title: "No users found",
+        message: "Try adjusting your search or filters",
+      },
     });
 
     $("#usersTable").html(tableHTML);
   },
 
   attachEventListeners() {
-    const self = this;
-
     $("#searchUsers").on("input", () => this.filterUsers());
     $("#roleFilter, #statusFilter").on("change", () => this.filterUsers());
     $("#clearFilters").on("click", () => this.clearFilters());
+    $("#importUsers").on("click", () => this.importUsers());
     $("#exportUsers").on("click", () => this.exportUsers());
     $("#addUser").on("click", () => this.addUser());
 
-    window.viewUser = (userId) => this.viewUser(userId);
-    window.editUser = (userId) => this.editUser(userId);
-    window.toggleUserStatus = (userId) => this.toggleUserStatus(userId);
-    window.deleteUser = (userId) => this.deleteUser(userId);
+    $(document)
+      .off("click", ".user-action-btn, .user-action-btn *")
+      .on("click", ".user-action-btn, .user-action-btn *", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+
+        const $target = $(e.target);
+        const $btn = $target.hasClass("user-action-btn")
+          ? $target
+          : $target.closest(".user-action-btn");
+
+        if (!$btn.length) {
+          console.error("Button not found");
+          return;
+        }
+
+        const action = $btn.data("action");
+        const userId = $btn.data("user-id");
+
+        console.log("Button clicked - Action:", action, "UserID:", userId);
+
+        if (!action || !userId) {
+          console.error("Missing action or user ID", { action, userId });
+          return;
+        }
+
+        switch (action) {
+          case "view":
+            this.viewUser(userId);
+            break;
+          case "edit":
+            this.editUser(userId);
+            break;
+          case "toggle-status":
+            this.toggleUserStatus(userId);
+            break;
+          case "delete":
+            this.deleteUser(userId);
+            break;
+          default:
+            console.error("Unknown action:", action);
+        }
+      });
   },
 
   filterUsers() {
@@ -364,8 +420,17 @@ export default {
   },
 
   async viewUser(userId) {
-    const user = this.allUsers.find((u) => u.userId === userId);
-    if (!user) return;
+    const user = this.allUsers.find((u) => String(u.userId) === String(userId));
+    if (!user) {
+      console.error(
+        "User not found:",
+        userId,
+        "Available users:",
+        this.allUsers.map((u) => u.userId)
+      );
+      notify.error("User not found");
+      return;
+    }
 
     const bookings = storage
       .getItem("bookings", [])
@@ -480,66 +545,183 @@ export default {
       `,
       width: 600,
       confirmButtonText: "Close",
-      confirmButtonColor: "#4f46e5",
+      confirmButtonColor: SwalColors.primary,
     });
   },
 
   async editUser(userId) {
-    const user = this.allUsers.find((u) => u.userId === userId);
-    if (!user) return;
+    const user = this.allUsers.find((u) => String(u.userId) === String(userId));
+    if (!user) {
+      notify.error("User not found");
+      return;
+    }
 
     const { value: formValues } = await Swal.fire({
-      title: "Edit User",
+      title: `<div class="flex items-center justify-between w-full">
+        <div class="flex items-center gap-3">
+          ${
+            user.profileImage
+              ? `<img src="${user.profileImage}" class="h-12 w-12 rounded-full object-cover border-2 border-indigo-200" />`
+              : `<div class="h-12 w-12 rounded-full bg-indigo-600 flex items-center justify-center border-2 border-indigo-400">
+                  <span class="text-white font-bold text-lg">${(
+                    user.name || "U"
+                  )
+                    .charAt(0)
+                    .toUpperCase()}</span>
+                </div>`
+          }
+          <div class="text-left">
+            <h3 class="text-xl font-bold text-gray-900">Edit User</h3>
+            <p class="text-sm text-gray-500">@${user.username} (ID: #${
+        user.userId
+      })</p>
+          </div>
+        </div>
+      </div>`,
       html: `
-        <div class="space-y-4 text-left">
-          ${FormComponents.input({
-            id: "editName",
-            label: "Full Name",
-            value: user.name,
-            required: true,
-          })}
-          ${FormComponents.input({
-            id: "editEmail",
-            type: "email",
-            label: "Email",
-            value: user.email,
-            required: true,
-          })}
-          ${FormComponents.input({
-            id: "editPhone",
-            type: "tel",
-            label: "Phone (HK)",
-            value: user.phone ? phoneUtils.formatHKPhone(user.phone) : "",
-          })}
-          ${FormComponents.select({
-            id: "editRole",
-            label: "Role",
-            value: user.role,
-            options: [
-              { value: "user", label: "User" },
-              { value: "admin", label: "Admin" },
-            ],
-            required: true,
-          })}
-          ${FormComponents.select({
-            id: "editStatus",
-            label: "Status",
-            value: user.status,
-            options: [
-              { value: "active", label: "Active" },
-              { value: "suspended", label: "Suspended" },
-            ],
-            required: true,
-          })}
+        <div class="space-y-6 text-left mt-4">
+          <div class="bg-gray-50 rounded-lg p-4 border border-gray-200">
+            <h4 class="text-sm font-semibold text-gray-700 uppercase mb-3 flex items-center gap-2">
+              <i class="fas fa-user-circle text-indigo-600"></i>
+              Personal Information
+            </h4>
+            <div class="space-y-3">
+              ${FormComponents.select({
+                id: "editTitle",
+                label: "Title",
+                value: user.title || "",
+                options: [
+                  { value: "", label: "None" },
+                  { value: "Mr.", label: "Mr." },
+                  { value: "Ms.", label: "Ms." },
+                  { value: "Mrs.", label: "Mrs." },
+                  { value: "Dr.", label: "Dr." },
+                  { value: "Prof.", label: "Prof." },
+                ],
+              })}
+              ${FormComponents.input({
+                id: "editName",
+                label: "Full Name",
+                value: user.name,
+                required: true,
+                placeholder: "e.g., John Doe",
+              })}
+              ${FormComponents.select({
+                id: "editGender",
+                label: "Gender",
+                value: user.gender || "prefer_not_to_say",
+                options: [
+                  { value: "male", label: "Male" },
+                  { value: "female", label: "Female" },
+                  { value: "other", label: "Other" },
+                  { value: "prefer_not_to_say", label: "Prefer not to say" },
+                ],
+              })}
+              ${FormComponents.input({
+                id: "editBirthday",
+                type: "date",
+                label: "Birthday",
+                value: user.birthday
+                  ? dayjs(user.birthday).format("YYYY-MM-DD")
+                  : "",
+              })}
+            </div>
+          </div>
+
+          <div class="bg-blue-50 rounded-lg p-4 border border-blue-200">
+            <h4 class="text-sm font-semibold text-blue-700 uppercase mb-3 flex items-center gap-2">
+              <i class="fas fa-envelope text-blue-600"></i>
+              Contact Information
+            </h4>
+            <div class="space-y-3">
+              ${FormComponents.input({
+                id: "editEmail",
+                type: "email",
+                label: "Email Address",
+                value: user.email,
+                required: true,
+                placeholder: "user@example.com",
+              })}
+              ${FormComponents.input({
+                id: "editPhone",
+                type: "tel",
+                label: "Phone Number (Hong Kong)",
+                value: user.phone ? phoneUtils.formatHKPhone(user.phone) : "",
+                placeholder: "9123 4567",
+              })}
+            </div>
+          </div>
+
+          <div class="bg-purple-50 rounded-lg p-4 border border-purple-200">
+            <h4 class="text-sm font-semibold text-purple-700 uppercase mb-3 flex items-center gap-2">
+              <i class="fas fa-user-shield text-purple-600"></i>
+              Account Settings
+            </h4>
+            <div class="space-y-3">
+              <div class="bg-white rounded p-3 border border-gray-200">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Username</label>
+                <input
+                  type="text"
+                  value="@${user.username}"
+                  class="w-full px-3 py-2 text-sm font-mono bg-gray-50 border border-gray-300 rounded text-gray-500 cursor-not-allowed"
+                  readonly
+                  disabled
+                />
+                <p class="text-xs text-gray-500 mt-1">Username cannot be changed</p>
+              </div>
+              ${FormComponents.select({
+                id: "editRole",
+                label: "User Role",
+                value: user.role,
+                options: [
+                  { value: "user", label: "User - Regular Access" },
+                  { value: "admin", label: "Admin - Full Access" },
+                ],
+                required: true,
+              })}
+              ${FormComponents.select({
+                id: "editStatus",
+                label: "Account Status",
+                value: user.status,
+                options: [
+                  { value: "active", label: "Active - Can login and book" },
+                  { value: "suspended", label: "Suspended - Cannot login" },
+                ],
+                required: true,
+              })}
+            </div>
+          </div>
+
+          <div class="bg-gray-50 rounded-lg p-3 border border-gray-200">
+            <p class="text-xs text-gray-600">
+              <i class="fas fa-clock mr-1"></i>
+              <strong>Last Updated:</strong> ${
+                user.updatedAt
+                  ? dayjs(user.updatedAt).format("MMM D, YYYY [at] h:mm A")
+                  : "Never"
+              }
+            </p>
+          </div>
         </div>
       `,
-      width: 500,
+      width: 700,
       focusConfirm: false,
       showCancelButton: true,
-      confirmButtonText: "Save Changes",
-      cancelButtonText: "Cancel",
-      confirmButtonColor: "#4f46e5",
+      confirmButtonText: '<i class="fas fa-save mr-2"></i>Save Changes',
+      cancelButtonText: '<i class="fas fa-times mr-2"></i>Cancel',
+      confirmButtonColor: SwalColors.primary,
+      customClass: {
+        popup: "edit-user-modal",
+        htmlContainer: "!max-h-[70vh]",
+      },
       didOpen: () => {
+        const modalContent = document.querySelector(
+          ".edit-user-modal .swal2-html-container"
+        );
+        if (modalContent) {
+          scrollbarUtils.initModal(modalContent);
+        }
+
         $("#editPhone").on("input", function () {
           const value = $(this).val();
           const cleaned = phoneUtils.cleanPhone(value);
@@ -548,14 +730,22 @@ export default {
         });
       },
       preConfirm: () => {
-        const name = $("#editName").val();
-        const email = $("#editEmail").val();
+        const title = $("#editTitle").val();
+        const name = $("#editName").val().trim();
+        const gender = $("#editGender").val();
+        const birthday = $("#editBirthday").val();
+        const email = $("#editEmail").val().trim();
         const phone = phoneUtils.cleanPhone($("#editPhone").val());
         const role = $("#editRole").val();
         const status = $("#editStatus").val();
 
         if (!name || !email) {
           Swal.showValidationMessage("Please fill in all required fields");
+          return false;
+        }
+
+        if (!userService.validateEmail(email)) {
+          Swal.showValidationMessage("Please enter a valid email address");
           return false;
         }
 
@@ -566,13 +756,28 @@ export default {
           return false;
         }
 
-        return { name, email, phone, role, status };
+        if (birthday && dayjs(birthday).isAfter(dayjs())) {
+          Swal.showValidationMessage("Birthday cannot be in the future");
+          return false;
+        }
+
+        return { title, name, gender, birthday, email, phone, role, status };
       },
     });
 
     if (formValues) {
+      const changes = [];
+      if (formValues.title !== (user.title || "")) changes.push("Title");
+      if (formValues.name !== user.name) changes.push("Name");
+      if (formValues.gender !== user.gender) changes.push("Gender");
+      if (formValues.birthday !== user.birthday) changes.push("Birthday");
+      if (formValues.email !== user.email) changes.push("Email");
+      if (formValues.phone !== user.phone) changes.push("Phone");
+      if (formValues.role !== user.role) changes.push("Role");
+      if (formValues.status !== user.status) changes.push("Status");
+
       const updatedUsers = this.allUsers.map((u) =>
-        u.userId === userId
+        String(u.userId) === String(userId)
           ? { ...u, ...formValues, updatedAt: new Date().toISOString() }
           : u
       );
@@ -582,13 +787,22 @@ export default {
       this.filterUsers();
       this.renderStats();
 
-      notify.success("User updated successfully!");
+      if (changes.length > 0) {
+        notify.saved(
+          `User ${formValues.name} updated! Changes: ${changes.join(", ")}`
+        );
+      } else {
+        notify.info("No changes were made");
+      }
     }
   },
 
   async toggleUserStatus(userId) {
-    const user = this.allUsers.find((u) => u.userId === userId);
-    if (!user) return;
+    const user = this.allUsers.find((u) => String(u.userId) === String(userId));
+    if (!user) {
+      notify.error("User not found");
+      return;
+    }
 
     const newStatus = user.status === "active" ? "suspended" : "active";
 
@@ -610,12 +824,13 @@ export default {
         newStatus === "suspended" ? "Suspend" : "Activate"
       }`,
       cancelButtonText: "Cancel",
-      confirmButtonColor: newStatus === "suspended" ? "#ef4444" : "#10b981",
+      confirmButtonColor:
+        newStatus === "suspended" ? SwalColors.danger : SwalColors.success,
     });
 
     if (result.isConfirmed) {
       const updatedUsers = this.allUsers.map((u) =>
-        u.userId === userId
+        String(u.userId) === String(userId)
           ? { ...u, status: newStatus, updatedAt: new Date().toISOString() }
           : u
       );
@@ -634,8 +849,11 @@ export default {
   },
 
   async deleteUser(userId) {
-    const user = this.allUsers.find((u) => u.userId === userId);
-    if (!user) return;
+    const user = this.allUsers.find((u) => String(u.userId) === String(userId));
+    if (!user) {
+      notify.error("User not found");
+      return;
+    }
 
     const bookings = storage
       .getItem("bookings", [])
@@ -662,7 +880,7 @@ export default {
       showCancelButton: true,
       confirmButtonText: "Yes, Delete User",
       cancelButtonText: "Cancel",
-      confirmButtonColor: "#ef4444",
+      confirmButtonColor: SwalColors.danger,
       input: "checkbox",
       inputPlaceholder: "I understand this action is permanent",
       inputValidator: (result) => {
@@ -671,13 +889,15 @@ export default {
     });
 
     if (result.isConfirmed) {
-      const updatedUsers = this.allUsers.filter((u) => u.userId !== userId);
+      const updatedUsers = this.allUsers.filter(
+        (u) => String(u.userId) !== String(userId)
+      );
       storage.setItem("registeredUsers", updatedUsers);
       this.allUsers = updatedUsers;
       this.filterUsers();
       this.renderStats();
 
-      notify.success(`User ${user.username} deleted successfully!`);
+      notify.deleted(`User ${user.username} deleted successfully!`);
     }
   },
 
@@ -751,7 +971,7 @@ export default {
       showCancelButton: true,
       confirmButtonText: "Create User",
       cancelButtonText: "Cancel",
-      confirmButtonColor: "#4f46e5",
+      confirmButtonColor: SwalColors.primary,
       didOpen: () => {
         $("#newPhone").on("input", function () {
           const value = $(this).val();
@@ -831,16 +1051,8 @@ export default {
     });
 
     if (formValues) {
-      const generateUUID = () => {
-        return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
-          const r = (Math.random() * 16) | 0;
-          const v = c === "x" ? r : (r & 0x3) | 0x8;
-          return v.toString(16);
-        });
-      };
-
       const newUser = {
-        id: generateUUID(),
+        id: this.generateUUID(),
         userId:
           this.allUsers.length > 0
             ? Math.max(...this.allUsers.map((u) => u.userId || 0)) + 1
@@ -862,50 +1074,218 @@ export default {
       this.filterUsers();
       this.renderStats();
 
-      notify.success("User created successfully!");
+      notify.confirm(`User ${newUser.username} created successfully!`);
     }
   },
 
-  exportUsers() {
-    const csv = [
-      [
-        "ID",
-        "User ID",
-        "Username",
-        "Name",
-        "Email",
-        "Phone",
-        "Gender",
-        "Birthday",
-        "Role",
-        "Status",
-        "Registered",
-      ],
-      ...this.filteredUsers.map((user) => [
-        user.userId,
-        user.id,
-        user.username,
-        `${user.title || ""}${user.name}`.trim(),
-        user.email,
-        user.phone ? phoneUtils.formatHKPhone(user.phone) : "",
-        user.gender,
-        dayjs(user.birthday).format("YYYY-MM-DD"),
-        user.role,
-        user.status,
-        dayjs(user.createdAt).format("YYYY-MM-DD HH:mm:ss"),
-      ]),
-    ]
-      .map((row) => row.join(","))
-      .join("\n");
+  async exportUsers() {
+    const loadingNotif = notify.loading("Preparing CSV export...");
 
-    const blob = new Blob([csv], { type: "text/csv" });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `users-${dayjs().format("YYYY-MM-DD")}.csv`;
-    a.click();
-    window.URL.revokeObjectURL(url);
+    try {
+      const userData = this.filteredUsers.map((user) => ({
+        "User ID": user.userId,
+        UUID: user.id,
+        Username: user.username,
+        "Full Name": `${user.title || ""}${user.name}`.trim(),
+        Email: user.email,
+        Phone: user.phone ? phoneUtils.formatHKPhone(user.phone) : "",
+        Gender:
+          user.gender === "prefer_not_to_say" ? "Not specified" : user.gender,
+        Birthday: dayjs(user.birthday).format("YYYY-MM-DD"),
+        Age: dayjs().diff(dayjs(user.birthday), "year"),
+        Role: user.role.charAt(0).toUpperCase() + user.role.slice(1),
+        Status: user.status.charAt(0).toUpperCase() + user.status.slice(1),
+        Registered: dayjs(user.createdAt).format("YYYY-MM-DD HH:mm:ss"),
+        "Last Updated": user.updatedAt
+          ? dayjs(user.updatedAt).format("YYYY-MM-DD HH:mm:ss")
+          : "Never",
+      }));
 
-    notify.success("Users exported successfully!");
+      const csv = Papa.unparse(userData, {
+        quotes: true,
+        header: true,
+      });
+
+      const blob = new Blob(["\uFEFF" + csv], {
+        type: "text/csv;charset=utf-8;",
+      });
+
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `users-export-${dayjs().format("YYYY-MM-DD-HHmmss")}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+
+      notify.dismiss(loadingNotif);
+      notify.download(
+        `${this.filteredUsers.length} users exported successfully!`
+      );
+    } catch (error) {
+      notify.dismiss(loadingNotif);
+      notify.error("Failed to export users: " + error.message);
+      console.error("Export error:", error);
+    }
+  },
+
+  async importUsers() {
+    const { value: file } = await Swal.fire({
+      title: "Import Users from CSV",
+      html: `
+        <div class="text-left space-y-4">
+          <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+            <p class="text-sm text-blue-800 mb-2">
+              <i class="fas fa-info-circle mr-2"></i><strong>CSV Format Required:</strong>
+            </p>
+            <code class="text-xs bg-blue-100 p-2 rounded block">
+              Username,Password,Name,Email,Phone,Gender,Birthday,Role
+            </code>
+          </div>
+          <input type="file" id="csvFile" accept=".csv" class="w-full px-4 py-2 border border-gray-300 rounded-lg" />
+        </div>
+      `,
+      showCancelButton: true,
+      confirmButtonText: "Import",
+      confirmButtonColor: SwalColors.primary,
+      preConfirm: () => {
+        const fileInput = document.getElementById("csvFile");
+        if (!fileInput.files[0]) {
+          Swal.showValidationMessage("Please select a CSV file");
+          return false;
+        }
+        return fileInput.files[0];
+      },
+    });
+
+    if (file) {
+      const loadingNotif = notify.loading("Importing users...");
+
+      Papa.parse(file, {
+        header: true,
+        skipEmptyLines: true,
+        complete: async (results) => {
+          try {
+            let imported = 0;
+            let errors = [];
+
+            for (const row of results.data) {
+              try {
+                if (!row.Username || !row.Password || !row.Email) {
+                  errors.push(`Skipped row: Missing required fields`);
+                  continue;
+                }
+
+                if (this.allUsers.some((u) => u.username === row.Username)) {
+                  errors.push(
+                    `Skipped: Username '${row.Username}' already exists`
+                  );
+                  continue;
+                }
+
+                if (this.allUsers.some((u) => u.email === row.Email)) {
+                  errors.push(
+                    `Skipped: Email '${row.Email}' already registered`
+                  );
+                  continue;
+                }
+
+                const passwordHash = await hashPassword(row.Password);
+
+                const newUser = {
+                  id: this.generateUUID(),
+                  userId:
+                    Math.max(...this.allUsers.map((u) => u.userId || 0), 0) + 1,
+                  username: row.Username,
+                  password: passwordHash,
+                  name: row.Name,
+                  email: row.Email,
+                  phone: row.Phone || "",
+                  gender: row.Gender || "prefer_not_to_say",
+                  birthday:
+                    row.Birthday ||
+                    dayjs().subtract(25, "year").format("YYYY-MM-DD"),
+                  role: row.Role?.toLowerCase() || "user",
+                  status: "active",
+                  title: "",
+                  createdAt: new Date().toISOString(),
+                  updatedAt: new Date().toISOString(),
+                  lastLoginAt: null,
+                  profileImage: null,
+                };
+
+                this.allUsers.push(newUser);
+                imported++;
+              } catch (err) {
+                errors.push(`Error importing ${row.Username}: ${err.message}`);
+              }
+            }
+
+            storage.setItem("registeredUsers", this.allUsers);
+            this.filterUsers();
+            this.renderStats();
+
+            notify.dismiss(loadingNotif);
+
+            await Swal.fire({
+              title: "Import Complete",
+              html: `
+                <div class="text-left">
+                  <p class="text-green-600 font-semibold mb-2">
+                    <i class="fas fa-check-circle mr-2"></i>${imported} users imported successfully
+                  </p>
+                  ${
+                    errors.length > 0
+                      ? `
+                    <p class="text-red-600 font-semibold mt-4 mb-2">
+                      <i class="fas fa-exclamation-triangle mr-2"></i>${
+                        errors.length
+                      } errors:
+                    </p>
+                    <div class="bg-red-50 rounded p-3 max-h-40 overflow-y-auto">
+                      <ul class="text-xs text-red-700 space-y-1">
+                        ${errors
+                          .slice(0, 10)
+                          .map((e) => `<li>• ${e}</li>`)
+                          .join("")}
+                        ${
+                          errors.length > 10
+                            ? `<li>... and ${errors.length - 10} more</li>`
+                            : ""
+                        }
+                      </ul>
+                    </div>
+                  `
+                      : ""
+                  }
+                </div>
+              `,
+              icon: imported > 0 ? "success" : "warning",
+              confirmButtonColor: SwalColors.primary,
+            });
+
+            if (imported > 0) {
+              notify.success(`${imported} users imported successfully!`);
+            }
+          } catch (error) {
+            notify.dismiss(loadingNotif);
+            notify.error("Import failed: " + error.message);
+          }
+        },
+        error: (error) => {
+          notify.dismiss(loadingNotif);
+          notify.error("Failed to parse CSV: " + error.message);
+        },
+      });
+    }
+  },
+
+  generateUUID() {
+    return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
+      const r = (Math.random() * 16) | 0;
+      const v = c === "x" ? r : (r & 0x3) | 0x8;
+      return v.toString(16);
+    });
   },
 };

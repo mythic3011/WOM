@@ -1,199 +1,203 @@
+import anime from "animejs";
+
 export const animations = {
   fadeIn(element, duration = 300) {
-    element.style.opacity = "0";
-    element.style.transition = `opacity ${duration}ms ease-in`;
-
-    requestAnimationFrame(() => {
-      element.style.opacity = "1";
-    });
-
-    return new Promise((resolve) => setTimeout(resolve, duration));
+    return anime({
+      targets: element,
+      opacity: [0, 1],
+      duration,
+      easing: "easeOutQuad",
+    }).finished;
   },
 
   fadeOut(element, duration = 300) {
-    element.style.opacity = "1";
-    element.style.transition = `opacity ${duration}ms ease-out`;
-
-    requestAnimationFrame(() => {
-      element.style.opacity = "0";
-    });
-
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        element.style.display = "none";
-        resolve();
-      }, duration);
-    });
+    return anime({
+      targets: element,
+      opacity: [1, 0],
+      duration,
+      easing: "easeOutQuad",
+    }).finished;
   },
 
   slideIn(element, direction = "right", duration = 300) {
     const transforms = {
-      right: "translateX(100%)",
-      left: "translateX(-100%)",
-      top: "translateY(-100%)",
-      bottom: "translateY(100%)",
+      right: ["100%", "0%"],
+      left: ["-100%", "0%"],
+      top: ["0%", "-100%"],
+      bottom: ["0%", "100%"],
     };
 
-    element.style.transform = transforms[direction];
-    element.style.transition = `transform ${duration}ms cubic-bezier(0.4, 0, 0.2, 1)`;
+    const axis = direction === "left" || direction === "right" ? "X" : "Y";
 
-    requestAnimationFrame(() => {
-      element.style.transform = "translate(0, 0)";
-    });
-
-    return new Promise((resolve) => setTimeout(resolve, duration));
+    return anime({
+      targets: element,
+      [`translate${axis}`]: transforms[direction],
+      duration,
+      easing: "easeOutCubic",
+    }).finished;
   },
 
   slideOut(element, direction = "right", duration = 300) {
     const transforms = {
-      right: "translateX(100%)",
-      left: "translateX(-100%)",
-      top: "translateY(-100%)",
-      bottom: "translateY(100%)",
+      right: ["0%", "100%"],
+      left: ["0%", "-100%"],
+      top: ["-100%", "0%"],
+      bottom: ["100%", "0%"],
     };
 
-    element.style.transform = "translate(0, 0)";
-    element.style.transition = `transform ${duration}ms cubic-bezier(0.4, 0, 0.2, 1)`;
+    const axis = direction === "left" || direction === "right" ? "X" : "Y";
 
-    requestAnimationFrame(() => {
-      element.style.transform = transforms[direction];
-    });
-
-    return new Promise((resolve) => setTimeout(resolve, duration));
+    return anime({
+      targets: element,
+      [`translate${axis}`]: transforms[direction],
+      duration,
+      easing: "easeInCubic",
+    }).finished;
   },
 
   scale(element, from = 0, to = 1, duration = 300) {
-    element.style.transform = `scale(${from})`;
-    element.style.transition = `transform ${duration}ms cubic-bezier(0.34, 1.56, 0.64, 1)`;
-
-    requestAnimationFrame(() => {
-      element.style.transform = `scale(${to})`;
-    });
-
-    return new Promise((resolve) => setTimeout(resolve, duration));
+    return anime({
+      targets: element,
+      scale: [from, to],
+      duration,
+      easing: "easeOutElastic(1, .6)",
+    }).finished;
   },
 
   bounce(element, iterations = 3) {
-    element.style.animation = `bounce 0.5s ease ${iterations}`;
-
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        element.style.animation = "";
-        resolve();
-      }, 500 * iterations);
-    });
+    return anime({
+      targets: element,
+      translateY: [
+        { value: -20, duration: 250 },
+        { value: 0, duration: 250 },
+      ],
+      loop: iterations,
+      easing: "easeInOutQuad",
+    }).finished;
   },
 
   shake(element) {
-    element.style.animation = "shake 0.5s ease";
-
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        element.style.animation = "";
-        resolve();
-      }, 500);
-    });
+    return anime({
+      targets: element,
+      translateX: [
+        { value: -10, duration: 50 },
+        { value: 10, duration: 50 },
+        { value: -10, duration: 50 },
+        { value: 10, duration: 50 },
+        { value: 0, duration: 50 },
+      ],
+      easing: "easeInOutSine",
+    }).finished;
   },
 
   pulse(element, duration = 1000) {
-    element.style.animation = `pulse ${duration}ms ease-in-out infinite`;
+    const animation = anime({
+      targets: element,
+      opacity: [1, 0.5, 1],
+      duration,
+      loop: true,
+      easing: "easeInOutSine",
+    });
 
     return {
       stop: () => {
-        element.style.animation = "";
+        animation.pause();
+        anime({ targets: element, opacity: 1, duration: 200 });
       },
     };
   },
 
   ripple(element, x, y) {
-    const ripple = document.createElement("span");
-    ripple.className = "ripple";
-    ripple.style.cssText = `
-      position: absolute;
-      border-radius: 50%;
-      background: rgba(255, 255, 255, 0.6);
-      transform: scale(0);
-      animation: ripple-animation 0.6s ease-out;
-      pointer-events: none;
-    `;
-
-    const rect = element.getBoundingClientRect();
+    const $el = $(element);
+    const rect = $el[0].getBoundingClientRect();
     const size = Math.max(rect.width, rect.height);
     const left = x - rect.left - size / 2;
     const top = y - rect.top - size / 2;
 
-    ripple.style.width = ripple.style.height = `${size}px`;
-    ripple.style.left = `${left}px`;
-    ripple.style.top = `${top}px`;
+    const rippleEl = document.createElement("span");
+    Object.assign(rippleEl.style, {
+      position: "absolute",
+      borderRadius: "50%",
+      background: "rgba(255, 255, 255, 0.6)",
+      width: `${size}px`,
+      height: `${size}px`,
+      left: `${left}px`,
+      top: `${top}px`,
+      transform: "scale(0)",
+      opacity: "1",
+      pointerEvents: "none",
+    });
 
-    element.style.position = "relative";
-    element.style.overflow = "hidden";
-    element.appendChild(ripple);
+    $el.css({ position: "relative", overflow: "hidden" }).append(rippleEl);
 
-    setTimeout(() => ripple.remove(), 600);
+    anime({
+      targets: rippleEl,
+      scale: [0, 4],
+      opacity: [1, 0],
+      duration: 600,
+      easing: "easeOutQuad",
+      complete: () => rippleEl.remove(),
+    });
   },
 
   staggeredFadeIn(elements, delay = 100) {
-    const promises = [];
-
-    elements.forEach((element, index) => {
-      const promise = new Promise((resolve) => {
-        setTimeout(() => {
-          this.fadeIn(element, 300).then(resolve);
-        }, index * delay);
-      });
-      promises.push(promise);
-    });
-
-    return Promise.all(promises);
+    return anime({
+      targets: elements,
+      opacity: [0, 1],
+      translateY: [10, 0],
+      duration: 300,
+      delay: anime.stagger(delay),
+      easing: "easeOutQuad",
+    }).finished;
   },
 
   parallax(element, speed = 0.5) {
+    const $el = $(element);
+    const $window = $(window);
+
     const handleScroll = () => {
-      const scrollY = window.scrollY;
-      const rect = element.getBoundingClientRect();
+      const scrollY = $window.scrollTop();
+      const rect = $el[0].getBoundingClientRect();
       const elementY = rect.top + scrollY;
       const distance = scrollY - elementY;
 
-      element.style.transform = `translateY(${distance * speed}px)`;
+      anime({
+        targets: element,
+        translateY: distance * speed,
+        duration: 0,
+      });
     };
 
-    window.addEventListener("scroll", handleScroll);
+    $window.on("scroll", handleScroll);
 
     return {
-      destroy: () => window.removeEventListener("scroll", handleScroll),
+      destroy: () => $window.off("scroll", handleScroll),
     };
   },
 
   countUp(element, start = 0, end = 100, duration = 1000) {
-    const startTime = performance.now();
-    const range = end - start;
+    const obj = { count: start };
+    const $el = $(element);
 
-    const animate = (currentTime) => {
-      const elapsed = currentTime - startTime;
-      const progress = Math.min(elapsed / duration, 1);
-
-      const easeOutQuart = 1 - Math.pow(1 - progress, 4);
-      const currentValue = start + range * easeOutQuart;
-
-      element.textContent = Math.round(currentValue);
-
-      if (progress < 1) {
-        requestAnimationFrame(animate);
-      }
-    };
-
-    requestAnimationFrame(animate);
+    anime({
+      targets: obj,
+      count: end,
+      duration,
+      easing: "easeOutQuart",
+      round: 1,
+      update: () => $el.text(Math.round(obj.count)),
+    });
   },
 
   typewriter(element, text, speed = 50) {
-    let i = 0;
-    element.textContent = "";
-
+    const $el = $(element);
+    $el.text("");
+    
     return new Promise((resolve) => {
+      let i = 0;
       const type = () => {
         if (i < text.length) {
-          element.textContent += text.charAt(i);
+          $el.text($el.text() + text.charAt(i));
           i++;
           setTimeout(type, speed);
         } else {
@@ -205,134 +209,96 @@ export const animations = {
   },
 
   morphNumber(element, from, to, duration = 1000) {
-    const startTime = performance.now();
-    const range = to - from;
+    const obj = { value: from };
+    const $el = $(element);
+    const isInteger = Number.isInteger(to);
 
-    const animate = (currentTime) => {
-      const elapsed = currentTime - startTime;
-      const progress = Math.min(elapsed / duration, 1);
-
-      const easeInOutCubic =
-        progress < 0.5
-          ? 4 * progress * progress * progress
-          : 1 - Math.pow(-2 * progress + 2, 3) / 2;
-
-      const current = from + range * easeInOutCubic;
-      element.textContent = Number.isInteger(to)
-        ? Math.round(current)
-        : current.toFixed(2);
-
-      if (progress < 1) {
-        requestAnimationFrame(animate);
-      }
-    };
-
-    requestAnimationFrame(animate);
+    anime({
+      targets: obj,
+      value: to,
+      duration,
+      easing: "easeInOutCubic",
+      update: () => {
+        $el.text(isInteger ? Math.round(obj.value) : obj.value.toFixed(2));
+      },
+    });
   },
 
   highlightElement(element, duration = 2000) {
-    const originalBg = element.style.backgroundColor;
-    element.style.transition = `background-color 300ms ease`;
-    element.style.backgroundColor = "#fef3c7";
+    anime.timeline({
+      targets: element,
+    })
+    .add({
+      backgroundColor: "#fef3c7",
+      duration: 300,
+      easing: "easeOutQuad",
+    })
+    .add({
+      backgroundColor: "rgba(255, 255, 255, 0)",
+      duration: 300,
+      delay: duration - 600,
+      easing: "easeOutQuad",
+    });
+  },
 
-    setTimeout(() => {
-      element.style.backgroundColor = originalBg;
-    }, duration);
+  spin(element, duration = 1000) {
+    const animation = anime({
+      targets: element,
+      rotate: "1turn",
+      duration,
+      loop: true,
+      easing: "linear",
+    });
+
+    return {
+      stop: () => animation.pause(),
+    };
+  },
+
+  zoomIn(element, duration = 300) {
+    return anime({
+      targets: element,
+      scale: [0, 1],
+      opacity: [0, 1],
+      duration,
+      easing: "easeOutBack",
+    }).finished;
+  },
+
+  zoomOut(element, duration = 300) {
+    return anime({
+      targets: element,
+      scale: [1, 0],
+      opacity: [1, 0],
+      duration,
+      easing: "easeInBack",
+    }).finished;
+  },
+
+  rotate(element, angle = 360, duration = 500) {
+    return anime({
+      targets: element,
+      rotate: angle,
+      duration,
+      easing: "easeInOutQuad",
+    }).finished;
+  },
+
+  flip(element, axis = "Y", duration = 600) {
+    return anime({
+      targets: element,
+      [`rotate${axis}`]: [0, 180],
+      duration,
+      easing: "easeInOutQuad",
+    }).finished;
+  },
+
+  elastic(element, direction = "X", duration = 800) {
+    return anime({
+      targets: element,
+      [`scale${direction}`]: [1, 1.2, 0.9, 1.05, 0.95, 1],
+      duration,
+      easing: "easeOutElastic(1, .5)",
+    }).finished;
   },
 };
-
-export const createAnimatedCSS = () => {
-  const style = document.createElement("style");
-  style.textContent = `
-    @keyframes fadeIn {
-      from { opacity: 0; }
-      to { opacity: 1; }
-    }
-    
-    @keyframes fadeOut {
-      from { opacity: 1; }
-      to { opacity: 0; }
-    }
-    
-    @keyframes slideInRight {
-      from { transform: translateX(100%); }
-      to { transform: translateX(0); }
-    }
-    
-    @keyframes slideInLeft {
-      from { transform: translateX(-100%); }
-      to { transform: translateX(0); }
-    }
-    
-    @keyframes slideInUp {
-      from { transform: translateY(100%); }
-      to { transform: translateY(0); }
-    }
-    
-    @keyframes slideInDown {
-      from { transform: translateY(-100%); }
-      to { transform: translateY(0); }
-    }
-    
-    @keyframes bounce {
-      0%, 100% { transform: translateY(0); }
-      50% { transform: translateY(-20px); }
-    }
-    
-    @keyframes shake {
-      0%, 100% { transform: translateX(0); }
-      10%, 30%, 50%, 70%, 90% { transform: translateX(-10px); }
-      20%, 40%, 60%, 80% { transform: translateX(10px); }
-    }
-    
-    @keyframes pulse {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.5; }
-    }
-    
-    @keyframes ripple-animation {
-      to { transform: scale(4); opacity: 0; }
-    }
-    
-    @keyframes spin {
-      from { transform: rotate(0deg); }
-      to { transform: rotate(360deg); }
-    }
-    
-    @keyframes ping {
-      75%, 100% { transform: scale(2); opacity: 0; }
-    }
-    
-    .animate-fadeIn { animation: fadeIn 0.3s ease-in; }
-    .animate-fadeOut { animation: fadeOut 0.3s ease-out; }
-    .animate-slideInRight { animation: slideInRight 0.3s ease; }
-    .animate-slideInLeft { animation: slideInLeft 0.3s ease; }
-    .animate-slideInUp { animation: slideInUp 0.3s ease; }
-    .animate-slideInDown { animation: slideInDown 0.3s ease; }
-    .animate-bounce { animation: bounce 0.5s ease; }
-    .animate-shake { animation: shake 0.5s ease; }
-    .animate-pulse { animation: pulse 2s ease-in-out infinite; }
-    .animate-spin { animation: spin 1s linear infinite; }
-    .animate-ping { animation: ping 1s cubic-bezier(0, 0, 0.2, 1) infinite; }
-    
-    .transition-all {
-      transition: all 0.3s ease;
-    }
-    
-    .transition-colors {
-      transition-property: background-color, border-color, color, fill, stroke;
-      transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-      transition-duration: 150ms;
-    }
-    
-    .transition-transform {
-      transition-property: transform;
-      transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-      transition-duration: 150ms;
-    }
-  `;
-
-  document.head.appendChild(style);
-};
-
-createAnimatedCSS();

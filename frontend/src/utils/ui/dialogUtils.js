@@ -1,4 +1,5 @@
 import Swal from "sweetalert2";
+import { SwalColors } from "/src/utils/colors.js";
 
 export const dialogUtils = {
   async confirmDelete(itemName, itemType = "item") {
@@ -10,8 +11,8 @@ export const dialogUtils = {
       `,
       icon: "warning",
       showCancelButton: true,
-      confirmButtonColor: "#ef4444",
-      cancelButtonColor: "#6b7280",
+      confirmButtonColor: SwalColors.danger,
+      cancelButtonColor: SwalColors.cancel,
       confirmButtonText: "Yes, delete it!",
       cancelButtonText: "Cancel",
     });
@@ -23,8 +24,8 @@ export const dialogUtils = {
       html: message,
       icon: "question",
       showCancelButton: true,
-      confirmButtonColor: "#4f46e5",
-      cancelButtonColor: "#6b7280",
+      confirmButtonColor: SwalColors.primary,
+      cancelButtonColor: SwalColors.cancel,
       confirmButtonText: confirmText,
       cancelButtonText: "Cancel",
     });
@@ -123,7 +124,7 @@ export const dialogUtils = {
       html: message,
       icon,
       confirmButtonText: "OK",
-      confirmButtonColor: "#4f46e5",
+      confirmButtonColor: SwalColors.primary,
     });
   },
 
@@ -133,7 +134,7 @@ export const dialogUtils = {
       html: message,
       icon: "success",
       confirmButtonText: "OK",
-      confirmButtonColor: "#10b981",
+      confirmButtonColor: SwalColors.success,
       timer: 3000,
       timerProgressBar: true,
     });
@@ -145,7 +146,7 @@ export const dialogUtils = {
       html: message,
       icon: "error",
       confirmButtonText: "OK",
-      confirmButtonColor: "#ef4444",
+      confirmButtonColor: SwalColors.danger,
     });
   },
 
@@ -155,7 +156,7 @@ export const dialogUtils = {
       html: message,
       icon: "warning",
       confirmButtonText: "OK",
-      confirmButtonColor: "#f59e0b",
+      confirmButtonColor: SwalColors.warning,
     });
   },
 
@@ -256,12 +257,12 @@ export const dialogUtils = {
             }>`;
             break;
           case "date":
-            inputHTML = `<input type="date" id="${id}" class="swal2-input w-full" value="${value}" ${
+            inputHTML = `<input type="date" id="${id}" class="swal2-input w-full text-black" value="${value}" ${
               required ? "required" : ""
             }>`;
             break;
           case "datetime-local":
-            inputHTML = `<input type="datetime-local" id="${id}" class="swal2-input w-full" value="${value}" ${
+            inputHTML = `<input type="datetime-local" id="${id}" class="swal2-input w-full text-black" value="${value}" ${
               required ? "required" : ""
             }>`;
             break;
@@ -330,8 +331,8 @@ export const dialogUtils = {
         <input type="${inputType}" id="confirmInput" class="swal2-input w-full" placeholder="${inputLabel}">
       `,
       showCancelButton: true,
-      confirmButtonColor: "#4f46e5",
-      cancelButtonColor: "#6b7280",
+      confirmButtonColor: SwalColors.primary,
+      cancelButtonColor: SwalColors.cancel,
       preConfirm: () => {
         const value = document.getElementById("confirmInput").value;
         if (!value) {

@@ -1,16 +1,51 @@
 import dayjs from "dayjs";
 import { statsService } from "/src/services/statsService.js";
 import QRCode from "qrcode";
-import JsBarcode from "jsbarcode";
-import jsPDF from "jspdf";
-import html2canvas from "html2canvas";
+import pdfMake from "pdfmake/build/pdfmake";
+
+const initPdfMake = async () => {
+  try {
+    const pdfFonts = await import("pdfmake/build/vfs_fonts");
+    if (pdfFonts.pdfMake?.vfs) {
+      pdfMake.vfs = pdfFonts.pdfMake.vfs;
+    } else if (pdfFonts.default?.pdfMake?.vfs) {
+      pdfMake.vfs = pdfFonts.default.pdfMake.vfs;
+    } else if (pdfFonts.default?.vfs) {
+      pdfMake.vfs = pdfFonts.default.vfs;
+    }
+  } catch (error) {
+    console.error("Failed to load pdfMake fonts:", error);
+  }
+};
+
+initPdfMake();
 
 export const TicketGenerator = {
+  generateVerificationCode(booking, performance) {
+    const bookingIdStr = String(booking.id || booking.bookingReference);
+    const perfIdStr = String(booking.performanceId);
+    const timestamp = new Date(booking.bookingDate || booking.date).getTime();
+    const seed = `${bookingIdStr}-${perfIdStr}-${timestamp}`;
+
+    let hash = 0;
+    for (let i = 0; i < seed.length; i++) {
+      const char = seed.charCodeAt(i);
+      hash = (hash << 5) - hash + char;
+      hash = hash & hash;
+    }
+
+    const verificationCode = `WOM${Math.abs(hash)
+      .toString()
+      .padStart(10, "0")
+      .slice(0, 10)}`;
+    return verificationCode;
+  },
+
   async generateQRCode(data) {
     try {
       const qrData = JSON.stringify(data);
       const qrCodeDataUrl = await QRCode.toDataURL(qrData, {
-        width: 300,
+        width: 400,
         margin: 2,
         color: {
           dark: "#1e293b",
@@ -24,559 +59,635 @@ export const TicketGenerator = {
     }
   },
 
-  generateBarcode(bookingId) {
-    try {
-      const canvas = $("<canvas>")[0];
-      JsBarcode(canvas, bookingId, {
-        format: "CODE128",
-        width: 3,
-        height: 100,
-        displayValue: true,
-        fontSize: 16,
-        margin: 10,
-        background: "#ffffff",
-        lineColor: "#1e293b",
-      });
-      return canvas.toDataURL();
-    } catch (error) {
-      console.error("Barcode generation error:", error);
-      return "";
-    }
-  },
+  async generatePDFDefinition(
+    booking,
+    performance,
+    customerInfo,
+    showtime = null
+  ) {
+    const verificationCode = this.generateVerificationCode(
+      booking,
+      performance
+    );
 
-  async generateTicketHTML(booking, performance, customerInfo) {
+    const performanceDate =
+      showtime?.dateTime ||
+      showtime?.date ||
+      performance?.dateTime ||
+      performance?.date ||
+      booking.performanceDate;
+    const performanceVenue =
+      performance?.venueName ||
+      performance?.location ||
+      performance?.venue ||
+      "TBA";
+
     const qrData = {
-      bookingId: booking.id,
+      verificationCode,
+      bookingId: booking.id || booking.bookingReference,
       performanceId: booking.performanceId,
-      date: performance?.date,
+      date: performanceDate,
       seats: booking.seats,
       customerName: customerInfo?.name,
       amount: booking.amount,
     };
 
     const qrCodeUrl = await this.generateQRCode(qrData);
-    const barcodeUrl = this.generateBarcode(booking.id);
 
-    const seatTicketList = booking.seatTicketTypes
-      ? Object.entries(booking.seatTicketTypes)
-          .map(
-            ([seat, ticket]) => `
-          <tr class="border-b border-gray-100 hover:bg-gray-50">
-            <td class="px-6 py-4">
-              <span class="inline-flex items-center justify-center w-10 h-10 bg-indigo-100 text-indigo-700 rounded-lg font-bold text-sm">${seat}</span>
-            </td>
-            <td class="px-6 py-4 text-gray-700 font-medium">${ticket.name}</td>
-            <td class="px-6 py-4 text-right text-gray-900 font-bold">${statsService.formatCurrency(
-              ticket.price
-            )}</td>
-          </tr>
-        `
-          )
-          .join("")
-      : booking.seats
-          .map(
-            (seat) => `
-          <tr class="border-b border-gray-100 hover:bg-gray-50">
-            <td class="px-6 py-4">
-              <span class="inline-flex items-center justify-center w-10 h-10 bg-indigo-100 text-indigo-700 rounded-lg font-bold text-sm">${seat}</span>
-            </td>
-            <td class="px-6 py-4 text-gray-700 font-medium">${
-              booking.ticketType || "Standard"
-            }</td>
-            <td class="px-6 py-4 text-right text-gray-900 font-bold">${statsService.formatCurrency(
-              booking.amount / booking.seats.length
-            )}</td>
-          </tr>
-        `
-          )
-          .join("");
+    const seatTableBody = booking.seatTicketTypes
+      ? Object.entries(booking.seatTicketTypes).map(([seatId, ticket]) => {
+          const seatParts = seatId.split("-");
+          const seatNumber = seatParts[seatParts.length - 1] || seatId;
+          const section = seatParts.length >= 3 ? seatParts[2] : "N/A";
+          const tier = ticket.tier || ticket.section || "Standard";
 
-    return `
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>E-Ticket - ${booking.id}</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script>
-    tailwind.config = {
-      theme: {
-        extend: {
-          colors: {
-            primary: '#6366f1',
-            secondary: '#8b5cf6',
-          }
-        }
+          return [
+            { text: seatNumber, style: "seatCell" },
+            { text: section, style: "ticketCell" },
+            { text: tier, style: "ticketCell" },
+            {
+              text: statsService.formatCurrency(ticket.price),
+              style: "priceCell",
+              alignment: "right",
+            },
+          ];
+        })
+      : booking.seats.map((seatId) => {
+          const seatParts = typeof seatId === "string" ? seatId.split("-") : [];
+          const seatNumber = seatParts[seatParts.length - 1] || seatId;
+          const section = seatParts.length >= 3 ? seatParts[2] : "N/A";
+          const tier = booking.ticketType || "Standard";
+
+          return [
+            { text: seatNumber, style: "seatCell" },
+            { text: section, style: "ticketCell" },
+            { text: tier, style: "ticketCell" },
+            {
+              text: statsService.formatCurrency(
+                booking.amount / booking.seats.length
+              ),
+              style: "priceCell",
+              alignment: "right",
+            },
+          ];
+        });
+
+    return {
+      pageSize: "A4",
+      pageMargins: [40, 40, 40, 40],
+      content: [
+        {
+          text: "E-TICKET",
+          style: "header",
+          alignment: "center",
+          margin: [0, 0, 0, 10],
+        },
+        {
+          text: "Western Orchestral Music Performance",
+          style: "subheader",
+          alignment: "center",
+          margin: [0, 0, 0, 20],
+        },
+        {
+          canvas: [
+            {
+              type: "rect",
+              x: 0,
+              y: 0,
+              w: 515,
+              h: 2,
+              color: "#6366f1",
+            },
+          ],
+          margin: [0, 0, 0, 20],
+        },
+        {
+          columns: [
+            {
+              width: "*",
+              stack: [
+                { text: "BOOKING ID", style: "label" },
+                { text: booking.id, style: "value", margin: [0, 5, 0, 0] },
+              ],
+            },
+            {
+              width: "*",
+              stack: [
+                { text: "BOOKING DATE", style: "label" },
+                {
+                  text: dayjs(booking.bookingDate).format("MMM D, YYYY"),
+                  style: "value",
+                  margin: [0, 5, 0, 0],
+                },
+              ],
+            },
+          ],
+          margin: [0, 0, 0, 20],
+        },
+        {
+          text: "Customer Information",
+          style: "sectionHeader",
+          margin: [0, 0, 0, 10],
+        },
+        {
+          table: {
+            widths: [120, "*"],
+            body: [
+              [
+                { text: "Name:", style: "tableLabel" },
+                { text: customerInfo?.name || "Guest", style: "tableValue" },
+              ],
+              [
+                { text: "Email:", style: "tableLabel" },
+                { text: customerInfo?.email || "N/A", style: "tableValue" },
+              ],
+              [
+                { text: "Phone:", style: "tableLabel" },
+                { text: customerInfo?.phone || "N/A", style: "tableValue" },
+              ],
+            ],
+          },
+          layout: "noBorders",
+          margin: [0, 0, 0, 20],
+        },
+        {
+          text: "Performance Details",
+          style: "sectionHeader",
+          margin: [0, 0, 0, 10],
+        },
+        {
+          table: {
+            widths: [120, "*"],
+            body: [
+              [
+                { text: "Title:", style: "tableLabel" },
+                {
+                  text:
+                    performance?.title ||
+                    performance?.name ||
+                    "Unknown Performance",
+                  style: "performanceTitle",
+                },
+              ],
+              [
+                { text: "Date & Time:", style: "tableLabel" },
+                {
+                  text: performanceDate
+                    ? dayjs(performanceDate).format(
+                        "dddd, MMMM D, YYYY [at] h:mm A"
+                      )
+                    : "TBA",
+                  style: "tableValue",
+                },
+              ],
+              [
+                { text: "Venue:", style: "tableLabel" },
+                { text: performanceVenue, style: "tableValue" },
+              ],
+              [
+                { text: "Conductor:", style: "tableLabel" },
+                {
+                  text: performance?.conductor || "N/A",
+                  style: "tableValue",
+                },
+              ],
+              [
+                { text: "Orchestra:", style: "tableLabel" },
+                {
+                  text: performance?.orchestra || "N/A",
+                  style: "tableValue",
+                },
+              ],
+            ],
+          },
+          layout: "noBorders",
+          margin: [0, 0, 0, 20],
+        },
+        {
+          text: "Seat & Ticket Details",
+          style: "sectionHeader",
+          margin: [0, 0, 0, 10],
+        },
+        {
+          table: {
+            headerRows: 1,
+            widths: ["auto", "*", "*", "auto"],
+            body: [
+              [
+                { text: "Seat", style: "tableHeader" },
+                { text: "Section/Zone", style: "tableHeader" },
+                { text: "Tier", style: "tableHeader" },
+                { text: "Price", style: "tableHeader", alignment: "right" },
+              ],
+              ...seatTableBody,
+              [
+                { text: "", border: [false, false, false, false] },
+                { text: "", border: [false, false, false, false] },
+                { text: "", border: [false, false, false, false] },
+                { text: "", border: [false, false, false, false] },
+              ],
+              [
+                { text: "", border: [false, false, false, false] },
+                { text: "", border: [false, false, false, false] },
+                {
+                  text: "TOTAL AMOUNT",
+                  style: "totalLabel",
+                  alignment: "right",
+                  border: [false, false, false, false],
+                },
+                {
+                  text: statsService.formatCurrency(booking.amount),
+                  style: "totalValue",
+                  alignment: "right",
+                  border: [false, false, false, false],
+                },
+              ],
+            ],
+          },
+          layout: {
+            hLineWidth: (i, node) =>
+              i === 1 || i === node.table.body.length - 2 ? 1 : 0,
+            vLineWidth: () => 0,
+            hLineColor: () => "#e5e7eb",
+            paddingLeft: () => 8,
+            paddingRight: () => 8,
+            paddingTop: () => 8,
+            paddingBottom: () => 8,
+          },
+          margin: [0, 0, 0, 20],
+        },
+        {
+          table: {
+            widths: ["*"],
+            body: [
+              [
+                {
+                  text: [
+                    { text: "Important: ", bold: true },
+                    {
+                      text: "Please arrive at least 15 minutes before the performance. Present this e-ticket at the entrance for verification. Late entry may not be permitted.",
+                    },
+                  ],
+                  style: "warningBox",
+                },
+              ],
+            ],
+          },
+          layout: {
+            fillColor: "#fef3c7",
+            hLineWidth: () => 1,
+            vLineWidth: () => 1,
+            hLineColor: () => "#fbbf24",
+            vLineColor: () => "#fbbf24",
+            paddingLeft: () => 12,
+            paddingRight: () => 12,
+            paddingTop: () => 12,
+            paddingBottom: () => 12,
+          },
+          margin: [0, 0, 0, 20],
+        },
+        {
+          text: [
+            "info@wom.hk  |  +852 2333 0600\n",
+            {
+              text: "This ticket is non-refundable and non-transferable. Photography and recording are prohibited.",
+              fontSize: 9,
+              color: "#94a3b8",
+            },
+          ],
+          style: "footer",
+          alignment: "center",
+        },
+        { text: "", pageBreak: "after" },
+        {
+          text: "ENTRY VERIFICATION",
+          style: "header",
+          alignment: "center",
+          margin: [0, 0, 0, 5],
+        },
+        {
+          text: "Scan at Venue Entrance",
+          style: "subheader",
+          alignment: "center",
+          margin: [0, 0, 0, 15],
+        },
+        {
+          columns: [
+            {
+              width: "*",
+              stack: [
+                {
+                  text:
+                    performance?.title || performance?.name || "Performance",
+                  style: "qrTitle",
+                  alignment: "center",
+                },
+                {
+                  text: performanceDate
+                    ? dayjs(performanceDate).format("MMM D, YYYY [at] h:mm A")
+                    : "TBA",
+                  style: "qrInfo",
+                  alignment: "center",
+                  margin: [0, 3, 0, 0],
+                },
+                {
+                  text: performanceVenue,
+                  style: "qrInfo",
+                  alignment: "center",
+                  margin: [0, 2, 0, 0],
+                },
+              ],
+            },
+          ],
+          margin: [0, 0, 0, 15],
+        },
+        {
+          image: qrCodeUrl,
+          width: 220,
+          alignment: "center",
+          margin: [0, 0, 0, 8],
+        },
+        {
+          text: "SCAN QR CODE FOR ENTRY",
+          style: "qrLabel",
+          alignment: "center",
+          margin: [0, 0, 0, 12],
+        },
+        {
+          table: {
+            widths: ["*"],
+            body: [
+              [
+                {
+                  stack: [
+                    {
+                      text: `VERIFICATION CODE`,
+                      style: "verificationHeader",
+                      alignment: "center",
+                      margin: [0, 0, 0, 6],
+                    },
+                    {
+                      text: verificationCode,
+                      style: "verificationCode",
+                      alignment: "center",
+                    },
+                  ],
+                },
+              ],
+            ],
+          },
+          layout: {
+            fillColor: "#f1f5f9",
+            hLineWidth: () => 2,
+            vLineWidth: () => 2,
+            hLineColor: () => "#6366f1",
+            vLineColor: () => "#6366f1",
+            paddingLeft: () => 12,
+            paddingRight: () => 12,
+            paddingTop: () => 8,
+            paddingBottom: () => 8,
+          },
+          margin: [0, 0, 0, 8],
+        },
+        {
+          text: `Booking ID: ${booking.id || booking.bookingReference}`,
+          style: "qrInfo",
+          alignment: "center",
+          margin: [0, 0, 0, 10],
+        },
+        {
+          table: {
+            widths: ["*"],
+            body: [
+              [
+                {
+                  stack: [
+                    {
+                      text: "ENTRY INSTRUCTIONS",
+                      style: "instructionsHeader",
+                      alignment: "center",
+                      margin: [0, 0, 0, 6],
+                    },
+                    {
+                      ul: [
+                        "Present the QR code at the entrance for scanning",
+                        "Have this page ready on your mobile device or printed",
+                        "Arrive at least 15 minutes early for quick entry",
+                        "Each ticket is valid for one-time entry only",
+                      ],
+                      style: "instructionsList",
+                    },
+                  ],
+                },
+              ],
+            ],
+          },
+          layout: {
+            fillColor: "#fef3c7",
+            hLineWidth: () => 1,
+            vLineWidth: () => 1,
+            hLineColor: () => "#fbbf24",
+            vLineColor: () => "#fbbf24",
+            paddingLeft: () => 12,
+            paddingRight: () => 12,
+            paddingTop: () => 10,
+            paddingBottom: () => 10,
+          },
+          margin: [0, 0, 0, 10],
+        },
+        {
+          text: [
+            { text: "Need Assistance?\n", bold: true, fontSize: 11 },
+            "info@wom.hk  |  +852 2333 0600\n",
+            {
+              text: "Western Orchestral Music Performance System",
+              fontSize: 8,
+            },
+          ],
+          style: "footer",
+          alignment: "center",
+        },
+      ],
+      styles: {
+        header: {
+          fontSize: 26,
+          bold: true,
+          color: "#6366f1",
+          letterSpacing: 1,
+        },
+        subheader: {
+          fontSize: 12,
+          color: "#64748b",
+        },
+        sectionHeader: {
+          fontSize: 16,
+          bold: true,
+          color: "#1e293b",
+        },
+        label: {
+          fontSize: 10,
+          color: "#64748b",
+          bold: true,
+        },
+        value: {
+          fontSize: 14,
+          color: "#1e293b",
+          bold: true,
+        },
+        tableLabel: {
+          fontSize: 11,
+          color: "#64748b",
+          bold: true,
+        },
+        tableValue: {
+          fontSize: 11,
+          color: "#1e293b",
+        },
+        performanceTitle: {
+          fontSize: 14,
+          color: "#6366f1",
+          bold: true,
+        },
+        tableHeader: {
+          fontSize: 11,
+          bold: true,
+          color: "#1e293b",
+          fillColor: "#f1f5f9",
+        },
+        seatCell: {
+          fontSize: 11,
+          bold: true,
+          color: "#6366f1",
+        },
+        ticketCell: {
+          fontSize: 11,
+          color: "#1e293b",
+        },
+        priceCell: {
+          fontSize: 11,
+          color: "#1e293b",
+          bold: true,
+        },
+        totalLabel: {
+          fontSize: 13,
+          bold: true,
+          color: "#1e293b",
+        },
+        totalValue: {
+          fontSize: 16,
+          bold: true,
+          color: "#6366f1",
+        },
+        warningBox: {
+          fontSize: 10,
+          color: "#78350f",
+          lineHeight: 1.5,
+        },
+        footer: {
+          fontSize: 10,
+          color: "#64748b",
+        },
+        qrTitle: {
+          fontSize: 14,
+          bold: true,
+          color: "#1e293b",
+        },
+        qrInfo: {
+          fontSize: 10,
+          color: "#64748b",
+        },
+        qrLabel: {
+          fontSize: 13,
+          bold: true,
+          color: "#6366f1",
+          letterSpacing: 0.5,
+        },
+        verificationHeader: {
+          fontSize: 10,
+          bold: true,
+          color: "#64748b",
+          letterSpacing: 0.5,
+        },
+        verificationCode: {
+          fontSize: 18,
+          bold: true,
+          color: "#1e293b",
+          letterSpacing: 2,
+        },
+        instructionsHeader: {
+          fontSize: 12,
+          bold: true,
+          color: "#92400e",
+        },
+        instructionsList: {
+          fontSize: 10,
+          color: "#78350f",
+          lineHeight: 1.4,
+        },
       },
-      corePlugins: {
-        preflight: false,
-      }
-    }
-  </script>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <style>
-    * { 
-      color-scheme: initial !important;
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
-    body {
-      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
-      background: #f8fafc;
-      padding: 0;
-    }
-    @media print {
-      body { background: white !important; padding: 0 !important; }
-      .no-print { display: none !important; }
-      .page-break { page-break-before: always; }
-    }
-    img {
-      image-rendering: -webkit-optimize-contrast;
-      image-rendering: crisp-edges;
-      max-width: 100%;
-      height: auto;
-      display: block;
-    }
-    .gradient-header {
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    }
-    .ticket-card {
-      background: white;
-      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
-    }
-    .info-row {
-      display: flex;
-      align-items: flex-start;
-      gap: 12px;
-      margin-bottom: 16px;
-    }
-    .info-label {
-      color: #64748b;
-      font-size: 13px;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      min-width: 120px;
-    }
-    .info-value {
-      color: #1e293b;
-      font-size: 15px;
-      font-weight: 600;
-      flex: 1;
-    }
-    .page-break {
-      page-break-before: always;
-      break-before: page;
-      display: block;
-      height: 0;
-    }
-  </style>
-</head>
-<body>
-  <div id="ticket-page-1" style="width: 794px; min-height: 1123px; margin: 0 auto; padding: 40px; background: white;">
-    <div class="gradient-header" style="padding: 32px; text-align: center; border-radius: 12px; margin-bottom: 32px;">
-      <div style="display: inline-flex; align-items: center; justify-content: center; width: 80px; height: 80px; background: rgba(255,255,255,0.2); border-radius: 50%; margin-bottom: 16px;">
-        <i class="fas fa-music" style="font-size: 36px; color: white;"></i>
-      </div>
-      <h1 style="color: white; font-size: 42px; font-weight: 800; margin-bottom: 8px; letter-spacing: 2px;">E-TICKET</h1>
-      <p style="color: rgba(255,255,255,0.9); font-size: 16px; font-weight: 500;">Western Orchestral Music Performance</p>
-    </div>
-
-    <div style="background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); border: 2px solid #0ea5e9; border-radius: 12px; padding: 24px; margin-bottom: 32px;">
-      <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px;">
-        <div>
-          <div class="info-label" style="color: #0284c7;">
-            <i class="fas fa-ticket-alt" style="margin-right: 6px;"></i>BOOKING ID
-          </div>
-          <div style="font-size: 24px; font-weight: 800; color: #0c4a6e; font-family: 'Courier New', monospace;">${
-            booking.id
-          }</div>
-        </div>
-        <div>
-          <div class="info-label" style="color: #0284c7;">
-            <i class="fas fa-calendar-check" style="margin-right: 6px;"></i>BOOKING DATE
-          </div>
-          <div style="font-size: 18px; font-weight: 700; color: #0c4a6e;">${dayjs(
-            booking.bookingDate
-          ).format("MMM D, YYYY")}</div>
-        </div>
-      </div>
-    </div>
-
-    <div style="background: #f8fafc; border-radius: 12px; padding: 28px; margin-bottom: 32px;">
-      <h2 style="color: #1e293b; font-size: 20px; font-weight: 700; margin-bottom: 20px; display: flex; align-items: center; gap: 10px;">
-        <i class="fas fa-user-circle" style="color: #6366f1;"></i>
-        Customer Information
-      </h2>
-      <div style="display: grid; gap: 12px;">
-        <div class="info-row">
-          <div class="info-label">Name</div>
-          <div class="info-value">${customerInfo?.name || "Guest"}</div>
-        </div>
-        <div class="info-row">
-          <div class="info-label">Email</div>
-          <div class="info-value">${customerInfo?.email || "N/A"}</div>
-        </div>
-        <div class="info-row">
-          <div class="info-label">Phone</div>
-          <div class="info-value">${customerInfo?.phone || "N/A"}</div>
-        </div>
-      </div>
-    </div>
-
-    <div style="background: linear-gradient(135deg, #faf5ff 0%, #f3e8ff 100%); border: 2px solid #a855f7; border-radius: 12px; padding: 28px; margin-bottom: 32px;">
-      <h2 style="color: #581c87; font-size: 20px; font-weight: 700; margin-bottom: 20px; display: flex; align-items: center; gap: 10px;">
-        <i class="fas fa-theater-masks" style="color: #a855f7;"></i>
-        Performance Details
-      </h2>
-      <div style="background: white; border-radius: 8px; padding: 20px; margin-bottom: 16px;">
-        <h3 style="color: #7c3aed; font-size: 26px; font-weight: 800; margin-bottom: 16px;">${
-          performance?.title || "Unknown Performance"
-        }</h3>
-        <div style="display: grid; gap: 12px;">
-          <div class="info-row">
-            <div class="info-label"><i class="fas fa-calendar-alt"></i> Date & Time</div>
-            <div class="info-value">${
-              performance?.date
-                ? dayjs(performance.date).format(
-                    "dddd, MMMM D, YYYY [at] h:mm A"
-                  )
-                : "N/A"
-            }</div>
-          </div>
-          <div class="info-row">
-            <div class="info-label"><i class="fas fa-map-marker-alt"></i> Venue</div>
-            <div class="info-value">${performance?.venue || "N/A"}</div>
-          </div>
-          <div class="info-row">
-            <div class="info-label"><i class="fas fa-user-tie"></i> Conductor</div>
-            <div class="info-value">${performance?.conductor || "N/A"}</div>
-          </div>
-          <div class="info-row">
-            <div class="info-label"><i class="fas fa-music"></i> Orchestra</div>
-            <div class="info-value">${performance?.orchestra || "N/A"}</div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div style="margin-bottom: 32px;">
-      <h2 style="color: #1e293b; font-size: 20px; font-weight: 700; margin-bottom: 16px; display: flex; align-items: center; gap: 10px;">
-        <i class="fas fa-chair" style="color: #6366f1;"></i>
-        Seat & Ticket Details
-      </h2>
-      <div style="background: white; border: 2px solid #e2e8f0; border-radius: 12px; overflow: hidden;">
-        <table style="width: 100%; border-collapse: collapse;">
-          <thead>
-            <tr style="background: #1e293b;">
-              <th style="padding: 16px 24px; text-align: left; color: white; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Seat</th>
-              <th style="padding: 16px 24px; text-align: left; color: white; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Ticket Type</th>
-              <th style="padding: 16px 24px; text-align: right; color: white; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Price</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${seatTicketList}
-          </tbody>
-          <tfoot>
-            <tr style="background: #f1f5f9; border-top: 3px solid #6366f1;">
-              <td colspan="2" style="padding: 20px 24px; text-align: right; font-size: 18px; font-weight: 700; color: #1e293b;">TOTAL AMOUNT</td>
-              <td style="padding: 20px 24px; text-align: right; font-size: 24px; font-weight: 800; color: #6366f1;">${statsService.formatCurrency(
-                booking.amount
-              )}</td>
-            </tr>
-          </tfoot>
-        </table>
-      </div>
-    </div>
-
-    <div style="background: #fef3c7; border: 2px solid #fbbf24; border-radius: 12px; padding: 20px; margin-bottom: 24px;">
-      <div style="display: flex; align-items: flex-start; gap: 12px;">
-        <i class="fas fa-info-circle" style="color: #d97706; font-size: 20px; margin-top: 2px;"></i>
-        <div>
-          <p style="color: #92400e; font-size: 14px; font-weight: 600; line-height: 1.6; margin: 0;">
-            <strong>Important:</strong> Please arrive at least 15 minutes before the performance. Present this e-ticket (digital or printed) at the entrance for verification. Late entry may not be permitted.
-          </p>
-        </div>
-      </div>
-    </div>
-
-    <div style="background: #f8fafc; border-radius: 8px; padding: 20px; text-align: center;">
-      <p style="color: #64748b; font-size: 13px; margin-bottom: 8px;">
-        <i class="fas fa-envelope" style="margin-right: 6px;"></i>
-        <strong>info@wom.hk</strong>
-        <span style="margin: 0 12px; color: #cbd5e1;">|</span>
-        <i class="fas fa-phone" style="margin-right: 6px;"></i>
-        <strong>+852 2333 0600</strong>
-      </p>
-      <p style="color: #94a3b8; font-size: 11px; margin: 0;">
-        This ticket is non-refundable and non-transferable. Photography and recording are prohibited.
-      </p>
-    </div>
-  </div>
-
-  <div class="page-break"></div>
-
-  <div id="ticket-page-2" style="width: 794px; min-height: 1123px; margin: 0 auto; padding: 40px; background: white;">
-    <div class="gradient-header" style="padding: 32px; text-align: center; border-radius: 12px; margin-bottom: 40px;">
-      <div style="display: inline-flex; align-items: center; justify-content: center; width: 80px; height: 80px; background: rgba(255,255,255,0.2); border-radius: 50%; margin-bottom: 16px;">
-        <i class="fas fa-qrcode" style="font-size: 36px; color: white;"></i>
-      </div>
-      <h1 style="color: white; font-size: 42px; font-weight: 800; margin-bottom: 8px; letter-spacing: 2px;">ENTRY VERIFICATION</h1>
-      <p style="color: rgba(255,255,255,0.9); font-size: 16px; font-weight: 500;">Scan at Venue Entrance</p>
-    </div>
-
-    <div style="background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); border: 3px solid #0ea5e9; border-radius: 16px; padding: 32px; margin-bottom: 40px; text-align: center;">
-      <div style="background: white; border-radius: 12px; padding: 20px; margin-bottom: 16px; display: inline-block;">
-        <h3 style="color: #0c4a6e; font-size: 18px; font-weight: 700; margin-bottom: 8px;">${
-          performance?.title || "Performance"
-        }</h3>
-        <p style="color: #0284c7; font-size: 14px; font-weight: 600; margin-bottom: 4px;">
-          <i class="fas fa-calendar-alt" style="margin-right: 6px;"></i>${
-            performance?.date
-              ? dayjs(performance.date).format("MMM D, YYYY [at] h:mm A")
-              : "N/A"
-          }
-        </p>
-        <p style="color: #0284c7; font-size: 14px; font-weight: 600;">
-          <i class="fas fa-map-marker-alt" style="margin-right: 6px;"></i>${
-            performance?.venue || "N/A"
-          }
-        </p>
-      </div>
-    </div>
-
-    <div style="margin-bottom: 40px;">
-      <div style="background: linear-gradient(135deg, #eef2ff 0%, #e0e7ff 100%); border: 4px solid #6366f1; border-radius: 16px; padding: 40px; text-align: center; margin-bottom: 32px;">
-        <div style="background: white; border-radius: 12px; padding: 24px; display: inline-block; box-shadow: 0 10px 30px rgba(99, 102, 241, 0.2);">
-          <img src="${qrCodeUrl}" alt="QR Code" style="width: 300px; height: 300px; display: block;">
-        </div>
-        <div style="background: #6366f1; color: white; padding: 16px; border-radius: 12px; margin-top: 20px; display: inline-block; min-width: 300px;">
-          <i class="fas fa-mobile-alt" style="font-size: 24px; margin-bottom: 8px;"></i>
-          <p style="font-size: 18px; font-weight: 700; margin: 0;">SCAN QR CODE</p>
-        </div>
-      </div>
-
-      <div style="background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%); border: 4px solid #6b7280; border-radius: 16px; padding: 40px; text-align: center;">
-        <div style="background: white; border-radius: 12px; padding: 24px; display: inline-block; box-shadow: 0 10px 30px rgba(107, 114, 128, 0.2);">
-          <img src="${barcodeUrl}" alt="Barcode" style="width: 450px; height: 120px; display: block;">
-        </div>
-        <div style="background: #1e293b; color: white; padding: 16px; border-radius: 12px; margin-top: 20px; display: inline-block; min-width: 300px;">
-          <i class="fas fa-barcode" style="font-size: 24px; margin-bottom: 8px;"></i>
-          <p style="font-size: 18px; font-weight: 700; margin: 0;">BOOKING ID: ${
-            booking.id
-          }</p>
-        </div>
-      </div>
-    </div>
-
-    <div style="background: #fef3c7; border: 3px solid #fbbf24; border-radius: 12px; padding: 28px; margin-bottom: 32px;">
-      <h3 style="color: #92400e; font-size: 18px; font-weight: 700; margin-bottom: 16px; text-align: center;">
-        <i class="fas fa-exclamation-triangle" style="margin-right: 8px;"></i>ENTRY INSTRUCTIONS
-      </h3>
-      <div style="color: #78350f; font-size: 14px; line-height: 1.8;">
-        <div style="display: flex; align-items: flex-start; gap: 12px; margin-bottom: 12px;">
-          <i class="fas fa-check-circle" style="color: #d97706; font-size: 18px; margin-top: 2px; flex-shrink: 0;"></i>
-          <p style="margin: 0;">Present either the <strong>QR code</strong> or <strong>barcode</strong> at the entrance for scanning</p>
-        </div>
-        <div style="display: flex; align-items: flex-start; gap: 12px; margin-bottom: 12px;">
-          <i class="fas fa-check-circle" style="color: #d97706; font-size: 18px; margin-top: 2px; flex-shrink: 0;"></i>
-          <p style="margin: 0;">Have this page ready on your <strong>mobile device</strong> or <strong>printed</strong></p>
-        </div>
-        <div style="display: flex; align-items: flex-start; gap: 12px; margin-bottom: 12px;">
-          <i class="fas fa-check-circle" style="color: #d97706; font-size: 18px; margin-top: 2px; flex-shrink: 0;"></i>
-          <p style="margin: 0;">Arrive at least <strong>15 minutes early</strong> for quick entry</p>
-        </div>
-        <div style="display: flex; align-items: flex-start; gap: 12px;">
-          <i class="fas fa-check-circle" style="color: #d97706; font-size: 18px; margin-top: 2px; flex-shrink: 0;"></i>
-          <p style="margin: 0;">Each ticket is valid for <strong>one-time entry only</strong></p>
-        </div>
-      </div>
-    </div>
-
-    <div style="background: #1e293b; color: white; border-radius: 12px; padding: 28px; text-align: center;">
-      <p style="font-size: 16px; font-weight: 600; margin-bottom: 12px;">
-        <i class="fas fa-headset" style="margin-right: 8px;"></i>Need Assistance?
-      </p>
-      <p style="font-size: 18px; font-weight: 700; margin-bottom: 16px;">
-        <i class="fas fa-envelope" style="margin-right: 8px;"></i>info@wom.hk
-        <span style="margin: 0 16px; opacity: 0.5;">|</span>
-        <i class="fas fa-phone" style="margin-right: 8px;"></i>+852 2333 0600
-      </p>
-      <p style="font-size: 13px; opacity: 0.7; margin: 0;">
-        <i class="fas fa-globe" style="margin-right: 6px;"></i>Western Orchestral Music Performance System
-      </p>
-    </div>
-  </div>
-</body>
-</html>
-    `;
+      defaultStyle: {
+        font: "Roboto",
+      },
+    };
   },
 
-  async downloadAsPDF(booking, performance, customerInfo) {
-    const html = await this.generateTicketHTML(
+  async downloadAsPDF(booking, performance, customerInfo, showtime = null) {
+    const docDefinition = await this.generatePDFDefinition(
       booking,
       performance,
-      customerInfo
+      customerInfo,
+      showtime
     );
-
-    const $iframe = $("<iframe>")
-      .css({
-        position: "absolute",
-        left: "-9999px",
-        width: "800px",
-        height: "2400px",
-      })
-      .appendTo("body");
-
-    const iframe = $iframe[0];
-    const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
-    iframeDoc.open();
-    iframeDoc.write(html);
-    iframeDoc.close();
-
-    await new Promise((resolve) => setTimeout(resolve, 3000));
-
-    try {
-      const pdf = new jsPDF("p", "mm", "a4");
-      const imgWidth = 210;
-      const imgHeight = 297;
-
-      const page1Element = iframeDoc.getElementById("ticket-page-1");
-      if (page1Element) {
-        const canvas1 = await html2canvas(page1Element, {
-          scale: 3,
-          useCORS: true,
-          logging: false,
-          backgroundColor: "#ffffff",
-          allowTaint: true,
-          foreignObjectRendering: false,
-          windowWidth: 794,
-          windowHeight: 1123,
-          imageTimeout: 0,
-          removeContainer: false,
-        });
-        const imgData1 = canvas1.toDataURL("image/jpeg", 0.95);
-        pdf.addImage(imgData1, "JPEG", 0, 0, imgWidth, imgHeight);
-      }
-
-      const page2Element = iframeDoc.getElementById("ticket-page-2");
-      if (page2Element) {
-        pdf.addPage();
-        const canvas2 = await html2canvas(page2Element, {
-          scale: 3,
-          useCORS: true,
-          logging: false,
-          backgroundColor: "#ffffff",
-          allowTaint: true,
-          foreignObjectRendering: false,
-          windowWidth: 794,
-          windowHeight: 1123,
-          imageTimeout: 0,
-          removeContainer: false,
-        });
-        const imgData2 = canvas2.toDataURL("image/jpeg", 0.95);
-        pdf.addImage(imgData2, "JPEG", 0, 0, imgWidth, imgHeight);
-      }
-
-      pdf.setProperties({
-        title: `E-Ticket - ${booking.id}`,
-        subject: `Electronic Ticket for ${performance?.title || "Performance"}`,
-        author: "WOM - Western Orchestral Music",
-        keywords: "ticket, e-ticket, booking, performance",
-        creator: "WOM Booking System",
-      });
-
-      pdf.save(`WOM-E-Ticket-${booking.id}.pdf`);
-    } finally {
-      $iframe.remove();
-    }
+    pdfMake.createPdf(docDefinition).download(`WOM-E-Ticket-${booking.id}.pdf`);
   },
 
-  async printTicket(booking, performance, customerInfo) {
-    const html = await this.generateTicketHTML(
+  async printTicket(booking, performance, customerInfo, showtime = null) {
+    const docDefinition = await this.generatePDFDefinition(
       booking,
       performance,
-      customerInfo
+      customerInfo,
+      showtime
+    );
+    pdfMake.createPdf(docDefinition).print();
+  },
+
+  async openTicket(booking, performance, customerInfo, showtime = null) {
+    const docDefinition = await this.generatePDFDefinition(
+      booking,
+      performance,
+      customerInfo,
+      showtime
+    );
+    pdfMake.createPdf(docDefinition).open();
+  },
+};
+
+export const generateTicket =
+  TicketGenerator.downloadAsPDF.bind(TicketGenerator);
+export const downloadTicket =
+  TicketGenerator.downloadAsPDF.bind(TicketGenerator);
+export const downloadTickets = async (bookings, performances, customers) => {
+  for (const booking of bookings) {
+    const performance = performances.find(
+      (p) => String(p.id) === String(booking.performanceId)
+    );
+    const customer = customers.find(
+      (c) => String(c.id) === String(booking.userId)
     );
 
-    const $iframe = $("<iframe>")
-      .css({
-        position: "absolute",
-        left: "-9999px",
-        width: "800px",
-        height: "2400px",
-      })
-      .appendTo("body");
-
-    const iframe = $iframe[0];
-    const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
-    iframeDoc.open();
-    iframeDoc.write(html);
-    iframeDoc.close();
-
-    await new Promise((resolve) => setTimeout(resolve, 3000));
-
-    try {
-      const pdf = new jsPDF("p", "mm", "a4");
-      const imgWidth = 210;
-      const imgHeight = 297;
-
-      const page1Element = iframeDoc.getElementById("ticket-page-1");
-      if (page1Element) {
-        const canvas1 = await html2canvas(page1Element, {
-          scale: 3,
-          useCORS: true,
-          logging: false,
-          backgroundColor: "#ffffff",
-          allowTaint: true,
-          foreignObjectRendering: false,
-          windowWidth: 794,
-          windowHeight: 1123,
-          imageTimeout: 0,
-          removeContainer: false,
-        });
-        const imgData1 = canvas1.toDataURL("image/jpeg", 0.95);
-        pdf.addImage(imgData1, "JPEG", 0, 0, imgWidth, imgHeight);
-      }
-
-      const page2Element = iframeDoc.getElementById("ticket-page-2");
-      if (page2Element) {
-        pdf.addPage();
-        const canvas2 = await html2canvas(page2Element, {
-          scale: 3,
-          useCORS: true,
-          logging: false,
-          backgroundColor: "#ffffff",
-          allowTaint: true,
-          foreignObjectRendering: false,
-          windowWidth: 794,
-          windowHeight: 1123,
-          imageTimeout: 0,
-          removeContainer: false,
-        });
-        const imgData2 = canvas2.toDataURL("image/jpeg", 0.95);
-        pdf.addImage(imgData2, "JPEG", 0, 0, imgWidth, imgHeight);
-      }
-
-      pdf.setProperties({
-        title: `E-Ticket - ${booking.id}`,
-        subject: `Electronic Ticket for ${performance?.title || "Performance"}`,
-        author: "WOM - Western Orchestral Music",
-        keywords: "ticket, e-ticket, booking, performance",
-        creator: "WOM Booking System",
-      });
-
-      const blob = pdf.output("blob");
-      const url = URL.createObjectURL(blob);
-      const printWindow = window.open(url, "_blank");
-
-      setTimeout(() => {
-        printWindow.print();
-      }, 500);
-    } finally {
-      $iframe.remove();
+    let showtime = null;
+    if (booking.showtimeId && performance?.showtimes) {
+      showtime = performance.showtimes.find(
+        (s) => String(s.id) === String(booking.showtimeId)
+      );
     }
-  },
+
+    await TicketGenerator.downloadAsPDF(
+      booking,
+      performance,
+      customer,
+      showtime
+    );
+    await new Promise((resolve) => setTimeout(resolve, 500));
+  }
 };

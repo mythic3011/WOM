@@ -1,3 +1,10 @@
+import {
+  getSectionColor,
+  getSeatStatusColor,
+  StageColor,
+  SeatStatusColors,
+} from "/src/utils/colors.js";
+
 export const seatMapGenerator = {
   generateInteractiveSeatMap(
     rows,
@@ -94,14 +101,14 @@ export const seatMapGenerator = {
         const seatDetail = seatDetails[seatId];
         const seatColor = getSeatColorFn
           ? getSeatColorFn(seatDetail)
-          : "#10b981";
+          : SeatStatusColors.available.rgb;
 
         seatsHTML += `
-          <rect x="${seatX}" y="${rowY}" width="${seatSize}" height="${seatSize}" 
+          <rect x="${seatX}" y="${rowY}" width="${seatSize}" height="${seatSize}"
             fill="${seatColor}" rx="3" />
           <text x="${seatX + seatSize / 2}" y="${
           rowY + seatSize / 2 + 4
-        }" fill="white" 
+        }" fill="white"
             text-anchor="middle" font-size="10" font-weight="bold">${rowLetter}${seatNumber}</text>
         `;
       }
@@ -164,10 +171,10 @@ export const seatMapGenerator = {
         const isSelected = selectedSeats.includes(seatId);
 
         const fillColor = isSelected
-          ? "#eab308"
+          ? SeatStatusColors.selected.rgb
           : getSeatColorFn
           ? getSeatColorFn(seatDetail)
-          : "#10b981";
+          : SeatStatusColors.available.rgb;
 
         const categoryIcon = this.getCategoryIcon(seatDetail);
 
@@ -177,9 +184,9 @@ export const seatMapGenerator = {
 
         html += `
           <g class="${gClass}" data-seat-id="${seatId}">
-            <rect x="${seatX}" y="${rowY}" width="${seatSize}" height="${seatSize}" 
+            <rect x="${seatX}" y="${rowY}" width="${seatSize}" height="${seatSize}"
               fill="${fillColor}" rx="4" stroke="${
-          isSelected ? "#ca8a04" : "#ffffff"
+          isSelected ? "rgb(202, 138, 4)" : "#ffffff"
         }" stroke-width="${isSelected ? "3" : "1"}" />
             ${this.generateSeatLabel(
               seatX,
@@ -211,11 +218,11 @@ export const seatMapGenerator = {
   generateSeatLabel(seatX, rowY, seatSize, seatId, categoryIcon) {
     if (categoryIcon) {
       return `
-        <text x="${seatX + seatSize - 6}" y="${rowY + 12}" fill="white" 
+        <text x="${seatX + seatSize - 6}" y="${rowY + 12}" fill="white"
           text-anchor="middle" font-size="12">${categoryIcon}</text>
         <text x="${seatX + seatSize / 2}" y="${
         rowY + seatSize - 6
-      }" fill="white" 
+      }" fill="white"
           text-anchor="middle" font-size="9" font-weight="bold">${seatId}</text>
       `;
     }
@@ -223,7 +230,7 @@ export const seatMapGenerator = {
     return `
       <text x="${seatX + seatSize / 2}" y="${
       rowY + seatSize / 2 + 4
-    }" fill="white" 
+    }" fill="white"
         text-anchor="middle" font-size="11" font-weight="bold">${seatId}</text>
     `;
   },
@@ -239,11 +246,11 @@ export const seatMapGenerator = {
   ) {
     return `
       <svg width="${svgWidth}" height="${svgHeight}" class="${className}">
-        <rect x="${stagePadding}" y="${stagePadding}" width="${stageWidth}" height="${stageHeight}" 
-          fill="#374151" rx="4" />
+        <rect x="${stagePadding}" y="${stagePadding}" width="${stageWidth}" height="${stageHeight}"
+          fill="${StageColor}" rx="4" />
         <text x="${svgWidth / 2}" y="${
       stagePadding + stageHeight / 2 + 5
-    }" fill="white" 
+    }" fill="white"
           text-anchor="middle" font-size="14" font-weight="bold">STAGE</text>
         ${seatsHTML}
       </svg>

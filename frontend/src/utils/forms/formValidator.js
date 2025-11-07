@@ -270,8 +270,7 @@ export const formValidator = {
   sanitizeHtml(html) {
     if (typeof html !== "string") return html;
 
-    const div = document.createElement("div");
-    div.textContent = html;
-    return div.innerHTML;
+    const $div = $("<div>").text(html);
+    return $div.html();
   },
 };

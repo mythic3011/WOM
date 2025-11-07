@@ -1,3 +1,5 @@
+import { createStatsCard } from "/src/components/StatsCard.js";
+
 export const FormComponents = {
   select({
     id,
@@ -18,7 +20,7 @@ export const FormComponents = {
       }
       <select
         id="${id}"
-        class="px-4 py-2.5 text-sm font-medium text-gray-900 bg-white border border-gray-300 rounded-lg shadow-sm hover:bg-gray-50 hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 ${className}"
+        class="px-4 py-2.5 text-sm font-medium text-gray-900 bg-white border border-gray-300 rounded-lg shadow-sm hover:bg-gray-50 hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 focus:-translate-y-0.5 focus:shadow-md transition-all duration-200 ${className}"
         ${onChange ? `onchange="${onChange}"` : ""}
         ${required ? "required" : ""}
       >
@@ -59,7 +61,7 @@ export const FormComponents = {
         id="${id}"
         value="${value}"
         placeholder="${placeholder}"
-        class="w-full px-4 py-2.5 text-sm font-medium text-gray-900 bg-white border border-gray-300 rounded-lg shadow-sm hover:bg-gray-50 hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 ${
+        class="w-full px-4 py-2.5 text-sm font-medium text-gray-900 bg-white border border-gray-300 rounded-lg shadow-sm hover:bg-gray-50 hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 focus:-translate-y-0.5 focus:shadow-md transition-all duration-200 ${
           readonly ? "bg-gray-50 cursor-not-allowed" : ""
         } ${
       disabled ? "bg-gray-100 text-gray-500 cursor-not-allowed" : ""
@@ -92,7 +94,7 @@ export const FormComponents = {
         id="${id}"
         rows="${rows}"
         placeholder="${placeholder}"
-        class="w-full px-4 py-2.5 text-sm font-medium text-gray-900 bg-white border border-gray-300 rounded-lg shadow-sm hover:bg-gray-50 hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 ${className}"
+        class="w-full px-4 py-2.5 text-sm font-medium text-gray-900 bg-white border border-gray-300 rounded-lg shadow-sm hover:bg-gray-50 hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 focus:-translate-y-0.5 focus:shadow-md transition-all duration-200 ${className}"
         ${required ? "required" : ""}
       >${value}</textarea>
     `;
@@ -193,87 +195,14 @@ export const FormComponents = {
   },
 
   statCard({ title, value, icon, color = "indigo", subtitle }) {
-    const colorClasses = {
-      indigo: {
-        gradient: "from-indigo-50 to-indigo-100",
-        border: "border-indigo-500",
-        title: "text-indigo-600",
-        value: "text-indigo-900",
-        subtitle: "text-indigo-700",
-        icon: "text-indigo-400",
-      },
-      blue: {
-        gradient: "from-blue-50 to-blue-100",
-        border: "border-blue-500",
-        title: "text-blue-600",
-        value: "text-blue-900",
-        subtitle: "text-blue-700",
-        icon: "text-blue-400",
-      },
-      green: {
-        gradient: "from-green-50 to-green-100",
-        border: "border-green-500",
-        title: "text-green-600",
-        value: "text-green-900",
-        subtitle: "text-green-700",
-        icon: "text-green-400",
-      },
-      yellow: {
-        gradient: "from-yellow-50 to-yellow-100",
-        border: "border-yellow-500",
-        title: "text-yellow-600",
-        value: "text-yellow-900",
-        subtitle: "text-yellow-700",
-        icon: "text-yellow-400",
-      },
-      red: {
-        gradient: "from-red-50 to-red-100",
-        border: "border-red-500",
-        title: "text-red-600",
-        value: "text-red-900",
-        subtitle: "text-red-700",
-        icon: "text-red-400",
-      },
-      purple: {
-        gradient: "from-purple-50 to-purple-100",
-        border: "border-purple-500",
-        title: "text-purple-600",
-        value: "text-purple-900",
-        subtitle: "text-purple-700",
-        icon: "text-purple-400",
-      },
-      gray: {
-        gradient: "from-gray-50 to-gray-100",
-        border: "border-gray-500",
-        title: "text-gray-600",
-        value: "text-gray-900",
-        subtitle: "text-gray-700",
-        icon: "text-gray-400",
-      },
-    };
-
-    const colors = colorClasses[color] || colorClasses.indigo;
-
-    return `
-      <div class="bg-gradient-to-br ${
-        colors.gradient
-      } rounded-lg p-4 border-l-4 ${colors.border}">
-        <div class="flex items-center justify-between">
-          <div>
-            <p class="text-xs font-semibold ${
-              colors.title
-            } uppercase">${title}</p>
-            <p class="text-2xl font-bold ${colors.value}">${value}</p>
-            ${
-              subtitle
-                ? `<p class="text-xs ${colors.subtitle} mt-1">${subtitle}</p>`
-                : ""
-            }
-          </div>
-          <i class="fas ${icon} text-3xl ${colors.icon}"></i>
-        </div>
-      </div>
-    `;
+    return createStatsCard({
+      title,
+      value,
+      icon,
+      color,
+      subtitle,
+      variant: "gradient",
+    });
   },
 
   actionButton({

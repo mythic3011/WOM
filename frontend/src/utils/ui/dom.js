@@ -1,101 +1,177 @@
-export function loadComponent(selector, path, callback) {
-  $(selector).load(path, function (response, status) {
-    if (status === "error") {
-      console.error(`Failed to load component: ${path}`);
+export const dom = {
+  $(selector, context = document) {
+    if (typeof selector === "string") {
+      return context.querySelector(selector);
     }
-    if (callback && typeof callback === "function") {
-      callback(status === "success");
+    return selector;
+  },
+
+  $$(selector, context = document) {
+    if (typeof selector === "string") {
+      return Array.from(context.querySelectorAll(selector));
     }
-  });
-}
+    return Array.isArray(selector) ? selector : [selector];
+  },
 
-export function loadCommonComponents(callback) {
-  let loaded = 0;
-  const total = 2;
+  create(tag, options = {}) {
+    const element = document.createElement(tag);
 
-  const checkComplete = () => {
-    loaded++;
-    if (loaded === total && callback) {
+    if (options.className) {
+      element.className = options.className;
+    }
+
+    if (options.attributes) {
+      Object.entries(options.attributes).forEach(([key, value]) => {
+        element.setAttribute(key, value);
+      });
+    }
+
+    if (options.data) {
+      Object.entries(options.data).forEach(([key, value]) => {
+        element.dataset[key] = value;
+      });
+    }
+
+    if (options.style) {
+      Object.assign(element.style, options.style);
+    }
+
+    if (options.html) {
+      element.innerHTML = options.html;
+    } else if (options.text) {
+      element.textContent = options.text;
+    }
+
+    if (options.children) {
+      options.children.forEach((child) => {
+        element.appendChild(child);
+      });
+    }
+
+    if (options.parent) {
+      this.$(options.parent).appendChild(element);
+    }
+
+    return element;
+  },
+
+  remove(element) {
+    const el = this.$(element);
+    if (el && el.parentNode) {
+      el.parentNode.removeChild(el);
+    }
+  },
+
+  empty(element) {
+    const el = this.$(element);
+    if (el) {
+      el.innerHTML = "";
+    }
+  },
+
+  addClass(element, ...classes) {
+    const el = this.$(element);
+    if (el) el.classList.add(...classes);
+  },
+
+  removeClass(element, ...classes) {
+    const el = this.$(element);
+    if (el) el.classList.remove(...classes);
+  },
+
+  toggleClass(element, className) {
+    const el = this.$(element);
+    if (el) el.classList.toggle(className);
+  },
+
+  hasClass(element, className) {
+    const el = this.$(element);
+    return el ? el.classList.contains(className) : false;
+  },
+
+  on(element, event, handler, options) {
+    const el = this.$(element);
+    if (el) el.addEventListener(event, handler, options);
+  },
+
+  off(element, event, handler, options) {
+    const el = this.$(element);
+    if (el) el.removeEventListener(event, handler, options);
+  },
+
+  trigger(element, eventName, detail = {}) {
+    const el = this.$(element);
+    if (el) {
+      el.dispatchEvent(
+        new CustomEvent(eventName, { detail, bubbles: true, cancelable: true })
+      );
+    }
+  },
+
+  ready(callback) {
+    if (document.readyState === "loading") {
+      document.addEventListener("DOMContentLoaded", callback);
+    } else {
       callback();
     }
-  };
+  },
 
-  loadComponent("#navbar", "/src/common/navbar.html", checkComplete);
-  loadComponent("#footer", "/src/common/footer.html", checkComplete);
-}
+  closest(element, selector) {
+    const el = this.$(element);
+    return el ? el.closest(selector) : null;
+  },
 
-export function setPageTitle(title) {
-  document.title = `${title} | Hong Kong Book Fair`;
-}
+  find(element, selector) {
+    const el = this.$(element);
+    return el ? el.querySelector(selector) : null;
+  },
 
-export function scrollToTop(smooth = true) {
-  window.scrollTo({
-    top: 0,
-    behavior: smooth ? "smooth" : "auto",
-  });
-}
+  findAll(element, selector) {
+    const el = this.$(element);
+    return el ? Array.from(el.querySelectorAll(selector)) : [];
+  },
 
-export function debounce(func, wait) {
-  let timeout;
-  return function executedFunction(...args) {
-    const later = () => {
-      clearTimeout(timeout);
-      func(...args);
-    };
-    clearTimeout(timeout);
-    timeout = setTimeout(later, wait);
-  };
-}
+  attr(element, name, value) {
+    const el = this.$(element);
+    if (!el) return undefined;
 
-export function throttle(func, limit) {
-  let inThrottle;
-  return function (...args) {
-    if (!inThrottle) {
-      func.apply(this, args);
-      inThrottle = true;
-      setTimeout(() => (inThrottle = false), limit);
+    if (value === undefined) {
+      return el.getAttribute(name);
     }
-  };
-}
+    el.setAttribute(name, value);
+    return el;
+  },
 
-export function copyToClipboard(text) {
-  if (navigator.clipboard) {
-    return navigator.clipboard.writeText(text);
-  } else {
-    const textArea = document.createElement("textarea");
-    textArea.value = text;
-    textArea.style.position = "fixed";
-    textArea.style.left = "-999999px";
-    document.body.appendChild(textArea);
-    textArea.select();
-    try {
-      document.execCommand("copy");
-      document.body.removeChild(textArea);
-      return Promise.resolve();
-    } catch (err) {
-      document.body.removeChild(textArea);
-      return Promise.reject(err);
+  removeAttr(element, name) {
+    const el = this.$(element);
+    if (el) el.removeAttribute(name);
+  },
+
+  data(element, key, value) {
+    const el = this.$(element);
+    if (!el) return undefined;
+
+    if (value === undefined) {
+      return el.dataset[key];
     }
-  }
-}
+    el.dataset[key] = value;
+    return el;
+  },
 
-export function parseQueryParams() {
-  const params = new URLSearchParams(window.location.search);
-  const result = {};
-  for (const [key, value] of params.entries()) {
-    result[key] = value;
-  }
-  return result;
-}
+  show(element) {
+    const el = this.$(element);
+    if (el) el.style.display = "";
+  },
 
-export function updateQueryParams(params) {
-  const url = new URL(window.location);
-  Object.entries(params).forEach(([key, value]) => {
-    if (value === null || value === undefined) {
-      url.searchParams.delete(key);
-    } else {
-      url.searchParams.set(key, value);
+  hide(element) {
+    const el = this.$(element);
+    if (el) el.style.display = "none";
+  },
+
+  toggle(element) {
+    const el = this.$(element);
+    if (el) {
+      el.style.display = el.style.display === "none" ? "" : "none";
     }
-  });
-  window.history.pushState({}, "", url);
-}
+  },
+};

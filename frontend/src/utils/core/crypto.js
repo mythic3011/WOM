@@ -1,6 +1,8 @@
 import bcrypt from "bcryptjs";
+import CryptoJS from "crypto-js";
 
 const SALT_ROUNDS = 10;
+const ENCRYPTION_KEY = "wom_secure_key_2024_orchestral_music";
 
 export async function hashPassword(password) {
   try {
@@ -41,4 +43,72 @@ export function generateToken(length = 32) {
     );
   }
   return generateSimpleId(length);
+}
+
+export function encrypt(data, customKey = null) {
+  try {
+    const key = customKey || ENCRYPTION_KEY;
+    const dataString = typeof data === "string" ? data : JSON.stringify(data);
+    const encrypted = CryptoJS.AES.encrypt(dataString, key).toString();
+    return encrypted;
+  } catch (error) {
+    console.error("Error encrypting data:", error);
+    throw new Error("Failed to encrypt data");
+  }
+}
+
+export function decrypt(encryptedData, customKey = null) {
+  try {
+    const key = customKey || ENCRYPTION_KEY;
+    const decrypted = CryptoJS.AES.decrypt(encryptedData, key);
+    const decryptedString = decrypted.toString(CryptoJS.enc.Utf8);
+
+    if (!decryptedString) {
+      throw new Error("Decryption failed - invalid key or corrupted data");
+    }
+
+    try {
+      return JSON.parse(decryptedString);
+    } catch (e) {
+      return decryptedString;
+    }
+  } catch (error) {
+    console.error("Error decrypting data:", error);
+    throw new Error("Failed to decrypt data");
+  }
+}
+
+export function encryptObject(obj, customKey = null) {
+  try {
+    return encrypt(JSON.stringify(obj), customKey);
+  } catch (error) {
+    console.error("Error encrypting object:", error);
+    throw new Error("Failed to encrypt object");
+  }
+}
+
+export function decryptObject(encryptedData, customKey = null) {
+  try {
+    const decryptedString = decrypt(encryptedData, customKey);
+    return typeof decryptedString === "string"
+      ? JSON.parse(decryptedString)
+      : decryptedString;
+  } catch (error) {
+    console.error("Error decrypting object:", error);
+    throw new Error("Failed to decrypt object");
+  }
+}
+
+export function hashData(data) {
+  try {
+    const dataString = typeof data === "string" ? data : JSON.stringify(data);
+    return CryptoJS.SHA256(dataString).toString();
+  } catch (error) {
+    console.error("Error hashing data:", error);
+    throw new Error("Failed to hash data");
+  }
+}
+
+export function generateEncryptionKey() {
+  return CryptoJS.lib.WordArray.random(256 / 8).toString();
 }

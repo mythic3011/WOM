@@ -1,4 +1,5 @@
 import dayjs from "dayjs";
+import Papa from "papaparse";
 
 export const reportingUtils = {
   generateUtilizationReport(showtime, performance) {
@@ -103,48 +104,72 @@ export const reportingUtils = {
   },
 
   exportReportAsCSV(report, filename) {
-    let csv = "Performance,Showtime,Venue\n";
-    csv += `"${report.performance}","${report.showtime}","${report.venue}"\n\n`;
+    const performanceData = [
+      ["Performance Details"],
+      ["Performance", report.performance],
+      ["Showtime", report.showtime],
+      ["Venue", report.venue],
+      [],
+    ];
 
-    csv += "Seat Statistics\n";
-    csv += "Category,Count,Percentage\n";
-    csv += `Total Seats,${report.stats.total},100%\n`;
-    csv += `Available,${report.stats.available},${(
-      (report.stats.available / report.stats.total) *
-      100
-    ).toFixed(1)}%\n`;
-    csv += `Blocked,${report.stats.blocked},${(
-      (report.stats.blocked / report.stats.total) *
-      100
-    ).toFixed(1)}%\n`;
-    csv += `Reserved,${report.stats.reserved},${(
-      (report.stats.reserved / report.stats.total) *
-      100
-    ).toFixed(1)}%\n`;
-    csv += `VIP,${report.stats.vip},${(
-      (report.stats.vip / report.stats.total) *
-      100
-    ).toFixed(1)}%\n`;
-    csv += `Wheelchair,${report.stats.wheelchair},${(
-      (report.stats.wheelchair / report.stats.total) *
-      100
-    ).toFixed(1)}%\n\n`;
+    const seatStatsData = [
+      ["Seat Statistics"],
+      ["Category", "Count", "Percentage"],
+      ["Total Seats", report.stats.total, "100%"],
+      [
+        "Available",
+        report.stats.available,
+        `${((report.stats.available / report.stats.total) * 100).toFixed(1)}%`,
+      ],
+      [
+        "Blocked",
+        report.stats.blocked,
+        `${((report.stats.blocked / report.stats.total) * 100).toFixed(1)}%`,
+      ],
+      [
+        "Reserved",
+        report.stats.reserved,
+        `${((report.stats.reserved / report.stats.total) * 100).toFixed(1)}%`,
+      ],
+      [
+        "VIP",
+        report.stats.vip,
+        `${((report.stats.vip / report.stats.total) * 100).toFixed(1)}%`,
+      ],
+      [
+        "Wheelchair",
+        report.stats.wheelchair,
+        `${((report.stats.wheelchair / report.stats.total) * 100).toFixed(1)}%`,
+      ],
+      [],
+    ];
+
+    let allData = [...performanceData, ...seatStatsData];
 
     if (report.revenue) {
-      csv += "Revenue Statistics\n";
-      csv += "Category,Seats Sold,Revenue\n";
-      Object.entries(report.revenue.bySection).forEach(([category, data]) => {
-        csv += `"${category}",${data.seats},$${data.revenue.toFixed(2)}\n`;
-      });
-      csv += `\nTotal Revenue,$${report.revenue.total.toFixed(2)}\n`;
-      csv += `Total Seats Sold,${report.revenue.seatsSold}\n`;
+      const revenueData = [
+        ["Revenue Statistics"],
+        ["Category", "Seats Sold", "Revenue"],
+        ...Object.entries(report.revenue.bySection).map(([category, data]) => [
+          category,
+          data.seats,
+          `$${data.revenue.toFixed(2)}`,
+        ]),
+        [],
+        ["Total Revenue", "", `$${report.revenue.total.toFixed(2)}`],
+        ["Total Seats Sold", "", report.revenue.seatsSold],
+        [],
+      ];
+      allData = [...allData, ...revenueData];
     }
 
-    csv += `\nGenerated: ${dayjs(report.generatedAt).format(
-      "YYYY-MM-DD HH:mm:ss"
-    )}\n`;
+    allData.push([
+      "Generated",
+      dayjs(report.generatedAt).format("YYYY-MM-DD HH:mm:ss"),
+    ]);
 
-    const dataBlob = new Blob([csv], { type: "text/csv" });
+    const csv = Papa.unparse(allData);
+    const dataBlob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(dataBlob);
     const link = document.createElement("a");
     link.href = url;
@@ -166,7 +191,7 @@ export const reportingUtils = {
         <h1 style="color: #4f46e5; border-bottom: 3px solid #4f46e5; padding-bottom: 10px;">
           Seat Utilization & Revenue Report
         </h1>
-        
+
         <div style="background: #f3f4f6; padding: 15px; border-radius: 8px; margin: 20px 0;">
           <h2 style="margin-top: 0; color: #374151;">Performance Details</h2>
           <p><strong>Performance:</strong> ${report.performance}</p>
@@ -291,7 +316,7 @@ export const reportingUtils = {
                 ${report.revenue.seatsSold} seats sold
               </p>
             </div>
-            
+
             <table style="width: 100%; border-collapse: collapse;">
               <thead>
                 <tr style="background: #f9fafb; border-bottom: 2px solid #e5e7eb;">

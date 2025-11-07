@@ -14,188 +14,267 @@ export default {
 
   async render() {
     return `
-      <main class="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-        <div class="max-w-md w-full space-y-8">
-          <div>
-            <h2 class="mt-6 text-center text-3xl font-extrabold text-gray-900">
-              Create your account
-            </h2>
-            <p class="mt-2 text-center text-sm text-gray-600">
-              Already have an account?
-              <a href="/login" data-link class="font-medium text-indigo-600 hover:text-indigo-500">
-                Sign in
-              </a>
-            </p>
-          </div>
-          <form id="registerForm" class="mt-8 space-y-6">
-            <div class="rounded-md shadow-sm space-y-4">
-              <div>
-                <label for="username" class="block text-sm font-medium text-gray-700">
-                  Username <span class="text-red-500">*</span>
-                </label>
-                <input
-                  id="username"
-                  name="username"
-                  type="text"
-                  required
-                  autocomplete="username"
-                  class="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                  placeholder="johndoe"
-                />
-                <p class="mt-1 text-xs text-gray-500">3-20 characters, letters, numbers, underscore, or hyphen</p>
+      <main class="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 py-12 px-4 sm:px-6 lg:px-8">
+        <div class="max-w-5xl mx-auto">
+          <div class="bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden">
+            <div class="bg-gradient-to-r from-indigo-600 to-purple-600 px-8 py-6">
+              <div class="text-center">
+                <div class="inline-flex items-center justify-center w-16 h-16 bg-white bg-opacity-20 rounded-full mb-4">
+                  <i class="fas fa-user-plus text-3xl text-white"></i>
+                </div>
+                <h2 class="text-3xl font-bold text-white mb-2">
+                  Create Your Account
+                </h2>
+                <p class="text-indigo-100">
+                  Join us and start booking your favorite performances
+                </p>
               </div>
-              <div>
-                <label for="password" class="block text-sm font-medium text-gray-700">
-                  Password <span class="text-red-500">*</span>
-                </label>
-                <input
-                  id="password"
-                  name="password"
-                  type="password"
-                  required
-                  autocomplete="new-password"
-                  class="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                  placeholder="••••••••"
-                />
-                <p class="mt-1 text-xs text-gray-500">At least 8 characters, include uppercase, lowercase, and number</p>
-              </div>
-              <div>
-                <label for="confirmPassword" class="block text-sm font-medium text-gray-700">
-                  Confirm Password <span class="text-red-500">*</span>
-                </label>
-                <input
-                  id="confirmPassword"
-                  name="confirmPassword"
-                  type="password"
-                  required
-                  autocomplete="new-password"
-                  class="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                  placeholder="••••••••"
-                />
-              </div>
-              <div class="grid grid-cols-4 gap-2">
-                <div class="col-span-1">
-                  <label for="title" class="block text-sm font-medium text-gray-700">
-                    Title
+            </div>
+
+            <form id="registerForm" class="p-8">
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                <div class="md:col-span-2">
+                  <div class="bg-indigo-50 border border-indigo-200 rounded-lg p-4 flex items-start gap-3">
+                    <i class="fas fa-info-circle text-indigo-600 text-lg mt-0.5"></i>
+                    <div class="text-sm text-indigo-900">
+                      <p class="font-semibold mb-1">Account Requirements</p>
+                      <ul class="list-disc list-inside text-indigo-800 space-y-1">
+                        <li>Choose a unique username (3-20 characters)</li>
+                        <li>Password must be at least 8 characters with uppercase, lowercase, and number</li>
+                        <li>You must be at least 13 years old</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="md:col-span-2">
+                  <h3 class="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+                    <i class="fas fa-key text-indigo-600"></i>
+                    Account Credentials
+                  </h3>
+                </div>
+
+                <div>
+                  <label for="username" class="block text-sm font-semibold text-gray-700 mb-2">
+                    Username <span class="text-red-500">*</span>
+                  </label>
+                  <div class="relative">
+                    <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                      <i class="fas fa-user text-gray-400"></i>
+                    </div>
+                    <input
+                      id="username"
+                      name="username"
+                      type="text"
+                      required
+                      autocomplete="username"
+                      class="w-full pl-11 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all text-gray-900 placeholder-gray-400"
+                      placeholder="johndoe"
+                    />
+                  </div>
+                  <p class="mt-1.5 text-xs text-gray-500">3-20 characters, letters, numbers, underscore, or hyphen</p>
+                </div>
+
+                <div>
+                  <label for="email" class="block text-sm font-semibold text-gray-700 mb-2">
+                    Email Address <span class="text-red-500">*</span>
+                  </label>
+                  <div class="relative">
+                    <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                      <i class="fas fa-envelope text-gray-400"></i>
+                    </div>
+                    <input
+                      id="email"
+                      name="email"
+                      type="email"
+                      required
+                      autocomplete="email"
+                      class="w-full pl-11 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all text-gray-900 placeholder-gray-400"
+                      placeholder="you@example.com"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label for="password" class="block text-sm font-semibold text-gray-700 mb-2">
+                    Password <span class="text-red-500">*</span>
+                  </label>
+                  <div class="relative">
+                    <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                      <i class="fas fa-lock text-gray-400"></i>
+                    </div>
+                    <input
+                      id="password"
+                      name="password"
+                      type="password"
+                      required
+                      autocomplete="new-password"
+                      class="w-full pl-11 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all text-gray-900 placeholder-gray-400"
+                      placeholder="••••••••"
+                    />
+                  </div>
+                  <p class="mt-1.5 text-xs text-gray-500">At least 8 characters, include uppercase, lowercase, and number</p>
+                </div>
+
+                <div>
+                  <label for="confirmPassword" class="block text-sm font-semibold text-gray-700 mb-2">
+                    Confirm Password <span class="text-red-500">*</span>
+                  </label>
+                  <div class="relative">
+                    <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                      <i class="fas fa-lock text-gray-400"></i>
+                    </div>
+                    <input
+                      id="confirmPassword"
+                      name="confirmPassword"
+                      type="password"
+                      required
+                      autocomplete="new-password"
+                      class="w-full pl-11 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all text-gray-900 placeholder-gray-400"
+                      placeholder="••••••••"
+                    />
+                  </div>
+                </div>
+
+                <div class="md:col-span-2 mt-4">
+                  <h3 class="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+                    <i class="fas fa-id-card text-indigo-600"></i>
+                    Personal Information
+                  </h3>
+                </div>
+
+                <div class="md:col-span-2 grid grid-cols-4 gap-4">
+                  <div class="col-span-1">
+                    <label for="title" class="block text-sm font-semibold text-gray-700 mb-2">
+                      Title
+                    </label>
+                    <select
+                      id="title"
+                      name="title"
+                      class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all text-gray-900"
+                    >
+                      <option value="">--</option>
+                      <option value="Mr.">Mr.</option>
+                      <option value="Mrs.">Mrs.</option>
+                      <option value="Ms.">Ms.</option>
+                      <option value="Miss">Miss</option>
+                      <option value="Dr.">Dr.</option>
+                      <option value="Prof.">Prof.</option>
+                    </select>
+                  </div>
+                  <div class="col-span-3">
+                    <label for="name" class="block text-sm font-semibold text-gray-700 mb-2">
+                      Full Name <span class="text-red-500">*</span>
+                    </label>
+                    <input
+                      id="name"
+                      name="name"
+                      type="text"
+                      required
+                      autocomplete="name"
+                      class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all text-gray-900 placeholder-gray-400"
+                      placeholder="John Doe"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label for="gender" class="block text-sm font-semibold text-gray-700 mb-2">
+                    Gender <span class="text-red-500">*</span>
                   </label>
                   <select
-                    id="title"
-                    name="title"
-                    class="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 text-gray-900 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                    id="gender"
+                    name="gender"
+                    required
+                    class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all text-gray-900"
                   >
-                    <option value="">--</option>
-                    <option value="Mr.">Mr.</option>
-                    <option value="Mrs.">Mrs.</option>
-                    <option value="Ms.">Ms.</option>
-                    <option value="Miss">Miss</option>
-                    <option value="Dr.">Dr.</option>
-                    <option value="Prof.">Prof.</option>
+                    <option value="">Select gender</option>
+                    <option value="male">Male</option>
+                    <option value="female">Female</option>
+                    <option value="other">Other</option>
+                    <option value="prefer_not_to_say">Prefer not to say</option>
                   </select>
                 </div>
-                <div class="col-span-3">
-                  <label for="name" class="block text-sm font-medium text-gray-700">
-                    Full Name <span class="text-red-500">*</span>
+
+                <div>
+                  <label for="birthday" class="block text-sm font-semibold text-gray-700 mb-2">
+                    Birthday <span class="text-red-500">*</span>
                   </label>
+                  <div class="relative">
+                    <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                      <i class="fas fa-calendar text-gray-400"></i>
+                    </div>
+                    <input
+                      id="birthday"
+                      name="birthday"
+                      type="date"
+                      required
+                      autocomplete="bday"
+                      class="w-full pl-11 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all text-gray-900"
+                    />
+                  </div>
+                  <p class="mt-1.5 text-xs text-gray-500">You must be at least 13 years old</p>
+                </div>
+
+                <div>
+                  <label for="phone" class="block text-sm font-semibold text-gray-700 mb-2">
+                    Phone Number (Hong Kong)
+                  </label>
+                  <div class="relative">
+                    <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                      <i class="fas fa-phone text-gray-400"></i>
+                    </div>
+                    <input
+                      id="phone"
+                      name="phone"
+                      type="tel"
+                      inputmode="numeric"
+                      maxlength="9"
+                      autocomplete="tel"
+                      class="w-full pl-11 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all text-gray-900 placeholder-gray-400"
+                      placeholder="9123 4567"
+                    />
+                  </div>
+                  <p class="mt-1.5 text-xs text-gray-500">8 digits, starts with 2-9 (optional)</p>
+                </div>
+
+                <div class="md:col-span-2" id="profileImageUpload"></div>
+              </div>
+
+              <div class="bg-gray-50 rounded-lg p-4 mb-6">
+                <div class="flex items-start gap-3">
                   <input
-                    id="name"
-                    name="name"
-                    type="text"
+                    id="terms"
+                    name="terms"
+                    type="checkbox"
                     required
-                    autocomplete="name"
-                    class="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                    placeholder="John Doe"
+                    class="mt-1 h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded cursor-pointer"
                   />
+                  <label for="terms" class="text-sm text-gray-700 cursor-pointer select-none">
+                    I agree to the <a href="#" class="font-semibold text-indigo-600 hover:text-indigo-500">Terms and Conditions</a> and <a href="#" class="font-semibold text-indigo-600 hover:text-indigo-500">Privacy Policy</a>
+                  </label>
                 </div>
               </div>
-              <div>
-                <label for="email" class="block text-sm font-medium text-gray-700">
-                  Email <span class="text-red-500">*</span>
-                </label>
-                <input
-                  id="email"
-                  name="email"
-                  type="email"
-                  required
-                  autocomplete="email"
-                  class="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                  placeholder="you@example.com"
-                />
-              </div>
-              <div>
-                <label for="gender" class="block text-sm font-medium text-gray-700">
-                  Gender <span class="text-red-500">*</span>
-                </label>
-                <select
-                  id="gender"
-                  name="gender"
-                  required
-                  class="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 text-gray-900 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                >
-                  <option value="">Select gender</option>
-                  <option value="male">Male</option>
-                  <option value="female">Female</option>
-                  <option value="other">Other</option>
-                  <option value="prefer_not_to_say">Prefer not to say</option>
-                </select>
-              </div>
-              <div>
-                <label for="birthday" class="block text-sm font-medium text-gray-700">
-                  Birthday <span class="text-red-500">*</span>
-                </label>
-                <input
-                  id="birthday"
-                  name="birthday"
-                  type="date"
-                  required
-                  autocomplete="bday"
-                  class="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 text-gray-900 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                />
-                <p class="mt-1 text-xs text-gray-500">You must be at least 13 years old</p>
-              </div>
-              <div>
-                <label for="phone" class="block text-sm font-medium text-gray-700">
-                  Phone Number (Hong Kong)
-                </label>
-                <input
-                  id="phone"
-                  name="phone"
-                  type="tel"
-                  inputmode="numeric"
-                  maxlength="9"
-                  autocomplete="tel"
-                  class="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                  placeholder="e.g., 9123 4567"
-                />
-                <p class="mt-1 text-xs text-gray-500">8 digits, starts with 2-9 (optional)</p>
-              </div>
-              <div id="profileImageUpload"></div>
-            </div>
 
-            <div class="flex items-center">
-              <input
-                id="terms"
-                name="terms"
-                type="checkbox"
-                required
-                class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
-              />
-              <label for="terms" class="ml-2 block text-sm text-gray-900">
-                I agree to the Terms and Conditions
-              </label>
-            </div>
-
-            <div>
               <button
                 type="submit"
-                class="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                id="registerBtn"
+                class="w-full flex items-center justify-center gap-2 py-3.5 px-4 border border-transparent rounded-lg shadow-lg text-white bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 font-semibold text-base transition-all transform hover:scale-[1.02] active:scale-[0.98]"
               >
-                <span class="absolute left-0 inset-y-0 flex items-center pl-3">
-                  <i class="fas fa-user-plus text-indigo-500 group-hover:text-indigo-400"></i>
-                </span>
-                Create Account
+                <i class="fas fa-user-plus"></i>
+                <span>Create Account</span>
               </button>
-            </div>
-          </form>
+
+              <div class="mt-6 pt-6 border-t border-gray-200 text-center">
+                <p class="text-sm text-gray-600">
+                  Already have an account?
+                  <a href="/login" data-link class="font-semibold text-indigo-600 hover:text-indigo-500 transition-colors">
+                    Sign in instead
+                  </a>
+                </p>
+              </div>
+            </form>
+          </div>
         </div>
       </main>
     `;
@@ -311,6 +390,13 @@ export default {
     }
 
     try {
+      const $btn = $("#registerBtn");
+      const originalHTML = $btn.html();
+      $btn.prop("disabled", true).html(`
+        <i class="fas fa-spinner fa-spin"></i>
+        <span>Creating your account...</span>
+      `);
+
       const profileImageData = await getImageDataURL("profileImageInput");
 
       const userData = {
@@ -334,10 +420,15 @@ export default {
           navigate("/user/dashboard");
         }, 1000);
       } else {
+        $btn.prop("disabled", false).html(originalHTML);
         notify.error(result.error || "Registration failed. Please try again.");
       }
     } catch (error) {
       console.error("Registration error:", error);
+      $("#registerBtn").prop("disabled", false).html(`
+        <i class="fas fa-user-plus"></i>
+        <span>Create Account</span>
+      `);
       notify.error("Registration failed. Please try again.");
     }
   },

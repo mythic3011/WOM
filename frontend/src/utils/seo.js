@@ -15,7 +15,7 @@ export const SEO = {
   setPageMeta(config = {}) {
     const meta = { ...this.defaultConfig, ...config };
 
-    document.title = meta.title || this.defaultConfig.siteName;
+    $(document).prop("title", meta.title || this.defaultConfig.siteName);
 
     this.setMetaTag("description", meta.description);
     this.setMetaTag("keywords", meta.keywords);
@@ -36,25 +36,21 @@ export const SEO = {
   setMetaTag(name, content) {
     if (!content) return;
 
-    let meta = document.querySelector(`meta[name="${name}"]`);
-    if (!meta) {
-      meta = document.createElement("meta");
-      meta.setAttribute("name", name);
-      document.head.appendChild(meta);
+    let $meta = $(`meta[name="${name}"]`);
+    if ($meta.length === 0) {
+      $meta = $("<meta>").attr("name", name).appendTo("head");
     }
-    meta.setAttribute("content", content);
+    $meta.attr("content", content);
   },
 
   setMetaProperty(property, content) {
     if (!content) return;
 
-    let meta = document.querySelector(`meta[property="${property}"]`);
-    if (!meta) {
-      meta = document.createElement("meta");
-      meta.setAttribute("property", property);
-      document.head.appendChild(meta);
+    let $meta = $(`meta[property="${property}"]`);
+    if ($meta.length === 0) {
+      $meta = $("<meta>").attr("property", property).appendTo("head");
     }
-    meta.setAttribute("content", content);
+    $meta.attr("content", content);
   },
 
   setOpenGraph(meta) {
@@ -82,27 +78,22 @@ export const SEO = {
 
   setCanonicalUrl(url) {
     const canonical = url || window.location.href;
-    let link = document.querySelector("link[rel='canonical']");
+    let $link = $("link[rel='canonical']");
 
-    if (!link) {
-      link = document.createElement("link");
-      link.setAttribute("rel", "canonical");
-      document.head.appendChild(link);
+    if ($link.length === 0) {
+      $link = $("<link>").attr("rel", "canonical").appendTo("head");
     }
-    link.setAttribute("href", canonical);
+    $link.attr("href", canonical);
   },
 
   setStructuredData(data) {
-    const existingScript = document.getElementById("structured-data");
-    if (existingScript) {
-      existingScript.remove();
-    }
+    $("#structured-data").remove();
 
-    const script = document.createElement("script");
-    script.id = "structured-data";
-    script.type = "application/ld+json";
-    script.text = JSON.stringify(data);
-    document.head.appendChild(script);
+    $("<script>")
+      .attr("id", "structured-data")
+      .attr("type", "application/ld+json")
+      .text(JSON.stringify(data))
+      .appendTo("head");
   },
 
   generatePerformanceStructuredData(performance) {
@@ -258,15 +249,18 @@ export const SEO = {
     ];
 
     resources.forEach((resource) => {
-      const existing = document.querySelector(`link[href="${resource.href}"]`);
-      if (!existing) {
-        const link = document.createElement("link");
-        link.rel = "preload";
-        link.href = resource.href;
-        link.as = resource.as;
-        if (resource.type) link.type = resource.type;
-        link.crossOrigin = "anonymous";
-        document.head.appendChild(link);
+      if ($(`link[href="${resource.href}"]`).length === 0) {
+        const $link = $("<link>")
+          .attr("rel", "preload")
+          .attr("href", resource.href)
+          .attr("as", resource.as)
+          .attr("crossorigin", "anonymous");
+
+        if (resource.type) {
+          $link.attr("type", resource.type);
+        }
+
+        $link.appendTo("head");
       }
     });
   },

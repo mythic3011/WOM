@@ -1,3 +1,5 @@
+import { SeatStatusColors, StageColor } from "/src/utils/colors.js";
+
 export class HeatMapGenerator {
   constructor(options = {}) {
     this.colorScheme = options.colorScheme || "availability";
@@ -181,29 +183,29 @@ export class HeatMapGenerator {
 
   getAvailabilityColorScale() {
     return [
-      { value: 0, color: "#ef4444" },
-      { value: 0.5, color: "#f59e0b" },
-      { value: 1, color: "#10b981" },
+      { value: 0, color: "rgb(239, 68, 68)" },
+      { value: 0.5, color: "rgb(245, 158, 11)" },
+      { value: 1, color: "rgb(16, 185, 129)" },
     ];
   },
 
   getPricingColorScale() {
     return [
-      { value: 0, color: "#3b82f6" },
-      { value: 0.25, color: "#10b981" },
-      { value: 0.5, color: "#f59e0b" },
-      { value: 0.75, color: "#f97316" },
-      { value: 1, color: "#ef4444" },
+      { value: 0, color: "rgb(59, 130, 246)" },
+      { value: 0.25, color: "rgb(16, 185, 129)" },
+      { value: 0.5, color: "rgb(245, 158, 11)" },
+      { value: 0.75, color: "rgb(249, 115, 22)" },
+      { value: 1, color: "rgb(239, 68, 68)" },
     ];
   },
 
   getRevenueColorScale() {
     return [
-      { value: 0, color: "#cbd5e1" },
-      { value: 0.3, color: "#60a5fa" },
-      { value: 0.6, color: "#34d399" },
-      { value: 0.8, color: "#fbbf24" },
-      { value: 1, color: "#f87171" },
+      { value: 0, color: "rgb(203, 213, 225)" },
+      { value: 0.3, color: "rgb(96, 165, 250)" },
+      { value: 0.6, color: "rgb(52, 211, 153)" },
+      { value: 0.8, color: "rgb(251, 191, 36)" },
+      { value: 1, color: "rgb(248, 113, 113)" },
     ];
   },
 
@@ -227,21 +229,14 @@ export class HeatMapGenerator {
   },
 
   blendColors(color1, color2, ratio) {
-    const r1 = parseInt(color1.slice(1, 3), 16);
-    const g1 = parseInt(color1.slice(3, 5), 16);
-    const b1 = parseInt(color1.slice(5, 7), 16);
+    const rgb1 = color1.match(/\d+/g).map(Number);
+    const rgb2 = color2.match(/\d+/g).map(Number);
 
-    const r2 = parseInt(color2.slice(1, 3), 16);
-    const g2 = parseInt(color2.slice(3, 5), 16);
-    const b2 = parseInt(color2.slice(5, 7), 16);
+    const r = Math.round(rgb1[0] + (rgb2[0] - rgb1[0]) * ratio);
+    const g = Math.round(rgb1[1] + (rgb2[1] - rgb1[1]) * ratio);
+    const b = Math.round(rgb1[2] + (rgb2[2] - rgb1[2]) * ratio);
 
-    const r = Math.round(r1 + (r2 - r1) * ratio);
-    const g = Math.round(g1 + (g2 - g1) * ratio);
-    const b = Math.round(b1 + (b2 - b1) * ratio);
-
-    return `#${r.toString(16).padStart(2, "0")}${g
-      .toString(16)
-      .padStart(2, "0")}${b.toString(16).padStart(2, "0")}`;
+    return `rgb(${r}, ${g}, ${b})`;
   },
 
   renderHeatMap(
@@ -281,13 +276,13 @@ export class HeatMapGenerator {
           2
         )}">
             <rect x="${seatX}" y="${rowY}" width="${seatSize}" height="${seatSize}" 
-              fill="${color}" rx="4" stroke="#ffffff" stroke-width="1" 
+              fill="${color}" rx="4" stroke="rgb(255, 255, 255)" stroke-width="1" 
               class="transition-all hover:stroke-width-2">
               <title>${seatId}: ${(score * 100).toFixed(1)}%</title>
             </rect>
             <text x="${seatX + seatSize / 2}" y="${
           rowY + seatSize / 2 + 4
-        }" fill="white" 
+        }" fill="rgb(255, 255, 255)" 
               text-anchor="middle" font-size="${Math.min(
                 seatSize * 0.3,
                 12
@@ -306,10 +301,10 @@ export class HeatMapGenerator {
           <rect x="${stagePadding}" y="${stagePadding}" width="${
       seatsPerRow * (seatSize + seatGap)
     }" height="${stageHeight}" 
-            fill="#374151" rx="4" />
+            fill="${StageColor}" rx="4" />
           <text x="${svgWidth / 2}" y="${
       stagePadding + stageHeight / 2 + 5
-    }" fill="white" 
+    }" fill="rgb(255, 255, 255)" 
             text-anchor="middle" font-size="16" font-weight="bold">STAGE</text>
           ${seatsHTML}
           ${legendHTML}
@@ -330,7 +325,7 @@ export class HeatMapGenerator {
       const x = legendX + i * segmentWidth;
       legendHTML += `
         <rect x="${x}" y="${legendY}" width="${segmentWidth}" height="20" 
-          fill="url(#gradient-${i})" stroke="#d1d5db" />
+          fill="url(#gradient-${i})" stroke="rgb(209, 213, 219)" />
         <defs>
           <linearGradient id="gradient-${i}" x1="0%" y1="0%" x2="100%" y2="0%">
             <stop offset="0%" stop-color="${colorScale[i].color}" />
@@ -343,7 +338,7 @@ export class HeatMapGenerator {
     colorScale.forEach((item, i) => {
       const x = legendX + i * segmentWidth;
       legendHTML += `
-        <text x="${x}" y="${legendY + 35}" fill="#6b7280" 
+        <text x="${x}" y="${legendY + 35}" fill="rgb(107, 114, 128)" 
           text-anchor="middle" font-size="10">${(item.value * 100).toFixed(
             0
           )}%</text>
@@ -384,61 +379,43 @@ export const heatMapUtils = {
   },
 
   initHeatMapControls(generator, seatDetails, pricingSections, layout) {
-    const buttons = document.querySelectorAll(".heat-mode-btn");
+    const $buttons = $(".heat-mode-btn");
 
-    buttons.forEach((btn) => {
-      btn.addEventListener("click", function () {
-        buttons.forEach((b) => {
-          b.classList.remove(
-            "bg-indigo-600",
-            "text-white",
-            "border-indigo-600"
+    $buttons.on("click", function () {
+      $buttons.removeClass("bg-indigo-600 text-white border-indigo-600")
+        .addClass("bg-white text-gray-700 border-gray-300 hover:bg-gray-50");
+
+      $(this).removeClass("bg-white text-gray-700 border-gray-300 hover:bg-gray-50")
+        .addClass("bg-indigo-600 text-white border-indigo-600");
+
+      const mode = $(this).data("mode");
+      const $display = $(".heat-map-display");
+
+      let html = "";
+      switch (mode) {
+        case "availability":
+          html = generator.generateAvailabilityHeatMap(seatDetails, layout);
+          break;
+        case "pricing":
+          html = generator.generatePricingHeatMap(
+            seatDetails,
+            pricingSections,
+            layout
           );
-          b.classList.add(
-            "bg-white",
-            "text-gray-700",
-            "border-gray-300",
-            "hover:bg-gray-50"
+          break;
+        case "revenue":
+          html = generator.generateRevenueHeatMap(
+            seatDetails,
+            pricingSections,
+            layout
           );
-        });
+          break;
+      }
 
-        this.classList.remove(
-          "bg-white",
-          "text-gray-700",
-          "border-gray-300",
-          "hover:bg-gray-50"
-        );
-        this.classList.add("bg-indigo-600", "text-white", "border-indigo-600");
-
-        const mode = this.dataset.mode;
-        const display = document.querySelector(".heat-map-display");
-
-        let html = "";
-        switch (mode) {
-          case "availability":
-            html = generator.generateAvailabilityHeatMap(seatDetails, layout);
-            break;
-          case "pricing":
-            html = generator.generatePricingHeatMap(
-              seatDetails,
-              pricingSections,
-              layout
-            );
-            break;
-          case "revenue":
-            html = generator.generateRevenueHeatMap(
-              seatDetails,
-              pricingSections,
-              layout
-            );
-            break;
-        }
-
-        if (display) display.innerHTML = html;
-      });
+      $display.html(html);
     });
 
-    buttons[0]?.click();
+    $buttons.first().trigger("click");
   },
 };
 

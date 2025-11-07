@@ -60,54 +60,6 @@
   }
 }
 
-@keyframes fade-in {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.animate-fade-in {
-  animation: fade-in 0.3s ease-out;
-}
-
-.text-shadow {
-  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
-}
-
-.text-shadow-sm {
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
-}
-
-.stall-card {
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
-}
-
-.stall-card:hover {
-  transform: translateY(-4px);
-}
-
-.interactive-seat {
-  cursor: pointer;
-  transition: opacity 0.2s ease;
-}
-
-.interactive-seat:hover {
-  opacity: 0.8;
-}
-
-.interactive-seat:hover rect {
-  filter: brightness(1.2);
-}
-
-.interactive-seat:active {
-  opacity: 0.6;
-}
-
 svg g.interactive-seat {
   pointer-events: all;
 }
@@ -116,38 +68,28 @@ svg g.interactive-seat * {
   pointer-events: none;
 }
 
-button[disabled],
-button.cursor-not-allowed {
-  pointer-events: none;
-  user-select: none;
+.os-theme-indigo > .os-scrollbar > .os-scrollbar-track > .os-scrollbar-handle {
+  background: rgba(99, 102, 241, 0.4);
 }
 
-.delete-ticket-type-btn[disabled] {
-  pointer-events: none !important;
-  cursor: not-allowed !important;
+.os-theme-indigo
+  > .os-scrollbar:hover
+  > .os-scrollbar-track
+  > .os-scrollbar-handle {
+  background: rgba(99, 102, 241, 0.6);
 }
 
-.group\/tooltip:hover .hidden {
-  display: block;
+.os-theme-indigo
+  > .os-scrollbar
+  > .os-scrollbar-track
+  > .os-scrollbar-handle.active {
+  background: rgba(99, 102, 241, 0.8);
 }
 
-@keyframes bounce-in {
-  0% {
-    transform: scale(0);
-    opacity: 0;
-  }
-  50% {
-    transform: scale(1.1);
-  }
-  100% {
-    transform: scale(1);
-    opacity: 1;
-  }
+.os-theme-indigo > .os-scrollbar-vertical {
+  width: 8px;
 }
 
-.card-valid-icon:not(.hidden),
-.expiry-valid-icon:not(.hidden),
-.cvv-valid-icon:not(.hidden),
-.name-valid-icon:not(.hidden) {
-  animation: bounce-in 0.3s ease-out;
+.os-theme-indigo > .os-scrollbar-horizontal {
+  height: 8px;
 }

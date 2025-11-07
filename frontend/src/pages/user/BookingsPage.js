@@ -1,7 +1,9 @@
 import { createEmptyState } from "/src/components/EmptyState.js";
 import { FormComponents } from "/src/components/FormComponents.js";
+import { BookingCard } from "/src/components/BookingCard.js";
 import { statsService } from "/src/services/statsService.js";
 import { storage } from "/src/services/storageService.js";
+import { SwalColors } from "/src/utils/colors.js";
 import dayjs from "dayjs";
 import Swal from "sweetalert2";
 import { notify } from "/src/utils/ui/notification.js";
@@ -226,7 +228,7 @@ export default {
 
     this.filteredBookings = this.bookings.filter((booking) => {
       const performance = this.performances.find(
-        (p) => p.id === booking.performanceId
+        (p) => String(p.id) === String(booking.performanceId)
       );
 
       const matchesSearch =
@@ -264,7 +266,18 @@ export default {
     const bookingsHTML = `
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         ${this.filteredBookings
-          .map((booking) => this.renderBookingCard(booking))
+          .map((booking) => {
+            const performance = this.performances.find(
+              (p) => String(p.id) === String(booking.performanceId)
+            );
+            let showtime = null;
+            if (booking.showtimeId && performance?.showtimes) {
+              showtime = performance.showtimes.find(
+                (s) => String(s.id) === String(booking.showtimeId)
+              );
+            }
+            return BookingCard.renderGrid(booking, performance, showtime);
+          })
           .join("")}
       </div>
       <div class="mt-6 text-center text-sm text-gray-600">
@@ -279,371 +292,239 @@ export default {
     $("#bookingsList").html(bookingsHTML);
   },
 
-  renderBookingCard(booking) {
-    const performance = this.performances.find(
-      (p) => p.id === booking.performanceId
-    );
-    const performanceDate = performance ? new Date(performance.date) : null;
-    const isUpcoming = performanceDate && performanceDate > new Date();
-    const isPast = performanceDate && performanceDate < new Date();
-
-    const statusConfig = {
-      confirmed: {
-        gradient: "from-emerald-500 to-green-600",
-        bgColor: "bg-emerald-50",
-        borderColor: "border-emerald-200",
-        textColor: "text-emerald-800",
-        iconColor: "text-emerald-600",
-        icon: "fa-check-circle",
-        text: "Confirmed",
-      },
-      pending: {
-        gradient: "from-amber-500 to-orange-600",
-        bgColor: "bg-amber-50",
-        borderColor: "border-amber-200",
-        textColor: "text-amber-800",
-        iconColor: "text-amber-600",
-        icon: "fa-clock",
-        text: "Pending",
-      },
-      cancelled: {
-        gradient: "from-rose-500 to-red-600",
-        bgColor: "bg-rose-50",
-        borderColor: "border-rose-200",
-        textColor: "text-rose-800",
-        iconColor: "text-rose-600",
-        icon: "fa-times-circle",
-        text: "Cancelled",
-      },
-    };
-
-    const status = statusConfig[booking.status];
-
-    const seatCount = booking.seats?.length || 0;
-    const seatDisplay =
-      seatCount <= 3
-        ? booking.seats.join(", ")
-        : `${booking.seats.slice(0, 3).join(", ")} +${seatCount - 3} more`;
-
-    return `
-      <div class="group relative bg-white rounded-2xl shadow-lg border-2 ${
-        status.borderColor
-      } hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 overflow-hidden ${
-      isPast ? "opacity-60" : ""
-    }">
-        ${
-          isPast
-            ? `<div class="absolute top-4 right-4 z-10 px-3 py-1 bg-gray-800/90 text-white text-xs font-bold rounded-full uppercase tracking-wider">
-              <i class="fas fa-history mr-1"></i>Past Event
-            </div>`
-            : isUpcoming
-            ? `<div class="absolute top-4 right-4 z-10 px-3 py-1 bg-indigo-600/90 text-white text-xs font-bold rounded-full uppercase tracking-wider animate-pulse">
-              <i class="fas fa-calendar-star mr-1"></i>Upcoming
-            </div>`
-            : ""
-        }
-
-        <div class="relative bg-gradient-to-br ${
-          status.gradient
-        } text-white p-6 pb-20">
-          <div class="absolute inset-0 bg-black/10"></div>
-          <div class="relative z-10">
-            <div class="flex items-start justify-between mb-4">
-              <div class="flex items-center gap-3">
-                <div class="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center">
-                  <i class="fas fa-ticket-alt text-2xl"></i>
-                </div>
-                <div>
-                  <p class="text-xs font-semibold opacity-90 uppercase tracking-wider mb-1">Booking ID</p>
-                  <p class="text-xl font-mono font-black">${booking.id}</p>
-                </div>
-              </div>
-            </div>
-
-            <div class="inline-flex items-center gap-2 px-4 py-2 bg-white/95 backdrop-blur-sm rounded-full ${
-              status.textColor
-            } shadow-lg">
-              <i class="fas ${status.icon} ${status.iconColor}"></i>
-              <span class="text-sm font-bold">${status.text}</span>
-            </div>
-          </div>
-        </div>
-
-        <div class="p-6 -mt-16 relative z-10">
-          <div class="bg-white rounded-xl shadow-md p-5 mb-4 border border-gray-100">
-            <h3 class="text-xl font-bold text-gray-900 mb-3 line-clamp-2 leading-tight">
-              <i class="fas fa-music text-indigo-600 mr-2"></i>${
-                performance?.title || "Unknown Performance"
-              }
-            </h3>
-
-            <div class="grid grid-cols-2 gap-3 text-sm">
-            <div class="flex items-center gap-2 text-gray-600">
-              <i class="fas fa-calendar-alt w-4"></i>
-              <span>${
-                performanceDate
-                  ? dayjs(performanceDate).format("MMM D, YYYY")
-                  : "N/A"
-              }</span>
-            </div>
-            <div class="flex items-center gap-2 text-gray-600">
-              <i class="fas fa-map-marker-alt w-4"></i>
-              <span>${performance?.venue || "N/A"}</span>
-            </div>
-            <div class="flex items-center gap-2 text-gray-600">
-              <i class="fas fa-chair w-4"></i>
-              <span>${booking.seats.length} seat${
-      booking.seats.length > 1 ? "s" : ""
-    }: ${booking.seats.slice(0, 3).join(", ")}${
-      booking.seats.length > 3 ? "..." : ""
-    }</span>
-            </div>
-            <div class="flex items-start gap-2 text-gray-600">
-              <i class="fas fa-tags w-4 mt-0.5"></i>
-              <div class="flex-1">
-                ${
-                  booking.seatTicketTypes
-                    ? `
-                  <div class="space-y-0.5">
-                    ${Object.entries(booking.seatTicketTypes)
-                      .slice(0, 2)
-                      .map(
-                        ([seat, ticket]) =>
-                          `<div class="text-xs"><span class="font-medium">${seat}:</span> ${ticket.name}</div>`
-                      )
-                      .join("")}
-                    ${
-                      Object.keys(booking.seatTicketTypes).length > 2
-                        ? `<div class="text-xs text-gray-500">+${
-                            Object.keys(booking.seatTicketTypes).length - 2
-                          } more</div>`
-                        : ""
-                    }
-                  </div>
-                `
-                    : `<span>${booking.ticketType || "Standard"}</span>`
-                }
-              </div>
-            </div>
-          </div>
-
-          <div class="mt-4 pt-4 border-t-2 border-dashed border-gray-200 flex justify-between items-center">
-            <div>
-              <p class="text-xs text-gray-500 uppercase tracking-wider font-semibold">Total Amount</p>
-              <p class="text-2xl font-black text-indigo-600">${statsService.formatCurrency(
-                booking.amount
-              )}</p>
-            </div>
-            <div class="text-right">
-              <p class="text-xs text-gray-500">Booked on</p>
-              <p class="text-sm font-semibold text-gray-700">${dayjs(
-                booking.date
-              ).format("MMM D, YYYY")}</p>
-            </div>
-          </div>
-        </div>
-
-        <div class="bg-gradient-to-br from-gray-50 to-gray-100 px-6 py-4 space-y-3">
-          <div class="flex gap-2">
-            <button
-              class="view-booking-btn flex-1 inline-flex items-center justify-center gap-2 px-4 py-3 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 hover:scale-105 transition-all duration-200 shadow-md text-sm font-bold group"
-              data-id="${booking.id}"
-            >
-              <i class="fas fa-eye group-hover:scale-110 transition-transform"></i>
-              <span>View Details</span>
-            </button>
-            ${
-              booking.status !== "cancelled" && isUpcoming
-                ? `
-            <button
-              class="cancel-booking-btn inline-flex items-center justify-center px-4 py-3 bg-red-600 text-white rounded-xl hover:bg-red-700 hover:scale-105 transition-all duration-200 shadow-md text-sm font-bold"
-              data-id="${booking.id}"
-              title="Cancel Booking"
-            >
-              <i class="fas fa-times"></i>
-            </button>
-          `
-                : ""
-            }
-          </div>
-          ${
-            booking.status === "confirmed"
-              ? `
-        <div class="grid grid-cols-2 gap-2">
-          <div class="bg-gradient-to-br from-emerald-500 to-green-600 p-0.5 rounded-xl">
-            <div class="bg-white rounded-[10px] p-2 flex gap-1">
-              <button
-                class="download-ticket-btn flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2.5 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-lg hover:from-emerald-600 hover:to-green-700 transition-all duration-200 text-xs font-bold shadow-md hover:shadow-lg hover:scale-105 group"
-                data-id="${booking.id}"
-                title="Download E-Ticket PDF"
-              >
-                <i class="fas fa-file-pdf group-hover:scale-110 transition-transform"></i>
-                <span>Ticket</span>
-              </button>
-              <button
-                class="print-ticket-btn inline-flex items-center justify-center px-3 py-2.5 bg-emerald-100 text-emerald-700 rounded-lg hover:bg-emerald-200 transition-all duration-200 text-xs font-bold hover:scale-105"
-                data-id="${booking.id}"
-                title="Print E-Ticket"
-              >
-                <i class="fas fa-print"></i>
-              </button>
-            </div>
-          </div>
-          <div class="bg-gradient-to-br from-blue-500 to-indigo-600 p-0.5 rounded-xl">
-            <div class="bg-white rounded-[10px] p-2 flex gap-1">
-              <button
-                class="download-invoice-btn flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2.5 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-lg hover:from-blue-600 hover:to-indigo-700 transition-all duration-200 text-xs font-bold shadow-md hover:shadow-lg hover:scale-105 group"
-                data-id="${booking.id}"
-                title="Download Invoice PDF"
-              >
-                <i class="fas fa-file-invoice group-hover:scale-110 transition-transform"></i>
-                <span>Invoice</span>
-              </button>
-              <button
-                class="print-invoice-btn inline-flex items-center justify-center px-3 py-2.5 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-all duration-200 text-xs font-bold hover:scale-105"
-                data-id="${booking.id}"
-                title="Print Invoice"
-              >
-                <i class="fas fa-print"></i>
-              </button>
-            </div>
-          </div>
-        </div>
-        `
-              : ""
-          }
-        </div>
-      </div>
-    `;
-  },
-
   viewBooking(bookingId) {
     const booking = this.bookings.find((b) => b.id === bookingId);
     if (!booking) return;
 
     const performance = this.performances.find(
-      (p) => p.id === booking.performanceId
+      (p) => String(p.id) === String(booking.performanceId)
     );
-    const performanceDate = performance ? new Date(performance.date) : null;
+
+    let showtime = null;
+    if (booking.showtimeId && performance?.showtimes) {
+      showtime = performance.showtimes.find(
+        (s) => String(s.id) === String(booking.showtimeId)
+      );
+    }
+
+    const performanceDate = showtime
+      ? new Date(showtime.dateTime || showtime.datetime)
+      : performance
+      ? new Date(performance.date)
+      : null;
+
+    const statusColors = {
+      confirmed: {
+        bg: "bg-green-100",
+        text: "text-green-800",
+        icon: "fa-check-circle",
+      },
+      pending: {
+        bg: "bg-yellow-100",
+        text: "text-yellow-800",
+        icon: "fa-clock",
+      },
+      cancelled: {
+        bg: "bg-red-100",
+        text: "text-red-800",
+        icon: "fa-times-circle",
+      },
+      completed: {
+        bg: "bg-blue-100",
+        text: "text-blue-800",
+        icon: "fa-check-double",
+      },
+    };
+    const statusStyle = statusColors[booking.status] || statusColors.pending;
 
     Swal.fire({
-      title: `<i class="fas fa-ticket-alt text-indigo-600"></i> Booking Details`,
+      title: `<div class="flex items-center justify-center gap-3 text-indigo-900">
+        <i class="fas fa-ticket-alt text-indigo-600"></i>
+        <span>Booking Details</span>
+      </div>`,
       html: `
-        <div class="text-left space-y-4">
-          <div class="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-lg p-4 border border-indigo-200">
-            <div class="flex justify-between items-center mb-3">
-              <h3 class="font-semibold text-gray-900">Booking Information</h3>
-              <span class="px-3 py-1 rounded-full text-xs font-semibold ${
-                booking.status === "confirmed"
-                  ? "bg-green-100 text-green-800"
-                  : booking.status === "pending"
-                  ? "bg-yellow-100 text-yellow-800"
-                  : "bg-red-100 text-red-800"
-              }">
-                <i class="fas ${
-                  booking.status === "confirmed"
-                    ? "fa-check-circle"
-                    : booking.status === "pending"
-                    ? "fa-clock"
-                    : "fa-times-circle"
-                } mr-1"></i>
-                ${
-                  booking.status.charAt(0).toUpperCase() +
-                  booking.status.slice(1)
-                }
+        <div class="text-left space-y-3">
+          <div class="bg-gradient-to-br from-indigo-500 to-purple-600 text-white rounded-xl p-4 shadow-lg">
+            <div class="flex justify-between items-start mb-2">
+              <div>
+                <p class="text-xs font-semibold uppercase tracking-wider opacity-90 mb-1">Booking ID</p>
+                <p class="text-lg font-mono font-bold">${booking.id}</p>
+              </div>
+              <span class="px-3 py-1.5 rounded-lg text-xs font-bold ${
+                statusStyle.bg
+              } ${statusStyle.text} shadow-md">
+                <i class="fas ${statusStyle.icon} mr-1"></i>${
+        booking.status.charAt(0).toUpperCase() + booking.status.slice(1)
+      }
               </span>
             </div>
-            <div class="space-y-2 text-sm">
-              <p><span class="font-medium">Booking ID:</span> <span class="font-mono">${
-                booking.id
-              }</span></p>
-              <p><span class="font-medium">Booking Date:</span> ${dayjs(
-                booking.date
-              ).format("MMMM D, YYYY h:mm A")}</p>
+            <div class="flex items-center gap-2 text-xs opacity-90">
+              <i class="fas fa-calendar-check"></i>
+              <span>Booked: ${dayjs(booking.date).format(
+                "MMM D, YYYY h:mm A"
+              )}</span>
             </div>
           </div>
 
-          <div class="bg-blue-50 rounded-lg p-4 border border-blue-200">
-            <h3 class="font-semibold text-gray-900 mb-2">Performance Details</h3>
-            <div class="space-y-2 text-sm">
-              <p class="font-medium text-indigo-900 text-base">${
-                performance?.title || "Unknown"
-              }</p>
-              <p><span class="font-medium">Date:</span> ${
-                performanceDate
-                  ? dayjs(performanceDate).format("MMMM D, YYYY")
-                  : "N/A"
-              }</p>
-              <p><span class="font-medium">Venue:</span> ${
-                performance?.venue || "N/A"
-              }</p>
-              <p><span class="font-medium">Conductor:</span> ${
-                performance?.conductor || "N/A"
-              }</p>
-            </div>
-          </div>
-
-          <div class="bg-purple-50 rounded-lg p-4 border border-purple-200">
-            <h3 class="font-semibold text-gray-900 mb-3">Ticket Information</h3>
-            ${
-              booking.seatTicketTypes
-                ? `
-              <div class="space-y-2 mb-3">
-                <p class="text-sm font-medium text-gray-700">Seat & Ticket Breakdown:</p>
-                <div class="space-y-1.5">
-                  ${Object.entries(booking.seatTicketTypes)
-                    .map(
-                      ([seat, ticket]) => `
-                    <div class="flex items-center justify-between p-2 bg-white rounded border border-purple-200 text-xs">
-                      <div class="flex items-center gap-2">
-                        <span class="px-2 py-1 bg-indigo-600 text-white rounded font-bold">${seat}</span>
-                        <span class="text-gray-700">${ticket.name}</span>
-                      </div>
-                      <span class="font-semibold text-gray-900">${statsService.formatCurrency(
-                        ticket.price
-                      )}</span>
-                    </div>
+          <div class="bg-white rounded-lg p-4 border-2 border-indigo-100 shadow-sm">
+            <div class="flex items-start gap-3">
+              <div class="w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                <i class="fas fa-music text-indigo-600"></i>
+              </div>
+              <div class="flex-1 min-w-0">
+                <h3 class="font-bold text-gray-900 text-base leading-tight mb-2">${
+                  performance?.title || "Unknown"
+                }</h3>
+                <div class="grid grid-cols-2 gap-x-3 gap-y-1.5 text-xs">
+                  <div class="flex items-center gap-1.5 text-gray-600">
+                    <i class="fas fa-calendar w-3"></i>
+                    <span class="truncate">${
+                      performanceDate
+                        ? dayjs(performanceDate).format("MMM D, YYYY")
+                        : "N/A"
+                    }</span>
+                  </div>
+                  <div class="flex items-center gap-1.5 text-gray-600">
+                    <i class="fas fa-clock w-3"></i>
+                    <span>${
+                      performanceDate
+                        ? dayjs(performanceDate).format("h:mm A")
+                        : "N/A"
+                    }</span>
+                  </div>
+                  <div class="flex items-center gap-1.5 text-gray-600 col-span-2">
+                    <i class="fas fa-map-marker-alt w-3"></i>
+                    <span class="truncate">${
+                      performance?.venueName ||
+                      performance?.location ||
+                      performance?.venue ||
+                      "N/A"
+                    }</span>
+                  </div>
+                  ${
+                    performance?.conductor
+                      ? `
+                  <div class="flex items-center gap-1.5 text-gray-600 col-span-2">
+                    <i class="fas fa-user-tie w-3"></i>
+                    <span class="truncate">${performance.conductor}</span>
+                  </div>
                   `
-                    )
-                    .join("")}
+                      : ""
+                  }
                 </div>
               </div>
-            `
-                : `
-              <div class="space-y-2 text-sm">
-                <p><span class="font-medium">Seats:</span> ${booking.seats.join(
-                  ", "
-                )}</p>
-                <p><span class="font-medium">Ticket Type:</span> ${
-                  booking.ticketType
-                }</p>
-              </div>
-            `
-            }
-            <p class="text-sm mt-2 pt-2 border-t border-purple-200">
-              <span class="font-medium">Total Seats:</span> ${
-                booking.seats.length
-              }
-            </p>
+            </div>
           </div>
 
-          <div class="bg-green-50 rounded-lg p-4 border border-green-200">
-            <h3 class="font-semibold text-gray-900 mb-2">Payment</h3>
+          <div class="bg-purple-50 rounded-lg p-3 border border-purple-200">
+            <div class="flex items-center gap-2 mb-2">
+              <i class="fas fa-couch text-purple-600"></i>
+              <h3 class="font-semibold text-gray-900 text-sm">Seats & Tickets</h3>
+              <span class="ml-auto text-xs font-bold text-purple-700 bg-purple-100 px-2 py-0.5 rounded-full">
+                ${booking.seats.length} seat${
+        booking.seats.length > 1 ? "s" : ""
+      }
+              </span>
+            </div>
+            <div class="space-y-1.5 max-h-44 overflow-y-auto">
+              ${
+                booking.seatTicketTypes
+                  ? Object.entries(booking.seatTicketTypes)
+                      .map(([seatId, ticket]) => {
+                        const seatParts = seatId.split("-");
+                        const seatNumber =
+                          seatParts[seatParts.length - 1] || seatId;
+                        const section =
+                          seatParts.length >= 3 ? seatParts[2] : "";
+                        const tier = ticket.tier || ticket.category || "";
+                        return `
+                <div class="bg-white rounded-lg border border-purple-200 p-2 hover:border-purple-300 transition-colors">
+                  <div class="flex items-start justify-between gap-2">
+                    <div class="flex items-center gap-2">
+                      <span class="px-2.5 py-1 bg-indigo-600 text-white rounded-lg font-bold text-xs min-w-[3rem] text-center">${seatNumber}</span>
+                      <div class="flex flex-col gap-0.5">
+                        ${
+                          section
+                            ? `<span class="text-gray-700 font-medium text-xs">${section}</span>`
+                            : ""
+                        }
+                        <div class="flex items-center gap-1.5">
+                          ${
+                            tier
+                              ? `<span class="px-1.5 py-0.5 bg-purple-100 text-purple-700 rounded text-[10px] font-semibold">${tier}</span>`
+                              : ""
+                          }
+                          <span class="text-gray-600 text-[10px]">${
+                            ticket.name
+                          }</span>
+                        </div>
+                      </div>
+                    </div>
+                    <span class="font-bold text-gray-900 text-xs whitespace-nowrap">${statsService.formatCurrency(
+                      ticket.price
+                    )}</span>
+                  </div>
+                </div>
+              `;
+                      })
+                      .join("")
+                  : booking.seats
+                      .map((seatId) => {
+                        const seatParts =
+                          typeof seatId === "string" ? seatId.split("-") : [];
+                        const seatNumber =
+                          seatParts[seatParts.length - 1] || seatId;
+                        const section =
+                          seatParts.length >= 3 ? seatParts[2] : "";
+                        return `
+                <div class="bg-white rounded-lg border border-purple-200 p-2 hover:border-purple-300 transition-colors">
+                  <div class="flex items-start justify-between gap-2">
+                    <div class="flex items-center gap-2">
+                      <span class="px-2.5 py-1 bg-indigo-600 text-white rounded-lg font-bold text-xs min-w-[3rem] text-center">${seatNumber}</span>
+                      <div class="flex flex-col gap-0.5">
+                        ${
+                          section
+                            ? `<span class="text-gray-700 font-medium text-xs">${section}</span>`
+                            : ""
+                        }
+                        <span class="text-gray-600 text-[10px]">${
+                          booking.ticketType || "Standard"
+                        }</span>
+                      </div>
+                    </div>
+                    <span class="font-bold text-gray-900 text-xs whitespace-nowrap">${statsService.formatCurrency(
+                      booking.amount / booking.seats.length
+                    )}</span>
+                  </div>
+                </div>
+              `;
+                      })
+                      .join("")
+              }
+            </div>
+          </div>
+
+          <div class="bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg p-4 border-2 border-green-200 shadow-sm">
             <div class="flex justify-between items-center">
-              <span class="text-sm font-medium">Total Amount:</span>
-              <span class="text-2xl font-bold text-green-700">${statsService.formatCurrency(
-                booking.amount
-              )}</span>
+              <div>
+                <p class="text-xs font-semibold text-green-700 uppercase tracking-wide mb-1">Total Amount</p>
+                <p class="text-2xl font-black text-green-700">${statsService.formatCurrency(
+                  booking.amount
+                )}</p>
+              </div>
+              <div class="w-12 h-12 bg-green-600 rounded-full flex items-center justify-center">
+                <i class="fas fa-check text-white text-xl"></i>
+              </div>
             </div>
           </div>
 
           ${
             booking.status === "confirmed"
               ? `
-            <div class="bg-indigo-50 rounded-lg p-3 border border-indigo-200">
-              <p class="text-xs text-indigo-800">
-                <i class="fas fa-info-circle mr-1"></i>
-                Please arrive 30 minutes before the performance starts. Present this booking confirmation at the entrance.
+            <div class="bg-indigo-50 rounded-lg p-2.5 border-l-4 border-indigo-600">
+              <p class="text-xs text-indigo-900 flex items-start gap-2">
+                <i class="fas fa-info-circle mt-0.5 flex-shrink-0"></i>
+                <span>Arrive 30 minutes early. Present this booking confirmation at the entrance.</span>
               </p>
             </div>
           `
@@ -651,12 +532,20 @@ export default {
           }
         </div>
       `,
-      width: "600px",
+      width: "550px",
       showCancelButton: booking.status === "confirmed",
-      confirmButtonText: "Close",
+      confirmButtonText: '<i class="fas fa-times mr-2"></i>Close',
       cancelButtonText:
-        booking.status === "confirmed" ? "Download E-Ticket" : "",
-      confirmButtonColor: "#4f46e5",
+        booking.status === "confirmed"
+          ? '<i class="fas fa-download mr-2"></i>Download E-Ticket'
+          : "",
+      confirmButtonColor: "#6366f1",
+      cancelButtonColor: "#10b981",
+      customClass: {
+        popup: "booking-details-modal",
+        confirmButton: "swal2-confirm-styled",
+        cancelButton: "swal2-cancel-styled",
+      },
     }).then((result) => {
       if (
         result.dismiss === Swal.DismissReason.cancel &&
@@ -672,13 +561,26 @@ export default {
     if (!booking) return;
 
     const performance = this.performances.find(
-      (p) => p.id === booking.performanceId
+      (p) => String(p.id) === String(booking.performanceId)
     );
+
+    let showtime = null;
+    if (booking.showtimeId && performance?.showtimes) {
+      showtime = performance.showtimes.find(
+        (s) => String(s.id) === String(booking.showtimeId)
+      );
+    }
+
     const currentUser = storage.getUser();
 
     try {
       notify.info("Generating PDF...");
-      await TicketGenerator.downloadAsPDF(booking, performance, currentUser);
+      await TicketGenerator.downloadAsPDF(
+        booking,
+        performance,
+        currentUser,
+        showtime
+      );
       notify.success("E-Ticket PDF downloaded successfully");
     } catch (error) {
       console.error("Error generating ticket:", error);
@@ -691,13 +593,26 @@ export default {
     if (!booking) return;
 
     const performance = this.performances.find(
-      (p) => p.id === booking.performanceId
+      (p) => String(p.id) === String(booking.performanceId)
     );
+
+    let showtime = null;
+    if (booking.showtimeId && performance?.showtimes) {
+      showtime = performance.showtimes.find(
+        (s) => String(s.id) === String(booking.showtimeId)
+      );
+    }
+
     const currentUser = storage.getUser();
 
     try {
       notify.info("Preparing print...");
-      await TicketGenerator.printTicket(booking, performance, currentUser);
+      await TicketGenerator.printTicket(
+        booking,
+        performance,
+        currentUser,
+        showtime
+      );
       notify.success("Opening print dialog...");
     } catch (error) {
       console.error("Error printing ticket:", error);
@@ -760,7 +675,7 @@ export default {
       `,
       icon: "warning",
       showCancelButton: true,
-      confirmButtonColor: "#ef4444",
+      confirmButtonColor: SwalColors.danger,
       confirmButtonText: "Yes, Cancel Booking",
       cancelButtonText: "No, Keep It",
     });

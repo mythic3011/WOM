@@ -1,247 +1,238 @@
-class NotificationService {
-  constructor() {
-    this.container = null;
-    this.init();
-  }
+import { Notyf } from "notyf";
+import "notyf/notyf.min.css";
 
-  init() {
-    if (!this.container) {
-      this.container = document.createElement("div");
-      this.container.id = "notification-container";
-      this.container.className =
-        "fixed top-4 right-4 z-50 flex flex-col gap-2 max-w-md";
-      document.body.appendChild(this.container);
+const notyf = new Notyf({
+  duration: 4000,
+  position: { x: "right", y: "top" },
+  dismissible: true,
+  ripple: true,
+  types: [
+    {
+      type: "success",
+      background: "#10b981",
+      className: "shadow-lg border-l-4 border-green-600",
+      icon: {
+        className: "fas fa-check-circle",
+        tagName: "i",
+        color: "white",
+      },
+    },
+    {
+      type: "error",
+      background: "#ef4444",
+      className: "shadow-lg border-l-4 border-red-600",
+      icon: {
+        className: "fas fa-times-circle",
+        tagName: "i",
+        color: "white",
+      },
+    },
+    {
+      type: "warning",
+      background: "#f59e0b",
+      className: "shadow-lg border-l-4 border-amber-600",
+      icon: {
+        className: "fas fa-exclamation-triangle",
+        tagName: "i",
+        color: "white",
+      },
+    },
+    {
+      type: "info",
+      background: "#3b82f6",
+      className: "shadow-lg border-l-4 border-blue-600",
+      icon: {
+        className: "fas fa-info-circle",
+        tagName: "i",
+        color: "white",
+      },
+    },
+    {
+      type: "loading",
+      background: "#6366f1",
+      className: "shadow-lg border-l-4 border-indigo-600",
+      duration: 0,
+      icon: {
+        className: "fas fa-spinner fa-spin",
+        tagName: "i",
+        color: "white",
+      },
+    },
+    {
+      type: "saved",
+      background: "#8b5cf6",
+      className: "shadow-lg border-l-4 border-purple-600",
+      icon: {
+        className: "fas fa-save",
+        tagName: "i",
+        color: "white",
+      },
+    },
+    {
+      type: "deleted",
+      background: "#f43f5e",
+      className: "shadow-lg border-l-4 border-rose-600",
+      icon: {
+        className: "fas fa-trash-alt",
+        tagName: "i",
+        color: "white",
+      },
+    },
+    {
+      type: "upload",
+      background: "#06b6d4",
+      className: "shadow-lg border-l-4 border-cyan-600",
+      icon: {
+        className: "fas fa-cloud-upload-alt",
+        tagName: "i",
+        color: "white",
+      },
+    },
+    {
+      type: "download",
+      background: "#14b8a6",
+      className: "shadow-lg border-l-4 border-teal-600",
+      icon: {
+        className: "fas fa-download",
+        tagName: "i",
+        color: "white",
+      },
+    },
+  ],
+});
+
+export const notify = {
+  success(message, duration = 4000) {
+    return notyf.open({
+      type: "success",
+      message,
+      duration,
+    });
+  },
+
+  error(message, duration = 5000) {
+    return notyf.open({
+      type: "error",
+      message,
+      duration,
+    });
+  },
+
+  warning(message, duration = 4500) {
+    return notyf.open({
+      type: "warning",
+      message,
+      duration,
+    });
+  },
+
+  info(message, duration = 4000) {
+    return notyf.open({
+      type: "info",
+      message,
+      duration,
+    });
+  },
+
+  loading(message = "Loading...", duration = 0) {
+    return notyf.open({
+      type: "loading",
+      message,
+      duration,
+    });
+  },
+
+  saved(message = "Changes saved successfully!", duration = 3000) {
+    return notyf.open({
+      type: "saved",
+      message,
+      duration,
+    });
+  },
+
+  deleted(message = "Item deleted successfully!", duration = 3000) {
+    return notyf.open({
+      type: "deleted",
+      message,
+      duration,
+    });
+  },
+
+  upload(message = "Upload complete!", duration = 3000) {
+    return notyf.open({
+      type: "upload",
+      message,
+      duration,
+    });
+  },
+
+  download(message = "Download started!", duration = 3000) {
+    return notyf.open({
+      type: "download",
+      message,
+      duration,
+    });
+  },
+
+  async promise(promise, messages = {}) {
+    const loadingNotification = this.loading(
+      messages.loading || "Processing..."
+    );
+
+    try {
+      const result = await promise;
+      this.dismiss(loadingNotification);
+      this.success(messages.success || "Operation completed successfully!");
+      return result;
+    } catch (error) {
+      this.dismiss(loadingNotification);
+      this.error(messages.error || "Operation failed. Please try again.");
+      throw error;
     }
-  }
+  },
 
-  show(message, type = "info", duration = 3000) {
-    const notification = this.createNotification(message, type);
-    this.container.appendChild(notification);
-
-    setTimeout(() => {
-      notification.classList.add("opacity-0", "translate-x-full");
-    }, duration);
-
-    setTimeout(() => {
-      notification.remove();
-    }, duration + 300);
-
-    return notification;
-  }
-
-  createNotification(message, type) {
-    const colors = {
-      success: "bg-green-600",
-      error: "bg-red-600",
-      warning: "bg-yellow-600",
-      info: "bg-blue-600",
-    };
-
-    const icons = {
-      success: "check-circle",
-      error: "exclamation-circle",
-      warning: "exclamation-triangle",
-      info: "info-circle",
-    };
-
-    const notification = document.createElement("div");
-    notification.className = `${
-      colors[type] || colors.info
-    } text-white px-6 py-3 rounded-lg shadow-lg transition-all duration-300 transform flex items-center gap-3 min-w-[300px]`;
-
-    notification.innerHTML = `
-      <i class="fas fa-${icons[type] || icons.info}"></i>
-      <span class="flex-1">${message}</span>
-      <button class="text-white hover:text-gray-200 transition-colors">
-        <i class="fas fa-times"></i>
-      </button>
-    `;
-
-    notification.querySelector("button").addEventListener("click", () => {
-      notification.classList.add("opacity-0", "translate-x-full");
-      setTimeout(() => notification.remove(), 300);
+  confirm(message, duration = 6000) {
+    return notyf.open({
+      type: "success",
+      message: `<i class="fas fa-check-double mr-2"></i>${message}`,
+      duration,
     });
+  },
 
-    return notification;
-  }
-
-  success(message, duration) {
-    return this.show(message, "success", duration);
-  }
-
-  error(message, duration) {
-    return this.show(message, "error", duration);
-  }
-
-  warning(message, duration) {
-    return this.show(message, "warning", duration);
-  }
-
-  info(message, duration) {
-    return this.show(message, "info", duration);
-  }
-
-  confirm(message, title = "Confirm") {
-    return new Promise((resolve) => {
-      const modal = document.createElement("div");
-      modal.className =
-        "fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center";
-      modal.innerHTML = `
-        <div class="bg-white rounded-lg p-6 max-w-md mx-4 shadow-xl">
-          <h3 class="text-xl font-bold text-gray-900 mb-4">
-            <i class="fas fa-question-circle text-yellow-500 mr-2"></i>${title}
-          </h3>
-          <p class="text-gray-600 mb-6">${message}</p>
-          <div class="flex justify-end gap-3">
-            <button id="cancelBtn" class="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg transition-colors">
-              Cancel
-            </button>
-            <button id="confirmBtn" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors">
-              Confirm
-            </button>
-          </div>
-        </div>
-      `;
-
-      document.body.appendChild(modal);
-
-      const confirmBtn = modal.querySelector("#confirmBtn");
-      const cancelBtn = modal.querySelector("#cancelBtn");
-
-      confirmBtn.addEventListener("click", () => {
-        modal.remove();
-        resolve(true);
-      });
-
-      cancelBtn.addEventListener("click", () => {
-        modal.remove();
-        resolve(false);
-      });
-
-      modal.addEventListener("click", (e) => {
-        if (e.target === modal) {
-          modal.remove();
-          resolve(false);
-        }
-      });
+  question(message, duration = 5000) {
+    return notyf.open({
+      type: "info",
+      message: `<i class="fas fa-question-circle mr-2"></i>${message}`,
+      duration,
     });
-  }
+  },
 
-  prompt(message, defaultValue = "", title = "Input") {
-    return new Promise((resolve) => {
-      const modal = document.createElement("div");
-      modal.className =
-        "fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center";
-      modal.innerHTML = `
-        <div class="bg-white rounded-lg p-6 max-w-md mx-4 shadow-xl">
-          <h3 class="text-xl font-bold text-gray-900 mb-4">
-            <i class="fas fa-edit text-blue-500 mr-2"></i>${title}
-          </h3>
-          <p class="text-gray-600 mb-4">${message}</p>
-          <input 
-            type="text" 
-            id="promptInput" 
-            value="${defaultValue}"
-            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent mb-6"
-            autofocus
-          />
-          <div class="flex justify-end gap-3">
-            <button id="cancelBtn" class="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg transition-colors">
-              Cancel
-            </button>
-            <button id="submitBtn" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors">
-              Submit
-            </button>
-          </div>
-        </div>
-      `;
+  custom(options) {
+    return notyf.open(options);
+  },
 
-      document.body.appendChild(modal);
+  dismiss(notification) {
+    if (notification) {
+      notyf.dismiss(notification);
+    }
+  },
 
-      const input = modal.querySelector("#promptInput");
-      const submitBtn = modal.querySelector("#submitBtn");
-      const cancelBtn = modal.querySelector("#cancelBtn");
+  dismissAll() {
+    notyf.dismissAll();
+  },
 
-      input.focus();
-      input.select();
+  queue: {
+    notifications: [],
 
-      const submit = () => {
-        const value = input.value.trim();
-        modal.remove();
-        resolve(value || null);
-      };
+    add(type, message, duration) {
+      const notification = notify[type](message, duration);
+      this.notifications.push(notification);
+      return notification;
+    },
 
-      submitBtn.addEventListener("click", submit);
-      input.addEventListener("keypress", (e) => {
-        if (e.key === "Enter") submit();
-      });
-
-      cancelBtn.addEventListener("click", () => {
-        modal.remove();
-        resolve(null);
-      });
-
-      modal.addEventListener("click", (e) => {
-        if (e.target === modal) {
-          modal.remove();
-          resolve(null);
-        }
-      });
-    });
-  }
-
-  alert(message, title = "Notice", type = "info") {
-    return new Promise((resolve) => {
-      const colors = {
-        success: "text-green-500",
-        error: "text-red-500",
-        warning: "text-yellow-500",
-        info: "text-blue-500",
-      };
-
-      const icons = {
-        success: "check-circle",
-        error: "exclamation-circle",
-        warning: "exclamation-triangle",
-        info: "info-circle",
-      };
-
-      const modal = document.createElement("div");
-      modal.className =
-        "fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center";
-      modal.innerHTML = `
-        <div class="bg-white rounded-lg p-6 max-w-md mx-4 shadow-xl">
-          <h3 class="text-xl font-bold text-gray-900 mb-4">
-            <i class="fas fa-${icons[type] || icons.info} ${
-        colors[type] || colors.info
-      } mr-2"></i>${title}
-          </h3>
-          <p class="text-gray-600 mb-6">${message}</p>
-          <div class="flex justify-end">
-            <button id="okBtn" class="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors">
-              OK
-            </button>
-          </div>
-        </div>
-      `;
-
-      document.body.appendChild(modal);
-
-      const okBtn = modal.querySelector("#okBtn");
-
-      okBtn.addEventListener("click", () => {
-        modal.remove();
-        resolve();
-      });
-
-      modal.addEventListener("click", (e) => {
-        if (e.target === modal) {
-          modal.remove();
-          resolve();
-        }
-      });
-    });
-  }
-}
-
-export const notify = new NotificationService();
+    clear() {
+      this.notifications.forEach((n) => notify.dismiss(n));
+      this.notifications = [];
+    },
+  },
+};

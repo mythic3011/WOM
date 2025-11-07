@@ -27,6 +27,16 @@ export const showtimeManager = {
     return {
       section: `Section ${sectionNumber}`,
       sectionCode: sectionCode,
+      tier: "standard",
+      rows: [],
+      basePrice: "",
+      capacity: 0,
+      discounts: {
+        student: 0.5,
+        senior: 0.5,
+        pwd: 0.5,
+        cssa: 0.5,
+      },
       prices: prices,
     };
   },

@@ -73,14 +73,8 @@ export {
   onPinch,
   onTap,
 } from "./ui/touchGestures.js";
+export { scrollbarUtils, initializeScrollbars } from "./ui/scrollbar.js";
 
-export {
-  createTable,
-  updateTable,
-  sortTable,
-  filterTable,
-  exportTableToCSV,
-} from "./data/table.js";
 export {
   validateEmail,
   validatePhone,
@@ -106,6 +100,7 @@ export {
   updateHeatMap,
   getSeatHeatData,
 } from "./booking/heatMap.js";
+export { ZonePricing } from "./booking/zonePricing.js";
 
 export {
   generateTicket,

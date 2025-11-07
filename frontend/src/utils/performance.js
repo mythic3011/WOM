@@ -78,10 +78,11 @@ export const performanceOptimizer = {
   },
 
   createVirtualScroller(container, items, renderItem, itemHeight = 50) {
+    const $container = $(container);
     const totalHeight = items.length * itemHeight;
-    const visibleItems = Math.ceil(container.clientHeight / itemHeight) + 2;
+    const visibleItems = Math.ceil($container.height() / itemHeight) + 2;
 
-    let scrollTop = container.scrollTop;
+    let scrollTop = $container.scrollTop();
     let startIndex = Math.floor(scrollTop / itemHeight);
 
     const render = () => {
@@ -93,19 +94,19 @@ export const performanceOptimizer = {
         .map((item, i) => renderItem(item, startIndex + i))
         .join("");
 
-      container.innerHTML = `
+      $container.html(`
         <div style="height: ${totalHeight}px; position: relative;">
           <div style="transform: translateY(${offsetY}px);">
             ${html}
           </div>
         </div>
-      `;
+      `);
     };
 
-    container.addEventListener(
+    $container.on(
       "scroll",
       this.throttle(() => {
-        scrollTop = container.scrollTop;
+        scrollTop = $container.scrollTop();
         startIndex = Math.floor(scrollTop / itemHeight);
         render();
       }, 100)
@@ -184,11 +185,8 @@ export const performanceOptimizer = {
   },
 
   eventDelegation(container, selector, event, handler) {
-    container.addEventListener(event, (e) => {
-      const target = e.target.closest(selector);
-      if (target && container.contains(target)) {
-        handler.call(target, e);
-      }
+    $(container).on(event, selector, function (e) {
+      handler.call(this, e);
     });
   },
 
@@ -197,17 +195,18 @@ export const performanceOptimizer = {
       const imageObserver = new IntersectionObserver((entries) => {
         entries.forEach((entry) => {
           if (entry.isIntersecting) {
-            const img = entry.target;
-            if (img.dataset.src) {
-              img.src = img.dataset.src;
-              delete img.dataset.src;
-              imageObserver.unobserve(img);
+            const $img = $(entry.target);
+            const dataSrc = $img.data("src");
+            if (dataSrc) {
+              $img.attr("src", dataSrc);
+              $img.removeData("src");
+              imageObserver.unobserve(entry.target);
             }
           }
         });
       });
 
-      document.querySelectorAll(selector).forEach((img) => {
+      $(selector).each((_, img) => {
         imageObserver.observe(img);
       });
 
@@ -217,10 +216,7 @@ export const performanceOptimizer = {
 
   prefetch(urls) {
     urls.forEach((url) => {
-      const link = document.createElement("link");
-      link.rel = "prefetch";
-      link.href = url;
-      document.head.appendChild(link);
+      $("<link>").attr("rel", "prefetch").attr("href", url).appendTo("head");
     });
   },
 

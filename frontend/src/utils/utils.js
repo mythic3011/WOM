@@ -1,17 +1,44 @@
+import dayjs from "dayjs";
+import relativeTime from "dayjs/plugin/relativeTime";
+import customParseFormat from "dayjs/plugin/customParseFormat";
+
+dayjs.extend(relativeTime);
+dayjs.extend(customParseFormat);
+
 export function formatDate(dateString) {
-  const date = new Date(dateString);
-  const now = new Date();
-  const diff = now - date;
-  const minutes = Math.floor(diff / 60000);
-  const hours = Math.floor(diff / 3600000);
-  const days = Math.floor(diff / 86400000);
+  return dayjs(dateString).fromNow();
+}
 
-  if (minutes < 1) return "Just now";
-  if (minutes < 60) return `${minutes} minute${minutes > 1 ? "s" : ""} ago`;
-  if (hours < 24) return `${hours} hour${hours > 1 ? "s" : ""} ago`;
-  if (days < 7) return `${days} day${days > 1 ? "s" : ""} ago`;
+export function formatDateTime(dateString) {
+  return dayjs(dateString).format("YYYY-MM-DD HH:mm");
+}
 
-  return date.toLocaleDateString();
+export function formatDateLong(dateString) {
+  return dayjs(dateString).format("MMMM D, YYYY");
+}
+
+export function formatDateShort(dateString) {
+  return dayjs(dateString).format("MMM D, YYYY");
+}
+
+export function formatTime(dateString) {
+  return dayjs(dateString).format("HH:mm");
+}
+
+export function isToday(dateString) {
+  return dayjs(dateString).isSame(dayjs(), "day");
+}
+
+export function isPast(dateString) {
+  return dayjs(dateString).isBefore(dayjs());
+}
+
+export function isFuture(dateString) {
+  return dayjs(dateString).isAfter(dayjs());
+}
+
+export function addDays(dateString, days) {
+  return dayjs(dateString).add(days, "day").format("YYYY-MM-DD");
 }
 
 export function formatCurrency(amount, currency = "HKD") {
@@ -24,17 +51,6 @@ export function formatCurrency(amount, currency = "HKD") {
 
 export function formatNumber(number) {
   return new Intl.NumberFormat("en-HK").format(number);
-}
-
-export function formatDateTime(dateString) {
-  const date = new Date(dateString);
-  return new Intl.DateTimeFormat("en-HK", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(date);
 }
 
 export function showAlert(

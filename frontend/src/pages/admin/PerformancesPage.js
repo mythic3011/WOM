@@ -3,16 +3,16 @@ import { getStatusBadge } from "/src/utils/status.js";
 import { createDebounceSearch } from "/src/utils/data/filters.js";
 import { createModal, openModal, closeModal } from "/src/components/Modal.js";
 import {
-  createImageUpload,
   initImageUpload,
   getImageDataURL,
 } from "/src/components/ImageUpload.js";
 import { notify } from "/src/utils/ui/notification.js";
 import { storage } from "/src/services/storageService.js";
-import { MOCK_VENUES } from "/src/data/mockData.js";
+import { MOCK_VENUES, SYSTEM_TICKET_TYPE_IDS } from "/src/data/mockData.js";
 import { ticketTypeService } from "/src/services/ticketTypeService.js";
 import { templateService } from "/src/services/templateService.js";
 import { venueService } from "/src/services/venueService.js";
+import { showtimeManager } from "/src/utils/booking/showtimeManager.js";
 import {
   createTemplateSelector,
   initTemplateSelector,
@@ -21,10 +21,15 @@ import {
   createZoneEditor,
   showZoneEditorDialog,
 } from "/src/components/ZoneEditor.js";
-import { seatMapGenerator } from "/src/utils/booking/seatMapGenerator.js";
-import { showtimeManager } from "/src/utils/booking/showtimeManager.js";
-import { formValidator } from "/src/utils/forms/formValidator.js";
-import { performanceOptimizer } from "/src/utils/performance.js";
+import {
+  getSectionColor,
+  getSeatStatusColor,
+  SwalColors,
+} from "/src/utils/colors.js";
+import { SeatMap } from "/src/components/SeatMap.js";
+import { SeatLayoutCustomizer } from "/src/components/SeatLayoutCustomizer.js";
+import { PerformanceFormSections } from "/src/components/PerformanceFormSections.js";
+import { FormComponents } from "/src/components/FormComponents.js";
 import dayjs from "dayjs";
 import Swal from "sweetalert2";
 
@@ -60,21 +65,21 @@ export default {
               type="text"
               id="searchInput"
               placeholder="Search performances..."
-              class="text-black px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+              class="text-gray-900 bg-white px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 placeholder:text-gray-400"
             />
             <select
               id="statusFilter"
-              class="text-black px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+              class="text-gray-900 bg-white px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
             >
-              <option value="">All Status</option>
-              <option value="upcoming">Upcoming</option>
-              <option value="on_sale">On Sale</option>
-              <option value="sold_out">Sold Out</option>
+              <option class="text-gray-900 bg-white" value="">All Status</option>
+              <option class="text-gray-900 bg-white" value="upcoming">Upcoming</option>
+              <option class="text-gray-900 bg-white" value="on_sale">On Sale</option>
+              <option class="text-gray-900 bg-white" value="sold_out">Sold Out</option>
             </select>
             <input
               type="date"
               id="dateFilter"
-              class="text-black px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+              class="text-gray-900 bg-white px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
             />
 <button
   id="clearFilters"
@@ -92,6 +97,8 @@ export default {
               <tr>
                 <th class="px-6 py-3 text-left text-xs font-bold text-gray-700 uppercase">Image</th>
                 <th class="px-6 py-3 text-left text-xs font-bold text-gray-700 uppercase">Title</th>
+                <th class="px-6 py-3 text-left text-xs font-bold text-gray-700 uppercase">Venue</th>
+                <th class="px-6 py-3 text-left text-xs font-bold text-gray-700 uppercase">Date</th>
                 <th class="px-6 py-3 text-left text-xs font-bold text-gray-700 uppercase">Composer</th>
                 <th class="px-6 py-3 text-left text-xs font-bold text-gray-700 uppercase">Conductor</th>
                 <th class="px-6 py-3 text-left text-xs font-bold text-gray-700 uppercase">Status</th>
@@ -126,7 +133,7 @@ export default {
     if (!data || data.length === 0) {
       $tbody.append(`
         <tr>
-          <td colspan="6" class="px-6 py-8 text-center text-gray-500">
+          <td colspan="8" class="px-6 py-8 text-center text-gray-500">
             No performances found. Click "Add Performance" to create one.
           </td>
         </tr>
@@ -143,43 +150,126 @@ export default {
         ? `<img src="${perf.imageUrl}" class="h-16 w-16 object-cover rounded" />`
         : `<div class="h-16 w-16 bg-gray-200 rounded flex items-center justify-center"><i class="fas fa-image text-gray-400"></i></div>`;
 
+      const venue = perf.venueName || perf.venue || perf.location || "N/A";
+      const showtimes = perf.showtimes || [];
+      const showtimeCount = showtimes.length;
+
+      let dateDisplay = "";
+      if (showtimeCount > 0) {
+        const firstShowtime = dayjs(
+          showtimes[0].dateTime || showtimes[0].datetime
+        );
+        const lastShowtime =
+          showtimeCount > 1
+            ? dayjs(
+                showtimes[showtimeCount - 1].dateTime ||
+                  showtimes[showtimeCount - 1].datetime
+              )
+            : null;
+
+        if (showtimeCount === 1) {
+          dateDisplay = `
+            <div class="text-sm font-medium text-gray-900">${firstShowtime.format(
+              "MMM D, YYYY"
+            )}</div>
+            <div class="text-xs text-gray-500">${firstShowtime.format(
+              "h:mm A"
+            )}</div>
+          `;
+        } else {
+          dateDisplay = `
+            <div class="flex items-center gap-2 mb-1">
+              <span class="text-sm font-medium text-gray-900">${firstShowtime.format(
+                "MMM D"
+              )}</span>
+              <i class="fas fa-arrow-right text-xs text-gray-400"></i>
+              <span class="text-sm font-medium text-gray-900">${lastShowtime.format(
+                "MMM D, YYYY"
+              )}</span>
+            </div>
+            <div class="inline-flex items-center gap-1.5 px-2 py-0.5 bg-indigo-100 text-indigo-700 rounded-full text-xs font-semibold">
+              <i class="fas fa-calendar-day"></i>
+              <span>${showtimeCount} Showtimes</span>
+            </div>
+          `;
+        }
+      } else if (perf.date) {
+        dateDisplay = `
+          <div class="text-sm text-gray-900">${dayjs(perf.date).format(
+            "MMM D, YYYY"
+          )}</div>
+          <div class="text-xs text-gray-500">No showtimes set</div>
+        `;
+      } else {
+        dateDisplay = `<div class="text-sm text-gray-500">N/A</div>`;
+      }
+
       $tbody.append(`
-        <tr class="hover:bg-gray-50">
+        <tr class="hover:bg-gray-50 transition-colors">
           <td class="px-6 py-4">${imageHtml}</td>
           <td class="px-6 py-4">
             <div class="text-sm font-medium text-gray-900">${perf.title}</div>
             <div class="text-xs text-gray-500">${perf.orchestra || "N/A"}</div>
           </td>
+          <td class="px-6 py-4">
+            <div class="text-sm text-gray-900">${venue}</div>
+          </td>
+          <td class="px-6 py-4">
+            ${dateDisplay}
+          </td>
           <td class="px-6 py-4 text-sm text-gray-600">${perf.composer}</td>
           <td class="px-6 py-4 text-sm text-gray-600">${perf.conductor}</td>
           <td class="px-6 py-4">${statusBadge}</td>
           <td class="px-6 py-4">
-            <div class="flex gap-2">
-              <button class="edit-btn text-indigo-600 hover:text-indigo-800 transition-colors" data-id="${
-                perf.id
-              }" title="Edit">
-                <i class="fas fa-edit"></i>
-              </button>
-              <button class="delete-btn text-red-600 hover:text-red-800 transition-colors" data-id="${
-                perf.id
-              }" title="Delete">
-                <i class="fas fa-trash"></i>
-              </button>
+            <div class="flex items-center gap-2">
+              ${FormComponents.actionButton({
+                icon: "fa-eye",
+                color: "blue",
+                size: "sm",
+                title: "View Details",
+                onClick: `window.PerformancesPage.viewPerformance(${perf.id})`,
+              })}
+              ${
+                showtimeCount > 0
+                  ? FormComponents.actionButton({
+                      icon: "fa-calendar-alt",
+                      color: "green",
+                      size: "sm",
+                      title: `Manage ${showtimeCount} Showtime${
+                        showtimeCount > 1 ? "s" : ""
+                      }`,
+                      onClick: `window.PerformancesPage.manageShowtimes(${perf.id})`,
+                    })
+                  : ""
+              }
+              ${FormComponents.actionButton({
+                icon: "fa-edit",
+                color: "yellow",
+                size: "sm",
+                title: "Edit Performance",
+                onClick: `window.PerformancesPage.editPerformance(${perf.id})`,
+              })}
+              ${FormComponents.actionButton({
+                icon: "fa-copy",
+                color: "indigo",
+                size: "sm",
+                title: "Duplicate Performance",
+                onClick: `window.PerformancesPage.duplicatePerformance(${perf.id})`,
+              })}
+              ${FormComponents.actionButton({
+                icon: "fa-trash",
+                color: "red",
+                size: "sm",
+                title: "Delete Performance",
+                onClick: `window.PerformancesPage.deletePerformance(${perf.id})`,
+              })}
             </div>
           </td>
         </tr>
       `);
     });
 
-    $(".edit-btn").on("click", (e) => {
-      const id = $(e.currentTarget).data("id");
-      this.editPerformance(id);
-    });
-
-    $(".delete-btn").on("click", (e) => {
-      const id = $(e.currentTarget).data("id");
-      this.deletePerformance(id);
-    });
+    window.PerformancesPage = this;
   },
 
   setupEventListeners() {
@@ -245,226 +335,9 @@ export default {
   getPerformanceFormHTML() {
     return `
       <form id="performanceForm" class="space-y-8">
-        <div class="bg-gray-50 p-6 rounded-lg">
-          <h3 class="text-lg font-semibold text-gray-900 mb-4">
-            <i class="fas fa-info-circle text-indigo-600 mr-2"></i>Basic Information
-          </h3>
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div class="md:col-span-2">
-              ${createImageUpload({
-                id: "performanceImage",
-                label: "Performance Image",
-                shape: "rounded-lg",
-                previewSize: "32",
-                helpText:
-                  "PNG, JPG, GIF up to 5MB - Recommended size 800x600px",
-              })}
-            </div>
-
-            <div class="md:col-span-2">
-              <label class="block text-sm font-medium text-gray-700 mb-2">
-                Title <span class="text-red-500">*</span>
-              </label>
-              <input type="text" id="title" required
-                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
-                placeholder="Symphony No. 9 - Beethoven" />
-            </div>
-
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-2">
-                Composer <span class="text-red-500">*</span>
-              </label>
-              <input type="text" id="composer" required
-                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
-                placeholder="Ludwig van Beethoven" />
-            </div>
-
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-2">
-                Conductor <span class="text-red-500">*</span>
-              </label>
-              <input type="text" id="conductor" required
-                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
-                placeholder="John Eliot Gardiner" />
-            </div>
-
-            <div class="md:col-span-2">
-              <label class="block text-sm font-medium text-gray-700 mb-2">
-                Orchestra <span class="text-red-500">*</span>
-              </label>
-              <input type="text" id="orchestra" required
-                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
-                placeholder="Hong Kong Philharmonic Orchestra" />
-            </div>
-
-            <div class="md:col-span-2">
-              <label class="block text-sm font-medium text-gray-700 mb-2">
-                Description <span class="text-red-500">*</span>
-              </label>
-              <textarea id="description" required rows="4"
-                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
-                placeholder="Experience Beethoven's monumental Ninth Symphony featuring the iconic Ode to Joy"></textarea>
-            </div>
-          </div>
-        </div>
-
-        <div class="bg-gray-50 p-6 rounded-lg">
-          <h3 class="text-lg font-semibold text-gray-900 mb-4">
-            <i class="fas fa-theater-masks text-indigo-600 mr-2"></i>Performance Information
-          </h3>
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div class="md:col-span-2">
-              <label class="block text-sm font-medium text-gray-700 mb-2">
-                Presenter <span class="text-red-500">*</span>
-              </label>
-              <input type="text" id="presenter" required
-                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
-                placeholder="Hong Kong Philharmonic Orchestra" />
-            </div>
-
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-2">
-                Event Categories <span class="text-red-500">*</span>
-              </label>
-              <div class="space-y-2">
-                <div class="flex items-center">
-                  <input type="checkbox" id="cat_western" value="Western Instrumental Music" class="mr-2 event-category">
-                  <label for="cat_western" class="text-sm">Western Instrumental Music</label>
-                </div>
-                <div class="flex items-center">
-                  <input type="checkbox" id="cat_symphony" value="Symphony" class="mr-2 event-category">
-                  <label for="cat_symphony" class="text-sm">Symphony</label>
-                </div>
-                <div class="flex items-center">
-                  <input type="checkbox" id="cat_chamber" value="Chamber Music" class="mr-2 event-category">
-                  <label for="cat_chamber" class="text-sm">Chamber Music</label>
-                </div>
-                <div class="flex items-center">
-                  <input type="checkbox" id="cat_concerto" value="Concerto" class="mr-2 event-category">
-                  <label for="cat_concerto" class="text-sm">Concerto</label>
-                </div>
-              </div>
-            </div>
-
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-2">
-                Mode of Tickets <span class="text-red-500">*</span>
-              </label>
-              <div class="space-y-2">
-                <div class="flex items-center">
-                  <input type="checkbox" id="mode_printed" value="Printed Ticket" class="mr-2 ticket-mode">
-                  <label for="mode_printed" class="text-sm">Printed Ticket</label>
-                </div>
-                <div class="flex items-center">
-                  <input type="checkbox" id="mode_eticket" value="e-Ticket" class="mr-2 ticket-mode">
-                  <label for="mode_eticket" class="text-sm">e-Ticket</label>
-                </div>
-              </div>
-            </div>
-
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-2">
-                Age Limit <span class="text-red-500">*</span>
-              </label>
-              <select id="ageLimit" required
-                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500">
-                <option value="">Select age limit</option>
-                <option value="0">No age limit</option>
-                <option value="3">3+</option>
-                <option value="6">6+</option>
-                <option value="12">12+</option>
-                <option value="18">18+</option>
-              </select>
-            </div>
-
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-2">
-                Duration
-              </label>
-              <input type="text" id="duration"
-                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
-                placeholder="Approx. 75 minutes" />
-            </div>
-
-            <div class="md:col-span-2">
-              <label class="block text-sm font-medium text-gray-700 mb-2">
-                Website
-              </label>
-              <input type="url" id="website"
-                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
-                placeholder="https://www.example.com" />
-            </div>
-          </div>
-        </div>
-
-        <div class="bg-gray-50 p-6 rounded-lg">
-          <h3 class="text-lg font-semibold text-gray-900 mb-4">
-            <i class="fas fa-ticket-alt text-indigo-600 mr-2"></i>Ticketing Information
-          </h3>
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-2">
-                Status <span class="text-red-500">*</span>
-              </label>
-              <select id="status" required
-                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500">
-                <option value="upcoming">Upcoming</option>
-                <option value="early_bird">Early Bird</option>
-                <option value="on_sale">On Sale</option>
-                <option value="sold_out">Sold Out</option>
-              </select>
-            </div>
-
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-2">
-                Ticket Sale Start <span class="text-red-500">*</span>
-              </label>
-              <input type="datetime-local" id="ticketSaleStart" required
-                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500" />
-            </div>
-
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-2">
-                Pre-order Start Date
-              </label>
-              <input type="date" id="preOrderStartDate"
-                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500" />
-            </div>
-
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-2">
-                Early Bird End Date
-              </label>
-              <input type="date" id="earlyBirdEndDate"
-                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500" />
-            </div>
-
-            <div class="md:col-span-2">
-              <label class="block text-sm font-medium text-gray-700 mb-2">
-                Interval Information
-              </label>
-              <input type="text" id="interval"
-                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
-                placeholder="One 20-minute interval" />
-            </div>
-
-            <div class="md:col-span-2">
-              <label class="flex items-center">
-                <input type="checkbox" id="eTicketAvailable" class="mr-2">
-                <span class="text-sm font-medium text-gray-700">E-ticket Available</span>
-              </label>
-            </div>
-
-            <div class="md:col-span-2">
-              <label class="block text-sm font-medium text-gray-700 mb-2">
-                Additional Information
-              </label>
-              <textarea id="additionalInfo" rows="3"
-                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
-                placeholder="Any additional ticketing information..."></textarea>
-            </div>
-          </div>
-        </div>
+        ${PerformanceFormSections.basicInformation()}
+        ${PerformanceFormSections.performanceInformation()}
+        ${PerformanceFormSections.ticketingInformation()}
 
         <div class="bg-gray-50 p-6 rounded-lg">
           <h3 class="text-lg font-semibold text-gray-900 mb-4">
@@ -476,13 +349,13 @@ export default {
                 <div>
                   <label class="block text-xs text-gray-600 mb-1">Minimum Tickets</label>
                   <input type="number" id="groupMinTickets" min="1"
-                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 text-black"
                     placeholder="10" />
                 </div>
                 <div>
                   <label class="block text-xs text-gray-600 mb-1">Discount Type</label>
                   <select id="groupDiscountType"
-                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500">
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 text-black">
                     <option value="percentage">Percentage (%)</option>
                     <option value="amount">Fixed Amount ($)</option>
                   </select>
@@ -492,13 +365,13 @@ export default {
                     <span id="groupDiscountLabel">Discount (%)</span>
                   </label>
                   <input type="number" id="groupDiscount" min="0"
-                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 text-black"
                     placeholder="10" />
                 </div>
                 <div>
                   <label class="block text-xs text-gray-600 mb-1">Note</label>
                   <input type="text" id="groupNote"
-                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 text-black"
                     placeholder="10% off for groups" />
                 </div>
               </div>
@@ -506,19 +379,7 @@ export default {
           </div>
         </div>
 
-        <div class="bg-gray-50 p-6 rounded-lg">
-          <div class="flex justify-between items-center mb-4">
-            <h3 class="text-lg font-semibold text-gray-900">
-              <i class="fas fa-calendar-alt text-indigo-600 mr-2"></i>Showtimes & Pricing
-            </h3>
-            <button type="button" id="addShowtimeBtn"
-              class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors">
-              <i class="fas fa-plus mr-2"></i>Add Showtime
-            </button>
-          </div>
-          <div id="showtimesContainer" class="space-y-4">
-          </div>
-        </div>
+        ${PerformanceFormSections.showtimesSection()}
 
         <div class="bg-gray-50 p-6 rounded-lg">
           <h3 class="text-lg font-semibold text-gray-900 mb-4">
@@ -699,12 +560,91 @@ export default {
     this.renderShowtimes();
   },
 
+  async addCustomTier(showtimeIndex, sectionIndex) {
+    const { value: customTier } = await Swal.fire({
+      title:
+        '<i class="fas fa-layer-group text-purple-600 mr-2"></i>Add Custom Tier',
+      html: `
+        <div class="text-left space-y-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">Custom Tier Name</label>
+            <input id="custom-tier-name" type="text"
+              class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent text-black"
+              placeholder="e.g., Gold, Silver, Box Seats, Gallery">
+            <p class="text-xs text-gray-500 mt-2">
+              <i class="fas fa-info-circle mr-1"></i>
+              Enter a custom tier name for this seating section
+            </p>
+          </div>
+          <div class="bg-purple-50 border border-purple-200 rounded-lg p-3">
+            <p class="text-xs text-purple-900">
+              <strong>Examples:</strong> Gold Circle, Silver Circle, Box Seats, Gallery, Dress Circle, Upper Circle, Stalls
+            </p>
+          </div>
+        </div>
+      `,
+      width: "500px",
+      showCancelButton: true,
+      confirmButtonText: "Add Tier",
+      cancelButtonText: "Cancel",
+      confirmButtonColor: SwalColors.primary,
+      preConfirm: () => {
+        const name = $("#custom-tier-name").val().trim();
+        if (!name) {
+          Swal.showValidationMessage("Please enter a tier name");
+          return false;
+        }
+        if (name.length > 30) {
+          Swal.showValidationMessage("Tier name must be 30 characters or less");
+          return false;
+        }
+        return name;
+      },
+    });
+
+    if (
+      customTier &&
+      this.showtimes[showtimeIndex]?.pricing?.sections[sectionIndex]
+    ) {
+      this.showtimes[showtimeIndex].pricing.sections[sectionIndex].tier =
+        customTier;
+      this.renderShowtimes();
+      notify.success(`Custom tier "${customTier}" added successfully`);
+    }
+  },
+
+  parseRowsInput(input) {
+    if (!input || typeof input !== "string") return [];
+
+    const rows = [];
+    const parts = input.split(",").map((p) => p.trim().toUpperCase());
+
+    for (const part of parts) {
+      if (part.includes("-")) {
+        const [start, end] = part.split("-").map((s) => s.trim());
+        if (start && end && start.length === 1 && end.length === 1) {
+          const startCode = start.charCodeAt(0);
+          const endCode = end.charCodeAt(0);
+          if (startCode <= endCode) {
+            for (let code = startCode; code <= endCode; code++) {
+              rows.push(String.fromCharCode(code));
+            }
+          }
+        }
+      } else if (part.length > 0) {
+        rows.push(part);
+      }
+    }
+
+    return [...new Set(rows)];
+  },
+
   async addCustomTicketType(showtimeIndex) {
     const result = await Swal.fire({
       title:
         '<i class="fas fa-ticket-alt text-green-600 mr-2"></i>Add Custom Ticket Type',
       html: `
-        <div class="text-left space-y-4">
+        <div class="text-left space-y-4 text-gray-900">
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-2">Ticket Type Name</label>
             <input type="text" id="customTicketTypeName" class="swal2-input w-full" placeholder="e.g., Military, Group, Family Pass">
@@ -726,11 +666,11 @@ export default {
               <div class="flex gap-2">
                 <label class="flex items-center">
                   <input type="radio" name="pricingModifier" value="discount" checked class="mr-2">
-                  <span class="text-sm">Discount</span>
+                  <span class="text-sm text-gray-900">Discount</span>
                 </label>
                 <label class="flex items-center">
                   <input type="radio" name="pricingModifier" value="markup" class="mr-2">
-                  <span class="text-sm">Markup</span>
+                  <span class="text-sm text-gray-900">Markup</span>
                 </label>
               </div>
               <div id="pricingPreview" class="text-xs text-gray-600 bg-gray-50 p-2 rounded hidden"></div>
@@ -747,38 +687,31 @@ export default {
       showCancelButton: true,
       confirmButtonText: "Add Ticket Type",
       didOpen: () => {
-        const pricingType = document.getElementById("pricingType");
-        const pricingValue = document.getElementById("pricingValue");
-        const pricingPreview = document.getElementById("pricingPreview");
+        const $pricingType = $("#pricingType");
+        const $pricingValue = $("#pricingValue");
+        const $pricingPreview = $("#pricingPreview");
 
-        pricingType.addEventListener("change", (e) => {
-          if (e.target.value === "none") {
-            pricingValue.disabled = true;
-            pricingValue.value = "";
-            pricingPreview.classList.add("hidden");
+        $pricingType.on("change", (e) => {
+          if ($(e.target).val() === "none") {
+            $pricingValue.prop("disabled", true).val("");
+            $pricingPreview.addClass("hidden");
           } else {
-            pricingValue.disabled = false;
-            pricingPreview.classList.remove("hidden");
+            $pricingValue.prop("disabled", false);
+            $pricingPreview.removeClass("hidden");
             updatePreview();
           }
         });
 
-        pricingValue.addEventListener("input", updatePreview);
-        document
-          .querySelectorAll('input[name="pricingModifier"]')
-          .forEach((radio) => {
-            radio.addEventListener("change", updatePreview);
-          });
+        $pricingValue.on("input", updatePreview);
+        $('input[name="pricingModifier"]').on("change", updatePreview);
 
         function updatePreview() {
-          const type = pricingType.value;
-          const value = parseFloat(pricingValue.value) || 0;
-          const modifier = document.querySelector(
-            'input[name="pricingModifier"]:checked'
-          ).value;
+          const type = $pricingType.val();
+          const value = parseFloat($pricingValue.val()) || 0;
+          const modifier = $('input[name="pricingModifier"]:checked').val();
 
           if (type === "none" || !value) {
-            pricingPreview.classList.add("hidden");
+            $pricingPreview.addClass("hidden");
             return;
           }
 
@@ -809,14 +742,11 @@ export default {
             }
           }
 
-          pricingPreview.textContent = example;
-          pricingPreview.classList.remove("hidden");
+          $pricingPreview.text(example).removeClass("hidden");
         }
       },
       preConfirm: () => {
-        const name = document
-          .getElementById("customTicketTypeName")
-          .value.trim();
+        const name = $("#customTicketTypeName").val().trim();
         if (!name) {
           Swal.showValidationMessage("Please enter a ticket type name");
           return false;
@@ -830,12 +760,11 @@ export default {
           return false;
         }
 
-        const pricingType = document.getElementById("pricingType").value;
-        const pricingValue =
-          parseFloat(document.getElementById("pricingValue").value) || 0;
-        const pricingModifier = document.querySelector(
+        const pricingType = $("#pricingType").val();
+        const pricingValue = parseFloat($("#pricingValue").val()) || 0;
+        const pricingModifier = $(
           'input[name="pricingModifier"]:checked'
-        ).value;
+        ).val();
 
         if (pricingType !== "none" && pricingValue <= 0) {
           Swal.showValidationMessage("Please enter a valid pricing value");
@@ -910,7 +839,7 @@ export default {
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
             <div>
               <label class="block text-xs text-gray-600 mb-1">Date & Time</label>
-              <input type="datetime-local" class="showtime-datetime w-full px-3 py-2 border border-gray-300 rounded-lg"
+              <input type="datetime-local" class="showtime-datetime w-full px-3 py-2 border border-gray-300 rounded-lg text-black focus:ring-2 focus:ring-indigo-500"
                 value="${
                   showtime.dateTime
                     ? dayjs(showtime.dateTime).format("YYYY-MM-DDTHH:mm")
@@ -1033,6 +962,43 @@ export default {
       }
     });
 
+    $(".section-tier").on("change", (e) => {
+      const showtimeIndex = $(e.currentTarget).data("showtime");
+      const sectionIndex = $(e.currentTarget).data("section");
+      if (this.showtimes[showtimeIndex]?.pricing?.sections[sectionIndex]) {
+        this.showtimes[showtimeIndex].pricing.sections[sectionIndex].tier = $(
+          e.currentTarget
+        ).val();
+      }
+    });
+
+    $(".add-custom-tier-btn").on("click", async (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const showtimeIndex = $(e.currentTarget).data("showtime");
+      const sectionIndex = $(e.currentTarget).data("section");
+      await this.addCustomTier(showtimeIndex, sectionIndex);
+    });
+
+    $(".section-rows").on("input", (e) => {
+      const showtimeIndex = $(e.currentTarget).data("showtime");
+      const sectionIndex = $(e.currentTarget).data("section");
+      if (this.showtimes[showtimeIndex]?.pricing?.sections[sectionIndex]) {
+        const rowsInput = $(e.currentTarget).val();
+        this.showtimes[showtimeIndex].pricing.sections[sectionIndex].rows =
+          this.parseRowsInput(rowsInput);
+      }
+    });
+
+    $(".section-base-price").on("input", (e) => {
+      const showtimeIndex = $(e.currentTarget).data("showtime");
+      const sectionIndex = $(e.currentTarget).data("section");
+      if (this.showtimes[showtimeIndex]?.pricing?.sections[sectionIndex]) {
+        this.showtimes[showtimeIndex].pricing.sections[sectionIndex].basePrice =
+          parseFloat($(e.currentTarget).val()) || 0;
+      }
+    });
+
     $(".customize-layout-btn").on("click", (e) => {
       const showtimeIndex = $(e.currentTarget).data("showtime");
       this.customizeSeatLayout(showtimeIndex);
@@ -1071,246 +1037,23 @@ export default {
     const result = await Swal.fire({
       title:
         '<i class="fas fa-chair text-indigo-600 mr-2"></i>Customize Seat Layout',
-      html: `
-        <div class="text-left p-4">
-          <div class="grid grid-cols-2 gap-6 mb-6">
-            <div class="bg-gray-50 p-4 rounded-lg">
-              <label class="block text-sm font-semibold text-gray-700 mb-2">
-                <i class="fas fa-arrows-alt-v text-indigo-600 mr-1"></i>Number of Rows
-              </label>
-              <div class="flex items-center gap-2">
-                <button type="button" id="decrease-rows" class="px-3 py-2 bg-gray-200 hover:bg-gray-300 rounded-lg transition-colors">
-                  <i class="fas fa-minus"></i>
-                </button>
-                <input type="number" id="swal-rows" class="swal2-input flex-1 text-center" value="${
-                  currentLayout.rows
-                }" min="1" max="20" style="margin: 0; padding: 8px;">
-                <button type="button" id="increase-rows" class="px-3 py-2 bg-gray-200 hover:bg-gray-300 rounded-lg transition-colors">
-                  <i class="fas fa-plus"></i>
-                </button>
-              </div>
-              <input type="range" id="rows-slider" min="1" max="20" value="${
-                currentLayout.rows
-              }" class="w-full mt-2">
-              <p class="text-xs text-gray-500 mt-1">Min: 1, Max: 20</p>
-            </div>
-
-            <div class="bg-gray-50 p-4 rounded-lg">
-              <label class="block text-sm font-semibold text-gray-700 mb-2">
-                <i class="fas fa-arrows-alt-h text-indigo-600 mr-1"></i>Seats Per Row
-              </label>
-              <div class="flex items-center gap-2">
-                <button type="button" id="decrease-seats" class="px-3 py-2 bg-gray-200 hover:bg-gray-300 rounded-lg transition-colors">
-                  <i class="fas fa-minus"></i>
-                </button>
-                <input type="number" id="swal-seatsPerRow" class="swal2-input flex-1 text-center" value="${
-                  currentLayout.seatsPerRow
-                }" min="1" max="30" style="margin: 0; padding: 8px;">
-                <button type="button" id="increase-seats" class="px-3 py-2 bg-gray-200 hover:bg-gray-300 rounded-lg transition-colors">
-                  <i class="fas fa-plus"></i>
-                </button>
-              </div>
-              <input type="range" id="seats-slider" min="1" max="30" value="${
-                currentLayout.seatsPerRow
-              }" class="w-full mt-2">
-              <p class="text-xs text-gray-500 mt-1">Min: 1, Max: 30</p>
-            </div>
-          </div>
-
-          <div class="bg-indigo-50 border-2 border-indigo-200 rounded-lg p-4 mb-4">
-            <div class="flex items-center justify-between mb-3">
-              <h4 class="text-sm font-semibold text-gray-800">
-                <i class="fas fa-eye text-indigo-600 mr-1"></i>Live Preview
-              </h4>
-              <div class="text-sm">
-                <span class="font-semibold text-indigo-600" id="preview-total">40</span>
-                <span class="text-gray-600"> seats</span>
-              </div>
-            </div>
-            <div id="preview-container" class="flex justify-center overflow-auto" style="max-height: 300px;">
-              ${this.generatePreviewSVG(
-                currentLayout.rows,
-                currentLayout.seatsPerRow
-              )}
-            </div>
-          </div>
-
-          <div class="grid grid-cols-3 gap-3 text-center">
-            <div class="bg-blue-50 p-3 rounded-lg">
-              <div class="text-xs text-gray-600 mb-1">Rows</div>
-              <div class="text-xl font-bold text-blue-600" id="display-rows">${
-                currentLayout.rows
-              }</div>
-            </div>
-            <div class="bg-green-50 p-3 rounded-lg">
-              <div class="text-xs text-gray-600 mb-1">Per Row</div>
-              <div class="text-xl font-bold text-green-600" id="display-seats">${
-                currentLayout.seatsPerRow
-              }</div>
-            </div>
-            <div class="bg-purple-50 p-3 rounded-lg">
-              <div class="text-xs text-gray-600 mb-1">Total</div>
-              <div class="text-xl font-bold text-purple-600" id="display-total">${
-                currentLayout.rows * currentLayout.seatsPerRow
-              }</div>
-            </div>
-          </div>
-
-          <div class="mt-4 flex gap-2">
-            <button type="button" id="preset-small" class="flex-1 px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded text-xs transition-colors">
-              <i class="fas fa-compress-alt mr-1"></i>Small (4x6)
-            </button>
-            <button type="button" id="preset-medium" class="flex-1 px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded text-xs transition-colors">
-              <i class="fas fa-th mr-1"></i>Medium (5x8)
-            </button>
-            <button type="button" id="preset-large" class="flex-1 px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded text-xs transition-colors">
-              <i class="fas fa-expand-alt mr-1"></i>Large (8x12)
-            </button>
-          </div>
-        </div>
-      `,
+      html: SeatLayoutCustomizer.createDialog(currentLayout),
       width: "700px",
       showCancelButton: true,
-      confirmButtonColor: "#4f46e5",
-      cancelButtonColor: "#6b7280",
+      confirmButtonColor: SwalColors.primary,
+      cancelButtonColor: SwalColors.cancel,
       confirmButtonText: '<i class="fas fa-check mr-1"></i>Apply Layout',
       cancelButtonText: '<i class="fas fa-times mr-1"></i>Cancel',
       didOpen: () => {
-        const updatePreview = () => {
-          const rows =
-            parseInt(document.getElementById("swal-rows").value) || 5;
-          const seats =
-            parseInt(document.getElementById("swal-seatsPerRow").value) || 8;
-          const total = rows * seats;
-
-          document.getElementById("preview-container").innerHTML =
-            this.generatePreviewSVG(rows, seats);
-          document.getElementById("preview-total").textContent = total;
-          document.getElementById("display-rows").textContent = rows;
-          document.getElementById("display-seats").textContent = seats;
-          document.getElementById("display-total").textContent = total;
-        };
-
-        document.getElementById("swal-rows").addEventListener("input", (e) => {
-          document.getElementById("rows-slider").value = e.target.value;
-          updatePreview();
-        });
-
-        document
-          .getElementById("swal-seatsPerRow")
-          .addEventListener("input", (e) => {
-            document.getElementById("seats-slider").value = e.target.value;
-            updatePreview();
-          });
-
-        document
-          .getElementById("rows-slider")
-          .addEventListener("input", (e) => {
-            document.getElementById("swal-rows").value = e.target.value;
-            updatePreview();
-          });
-
-        document
-          .getElementById("seats-slider")
-          .addEventListener("input", (e) => {
-            document.getElementById("swal-seatsPerRow").value = e.target.value;
-            updatePreview();
-          });
-
-        document
-          .getElementById("decrease-rows")
-          .addEventListener("click", () => {
-            const input = document.getElementById("swal-rows");
-            const current = parseInt(input.value);
-            if (current > 1) {
-              input.value = current - 1;
-              document.getElementById("rows-slider").value = current - 1;
-              updatePreview();
-            }
-          });
-
-        document
-          .getElementById("increase-rows")
-          .addEventListener("click", () => {
-            const input = document.getElementById("swal-rows");
-            const current = parseInt(input.value);
-            if (current < 20) {
-              input.value = current + 1;
-              document.getElementById("rows-slider").value = current + 1;
-              updatePreview();
-            }
-          });
-
-        document
-          .getElementById("decrease-seats")
-          .addEventListener("click", () => {
-            const input = document.getElementById("swal-seatsPerRow");
-            const current = parseInt(input.value);
-            if (current > 1) {
-              input.value = current - 1;
-              document.getElementById("seats-slider").value = current - 1;
-              updatePreview();
-            }
-          });
-
-        document
-          .getElementById("increase-seats")
-          .addEventListener("click", () => {
-            const input = document.getElementById("swal-seatsPerRow");
-            const current = parseInt(input.value);
-            if (current < 30) {
-              input.value = current + 1;
-              document.getElementById("seats-slider").value = current + 1;
-              updatePreview();
-            }
-          });
-
-        document
-          .getElementById("preset-small")
-          .addEventListener("click", () => {
-            document.getElementById("swal-rows").value = 4;
-            document.getElementById("swal-seatsPerRow").value = 6;
-            document.getElementById("rows-slider").value = 4;
-            document.getElementById("seats-slider").value = 6;
-            updatePreview();
-          });
-
-        document
-          .getElementById("preset-medium")
-          .addEventListener("click", () => {
-            document.getElementById("swal-rows").value = 5;
-            document.getElementById("swal-seatsPerRow").value = 8;
-            document.getElementById("rows-slider").value = 5;
-            document.getElementById("seats-slider").value = 8;
-            updatePreview();
-          });
-
-        document
-          .getElementById("preset-large")
-          .addEventListener("click", () => {
-            document.getElementById("swal-rows").value = 8;
-            document.getElementById("swal-seatsPerRow").value = 12;
-            document.getElementById("rows-slider").value = 8;
-            document.getElementById("seats-slider").value = 12;
-            updatePreview();
-          });
+        SeatLayoutCustomizer.setupEventHandlers();
       },
       preConfirm: () => {
-        const rows = parseInt(document.getElementById("swal-rows").value);
-        const seatsPerRow = parseInt(
-          document.getElementById("swal-seatsPerRow").value
-        );
-
-        if (!rows || rows < 1 || rows > 20) {
-          Swal.showValidationMessage("Rows must be between 1 and 20");
+        const validation = SeatLayoutCustomizer.validateAndGetValues();
+        if (!validation.valid) {
+          Swal.showValidationMessage(validation.message);
           return false;
         }
-        if (!seatsPerRow || seatsPerRow < 1 || seatsPerRow > 30) {
-          Swal.showValidationMessage("Seats per row must be between 1 and 30");
-          return false;
-        }
-
-        return { rows, seatsPerRow };
+        return validation.data;
       },
     });
 
@@ -1344,7 +1087,7 @@ export default {
     const result = await Swal.fire({
       title: '<i class="fas fa-chair text-green-600 mr-2"></i>Edit Seats',
       html: `
-        <div class="text-left p-4">
+        <div class="text-left p-4 text-gray-900">
           <div class="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
             <div class="flex items-center justify-between mb-2">
               <div class="text-sm font-semibold text-gray-800">
@@ -1432,42 +1175,13 @@ export default {
             </button>
           </div>
 
-          <div class="flex gap-2 text-xs flex-wrap">
-            <div class="flex items-center gap-1">
-              <div class="w-4 h-4 rounded" style="background-color: #10b981"></div>
-              <span>Available</span>
-            </div>
-            <div class="flex items-center gap-1">
-              <div class="w-4 h-4 bg-yellow-500 rounded"></div>
-              <span>Selected</span>
-            </div>
-            <div class="flex items-center gap-1">
-              <div class="w-4 h-4 rounded" style="background-color: #ef4444"></div>
-              <span>Blocked</span>
-            </div>
-            <div class="flex items-center gap-1">
-              <div class="w-4 h-4 rounded" style="background-color: #f59e0b"></div>
-              <span>Reserved</span>
-            </div>
-            ${sections
-              .map(
-                (s, idx) => `
-            <div class="flex items-center gap-1">
-              <div class="w-4 h-4 rounded" style="background-color: ${this.getSectionColor(
-                idx
-              )}"></div>
-              <span>${s.section}</span>
-            </div>
-            `
-              )
-              .join("")}
-          </div>
+          ${SeatMap.createLegend(sections, true)}
         </div>
       `,
       width: "800px",
       showCancelButton: true,
-      confirmButtonColor: "#10b981",
-      cancelButtonColor: "#6b7280",
+      confirmButtonColor: SwalColors.success,
+      cancelButtonColor: SwalColors.cancel,
       confirmButtonText: '<i class="fas fa-save mr-1"></i>Save Changes',
       cancelButtonText: '<i class="fas fa-times mr-1"></i>Cancel',
       didOpen: () => {
@@ -1478,122 +1192,106 @@ export default {
             showtime.seatDetails,
             selectedSeats
           );
-          document.getElementById("interactive-seat-map").innerHTML = mapHTML;
+          $("#interactive-seat-map").html(mapHTML);
 
-          document.querySelectorAll(".interactive-seat").forEach((seat) => {
-            seat.addEventListener("click", function (e) {
-              e.stopPropagation();
-              const seatElement = e.target.closest(".interactive-seat");
-              if (!seatElement) return;
+          $(".interactive-seat").on("click", function (e) {
+            e.stopPropagation();
+            const $seatElement = $(e.target).closest(".interactive-seat");
+            if (!$seatElement.length) return;
 
-              const seatId = seatElement.dataset.seatId;
-              const index = selectedSeats.indexOf(seatId);
+            const seatId = $seatElement.data("seat-id");
+            const index = selectedSeats.indexOf(seatId);
 
-              if (index > -1) {
-                selectedSeats.splice(index, 1);
-              } else {
-                selectedSeats.push(seatId);
-              }
+            if (index > -1) {
+              selectedSeats.splice(index, 1);
+            } else {
+              selectedSeats.push(seatId);
+            }
 
-              document.getElementById("selected-count").textContent =
-                selectedSeats.length;
-              renderInteractiveMap();
-            });
+            $("#selected-count").text(selectedSeats.length);
+            renderInteractiveMap();
           });
         };
 
         renderInteractiveMap();
 
-        document
-          .getElementById("select-all-btn")
-          .addEventListener("click", () => {
-            selectedSeats = [];
-            for (let row = 0; row < layout.rows; row++) {
-              for (let seat = 0; seat < layout.seatsPerRow; seat++) {
-                const rowLetter = String.fromCharCode(65 + row);
-                const seatNumber = seat + 1;
-                selectedSeats.push(`${rowLetter}${seatNumber}`);
-              }
+        $("#select-all-btn").on("click", () => {
+          selectedSeats = [];
+          for (let row = 0; row < layout.rows; row++) {
+            for (let seat = 0; seat < layout.seatsPerRow; seat++) {
+              const rowLetter = String.fromCharCode(65 + row);
+              const seatNumber = seat + 1;
+              selectedSeats.push(`${rowLetter}${seatNumber}`);
             }
-            document.getElementById("selected-count").textContent =
-              selectedSeats.length;
-            renderInteractiveMap();
-          });
+          }
+          $("#selected-count").text(selectedSeats.length);
+          renderInteractiveMap();
+        });
 
-        document
-          .getElementById("clear-selection-btn")
-          .addEventListener("click", () => {
-            selectedSeats = [];
-            document.getElementById("selected-count").textContent = 0;
-            renderInteractiveMap();
-          });
+        $("#clear-selection-btn").on("click", () => {
+          selectedSeats = [];
+          $("#selected-count").text(0);
+          renderInteractiveMap();
+        });
 
-        document
-          .getElementById("apply-changes-btn")
-          .addEventListener("click", () => {
-            if (selectedSeats.length === 0) {
-              notify.warning("Please select at least one seat");
-              return;
-            }
+        $("#apply-changes-btn").on("click", () => {
+          if (selectedSeats.length === 0) {
+            notify.warning("Please select at least one seat");
+            return;
+          }
 
-            const typeSelectEl = document.getElementById("seat-type");
-            const seatType = typeSelectEl.value;
-            const category = document.getElementById("seat-category").value;
-            const companion = document
-              .getElementById("seat-companion")
-              .value.trim();
-            const notes = document.getElementById("seat-notes").value.trim();
+          const $typeSelectEl = $("#seat-type");
+          const seatType = $typeSelectEl.val();
+          const category = $("#seat-category").val();
+          const companion = $("#seat-companion").val().trim();
+          const notes = $("#seat-notes").val().trim();
 
-            if (!seatType && !category && !companion && !notes) {
-              notify.warning("Please make at least one change to apply");
-              return;
+          if (!seatType && !category && !companion && !notes) {
+            notify.warning("Please make at least one change to apply");
+            return;
+          }
+
+          selectedSeats.forEach((seatId) => {
+            if (!showtime.seatDetails[seatId]) {
+              showtime.seatDetails[seatId] = {};
             }
 
-            selectedSeats.forEach((seatId) => {
-              if (!showtime.seatDetails[seatId]) {
-                showtime.seatDetails[seatId] = {};
-              }
+            if (seatType) {
+              const $selectedOption = $typeSelectEl.find("option:selected");
+              const sectionIndex = $selectedOption.data("section-index");
 
-              if (seatType) {
-                const selectedOption =
-                  typeSelectEl.options[typeSelectEl.selectedIndex];
-                const sectionIndex = selectedOption.dataset.sectionIndex;
+              if (sectionIndex !== "" && sectionIndex !== undefined) {
+                showtime.seatDetails[seatId].status = "assigned";
+                showtime.seatDetails[seatId].sectionIndex =
+                  parseInt(sectionIndex);
+                delete showtime.seatDetails[seatId].section;
+              } else {
+                showtime.seatDetails[seatId].status = seatType;
+                delete showtime.seatDetails[seatId].sectionIndex;
+                delete showtime.seatDetails[seatId].section;
+              }
+            }
 
-                if (sectionIndex !== "" && sectionIndex !== undefined) {
-                  showtime.seatDetails[seatId].status = "assigned";
-                  showtime.seatDetails[seatId].sectionIndex =
-                    parseInt(sectionIndex);
-                  delete showtime.seatDetails[seatId].section;
-                } else {
-                  showtime.seatDetails[seatId].status = seatType;
-                  delete showtime.seatDetails[seatId].sectionIndex;
-                  delete showtime.seatDetails[seatId].section;
-                }
-              }
-
-              if (category) {
-                showtime.seatDetails[seatId].category = category;
-              }
-              if (companion) {
-                showtime.seatDetails[seatId].companion =
-                  companion.toUpperCase();
-              }
-              if (notes) {
-                showtime.seatDetails[seatId].notes = notes;
-              }
-            });
-
-            notify.success(
-              `Applied changes to ${selectedSeats.length} seat(s)`
-            );
-            selectedSeats = [];
-            document.getElementById("selected-count").textContent = 0;
-            document.getElementById("seat-type").value = "";
-            document.getElementById("seat-category").value = "";
-            document.getElementById("seat-companion").value = "";
-            document.getElementById("seat-notes").value = "";
-            renderInteractiveMap();
+            if (category) {
+              showtime.seatDetails[seatId].category = category;
+            }
+            if (companion) {
+              showtime.seatDetails[seatId].companion = companion.toUpperCase();
+            }
+            if (notes) {
+              showtime.seatDetails[seatId].notes = notes;
+            }
           });
+
+          notify.success(`Applied changes to ${selectedSeats.length} seat(s)`);
+          selectedSeats = [];
+          $("#selected-count").text(0);
+          $("#seat-type").val("");
+          $("#seat-category").val("");
+          $("#seat-companion").val("");
+          $("#seat-notes").val("");
+          renderInteractiveMap();
+        });
       },
       preConfirm: () => {
         return { seatDetails: showtime.seatDetails };
@@ -1610,39 +1308,19 @@ export default {
   },
 
   initializeSeatDetails(rows, seatsPerRow) {
-    return seatMapGenerator.initializeSeatDetails(rows, seatsPerRow);
-  },
-
-  getSectionColor(index) {
-    const colors = [
-      "#a855f7",
-      "#3b82f6",
-      "#ec4899",
-      "#f59e0b",
-      "#10b981",
-      "#6366f1",
-      "#f97316",
-      "#14b8a6",
-    ];
-    return colors[index % colors.length];
+    return SeatMap.initializeSeatDetails(rows, seatsPerRow);
   },
 
   getSeatColorForShowtime(seatDetail, showtime) {
-    const systemColors = {
-      available: "#10b981",
-      blocked: "#ef4444",
-      reserved: "#f59e0b",
-    };
-
     if (seatDetail.sectionIndex !== undefined) {
-      return this.getSectionColor(seatDetail.sectionIndex);
+      return getSectionColor(seatDetail.sectionIndex);
     }
 
-    return systemColors[seatDetail.status] || "#10b981";
+    return getSeatStatusColor(seatDetail.status);
   },
 
   generateInteractiveSeatMap(rows, seats, seatDetails, selectedSeats) {
-    return seatMapGenerator.generateInteractiveSeatMap(
+    return SeatMap.generateInteractive(
       rows,
       seats,
       seatDetails,
@@ -1652,34 +1330,7 @@ export default {
   },
 
   generatePreviewSVG(rows, seats) {
-    const seatSize = 18;
-    const seatGap = 4;
-    const stageWidth = seats * (seatSize + seatGap) + seatGap;
-    const stageHeight = 24;
-    const stagePadding = 15;
-    const svgWidth = stageWidth + stagePadding * 2;
-    const svgHeight =
-      rows * (seatSize + seatGap) + stageHeight + stagePadding * 3;
-
-    let seatsHTML = "";
-    for (let row = 0; row < rows; row++) {
-      const rowY =
-        stagePadding + stageHeight + stagePadding + row * (seatSize + seatGap);
-      for (let seat = 0; seat < seats; seat++) {
-        const seatX = stagePadding + seat * (seatSize + seatGap);
-        seatsHTML += `<rect x="${seatX}" y="${rowY}" width="${seatSize}" height="${seatSize}" fill="#10b981" rx="2" />`;
-      }
-    }
-
-    return `
-      <svg width="${svgWidth}" height="${svgHeight}" class="bg-white rounded shadow-sm">
-        <rect x="${stagePadding}" y="${stagePadding}" width="${stageWidth}" height="${stageHeight}" fill="#374151" rx="3" />
-        <text x="${svgWidth / 2}" y="${
-      stagePadding + stageHeight / 2 + 4
-    }" fill="white" text-anchor="middle" font-size="11" font-weight="bold">STAGE</text>
-        ${seatsHTML}
-      </svg>
-    `;
+    return SeatMap.generateSimplePreview(rows, seats);
   },
 
   renderSeatPlanSVG(showtime, showtimeIndex) {
@@ -1697,86 +1348,15 @@ export default {
       }
     }
 
-    const seatSize = 24;
-    const seatGap = 6;
-    const stageWidth = seatsPerRow * (seatSize + seatGap) + seatGap;
-    const stageHeight = 30;
-    const stagePadding = 20;
-    const svgWidth = stageWidth + stagePadding * 2;
-    const svgHeight =
-      rows * (seatSize + seatGap) + stageHeight + stagePadding * 3;
-
     const sections = showtime.pricing?.sections || [];
     const seatDetails = showtime.seatDetails || {};
 
-    let seatsHTML = "";
-    for (let row = 0; row < rows; row++) {
-      const rowY =
-        stagePadding + stageHeight + stagePadding + row * (seatSize + seatGap);
-      const sectionIndex = Math.floor(
-        (row / rows) * Math.min(sections.length, 4)
-      );
-      const defaultSeatColor = this.getSectionColor(sectionIndex);
-
-      for (let seat = 0; seat < seatsPerRow; seat++) {
-        const seatX = stagePadding + seat * (seatSize + seatGap);
-        const rowLetter = String.fromCharCode(65 + row);
-        const seatNumber = seat + 1;
-        const seatId = `${rowLetter}${seatNumber}`;
-
-        const seatDetail = seatDetails[seatId];
-        let seatColor = seatDetail
-          ? this.getSeatColorForShowtime(seatDetail)
-          : defaultSeatColor;
-
-        seatsHTML += `
-          <rect x="${seatX}" y="${rowY}" width="${seatSize}" height="${seatSize}" fill="${seatColor}" rx="3" />
-          <text x="${seatX + seatSize / 2}" y="${
-          rowY + seatSize / 2 + 4
-        }" fill="white" text-anchor="middle" font-size="10" font-weight="bold">${rowLetter}${seatNumber}</text>
-        `;
-      }
-    }
-
-    const totalSeats = rows * seatsPerRow;
-
-    let legendHTML = "";
-    if (sections.length > 0) {
-      legendHTML = `
-        <div class="mt-3 flex flex-wrap gap-3 justify-center text-xs">
-          ${sections
-            .slice(0, 4)
-            .map((section, idx) => {
-              const color = this.getSectionColor(idx);
-              return `
-              <div class="flex items-center gap-1">
-                <div style="width: 16px; height: 16px; background-color: ${color}; border-radius: 3px;"></div>
-                <span class="text-gray-700">${section.section} (${section.sectionCode})</span>
-              </div>
-            `;
-            })
-            .join("")}
-        </div>
-      `;
-    }
-
-    return `
-      <div>
-        <svg width="${svgWidth}" height="${svgHeight}" class="bg-white rounded shadow-sm">
-          <rect x="${stagePadding}" y="${stagePadding}" width="${stageWidth}" height="${stageHeight}" fill="#374151" rx="4" />
-          <text x="${svgWidth / 2}" y="${
-      stagePadding + stageHeight / 2 + 5
-    }" fill="white" text-anchor="middle" font-size="14" font-weight="bold">STAGE</text>
-          ${seatsHTML}
-        </svg>
-        <div class="mt-2 text-center text-xs text-gray-600">
-          <span class="font-semibold">${rows} Rows</span> ×
-          <span class="font-semibold">${seatsPerRow} Seats</span> =
-          <span class="font-semibold text-indigo-600">${totalSeats} Total Seats</span>
-        </div>
-        ${legendHTML}
-      </div>
-    `;
+    return SeatMap.createSeatPlanWithStats(
+      rows,
+      seatsPerRow,
+      seatDetails,
+      sections
+    );
   },
 
   renderPricingSections(showtime, showtimeIndex) {
@@ -1819,7 +1399,7 @@ export default {
 
     html += sections
       .map((section, sectionIndex) => {
-        const sectionColor = this.getSectionColor(sectionIndex);
+        const sectionColor = getSectionColor(sectionIndex);
         return `
       <div class="mb-4 p-4 bg-white rounded-lg border-2 border-gray-200 shadow-sm hover:shadow-md transition-shadow">
         <div class="flex justify-between items-center mb-4">
@@ -1853,13 +1433,83 @@ export default {
             <i class="fas fa-trash"></i>
           </button>
         </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
+          <div>
+            <label class="block text-xs font-semibold text-gray-700 mb-1 flex items-center justify-between">
+              <span>
+                <i class="fas fa-layer-group mr-1"></i>Zone Tier
+              </span>
+              <button type="button" class="add-custom-tier-btn text-xs px-2 py-0.5 bg-purple-50 text-purple-700 border border-purple-200 rounded hover:bg-purple-100 transition-colors"
+                data-showtime="${showtimeIndex}"
+                data-section="${sectionIndex}"
+                title="Add custom tier">
+                <i class="fas fa-plus mr-1"></i>Custom
+              </button>
+            </label>
+            <div class="relative">
+              <select class="section-tier w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 text-black"
+                data-showtime="${showtimeIndex}"
+                data-section="${sectionIndex}">
+                <option value="vip" ${
+                  section.tier === "vip" ? "selected" : ""
+                }>VIP</option>
+                <option value="premium" ${
+                  section.tier === "premium" ? "selected" : ""
+                }>Premium</option>
+                <option value="standard" ${
+                  section.tier === "standard" ? "selected" : ""
+                }>Standard</option>
+                <option value="economy" ${
+                  section.tier === "economy" ? "selected" : ""
+                }>Economy</option>
+                ${
+                  section.tier &&
+                  !["vip", "premium", "standard", "economy"].includes(
+                    section.tier.toLowerCase()
+                  )
+                    ? `<option value="${section.tier}" selected>${section.tier}</option>`
+                    : ""
+                }
+              </select>
+            </div>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-gray-700 mb-1">
+              <i class="fas fa-chair mr-1"></i>Seat Rows
+            </label>
+            <input type="text"
+              class="section-rows w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 text-black"
+              data-showtime="${showtimeIndex}"
+              data-section="${sectionIndex}"
+              value="${
+                Array.isArray(section.rows)
+                  ? section.rows.join(",")
+                  : section.rows || ""
+              }"
+              placeholder="e.g., A,B,C,D or A-D" />
+            <p class="text-xs text-gray-500 mt-1">Comma-separated: A,B,C or range: A-D</p>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-gray-700 mb-1">
+              <i class="fas fa-dollar-sign mr-1"></i>Base Price (HKD)
+            </label>
+            <input type="number"
+              class="section-base-price w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 text-black"
+              data-showtime="${showtimeIndex}"
+              data-section="${sectionIndex}"
+              value="${section.basePrice || ""}"
+              placeholder="e.g., 600"
+              min="0"
+              step="10" />
+            <p class="text-xs text-gray-500 mt-1">Standard ticket price before discounts</p>
+          </div>
+        </div>
         <div class="bg-gray-50 rounded-lg p-3">
           ${
             sectionIndex === 0 &&
             this.ticketTypes.some(
-              (t) =>
-                t.id &&
-                ["standard", "student", "senior", "pwd", "cssa"].includes(t.id)
+              (t) => t.id && SYSTEM_TICKET_TYPE_IDS.includes(t.id)
             )
               ? `
             <div class="bg-blue-50 border border-blue-200 rounded-lg p-2.5 mb-3 flex items-start gap-2">
@@ -1894,9 +1544,7 @@ export default {
                 }">
                   ${type.name}
                   ${
-                    !["standard", "student", "senior", "pwd", "cssa"].includes(
-                      type.id
-                    )
+                    !SYSTEM_TICKET_TYPE_IDS.includes(type.id)
                       ? '<i class="fas fa-star text-yellow-500 text-[8px] ml-1" title="Custom type"></i>'
                       : ""
                   }
@@ -2041,6 +1689,534 @@ export default {
     }
   },
 
+  async viewPerformance(id) {
+    const performance = this.performances.find((p) => p.id === id);
+    if (!performance) return;
+
+    const venue =
+      performance.venueName ||
+      performance.venue ||
+      performance.location ||
+      "N/A";
+    const ticketTypes = performance.pricingSections || [];
+    const showtimes = performance.showtimes || [];
+
+    const showtimesHtml =
+      showtimes.length > 0
+        ? showtimes
+            .map(
+              (st) => `
+          <div class="py-2 px-3 bg-gray-50 rounded-lg">
+            <div class="font-semibold text-gray-900">${dayjs(
+              st.dateTime || st.datetime
+            ).format("MMM D, YYYY h:mm A")}</div>
+            ${
+              st.available !== undefined
+                ? `<div class="text-sm text-gray-600">${st.available} seats available</div>`
+                : ""
+            }
+          </div>
+        `
+            )
+            .join("")
+        : "<p class='text-gray-500'>No showtimes scheduled</p>";
+
+    const ticketTypesHtml =
+      ticketTypes.length > 0
+        ? ticketTypes
+            .map(
+              (tt) => `
+          <div class="flex justify-between items-center py-2 px-3 bg-gray-50 rounded-lg">
+            <div>
+              <span class="font-medium text-gray-900">${
+                tt.sectionName || tt.name || tt.section || "Unnamed Section"
+              }</span>
+              ${
+                tt.tier
+                  ? `<span class="ml-2 text-xs px-2 py-0.5 rounded-full ${
+                      tt.tier === "premium"
+                        ? "bg-purple-100 text-purple-700"
+                        : tt.tier === "standard"
+                        ? "bg-blue-100 text-blue-700"
+                        : "bg-gray-100 text-gray-700"
+                    }">${
+                      tt.tier.charAt(0).toUpperCase() + tt.tier.slice(1)
+                    }</span>`
+                  : ""
+              }
+            </div>
+            <span class="text-indigo-600 font-semibold">HKD ${
+              tt.basePrice || tt.price || "N/A"
+            }</span>
+          </div>
+        `
+            )
+            .join("")
+        : "<p class='text-gray-500'>No pricing information</p>";
+
+    await Swal.fire({
+      title: `<i class="fas fa-music text-indigo-600 mr-2"></i>${performance.title}`,
+      html: `
+        <div class="text-left space-y-4">
+          ${
+            performance.imageUrl
+              ? `
+            <div class="mb-4">
+              <img src="${performance.imageUrl}" class="w-full h-48 object-cover rounded-lg" />
+            </div>
+          `
+              : ""
+          }
+
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <p class="text-xs text-gray-500 uppercase font-semibold">Composer</p>
+              <p class="text-sm text-gray-900">${
+                performance.composer || "N/A"
+              }</p>
+            </div>
+            <div>
+              <p class="text-xs text-gray-500 uppercase font-semibold">Conductor</p>
+              <p class="text-sm text-gray-900">${
+                performance.conductor || "N/A"
+              }</p>
+            </div>
+            <div>
+              <p class="text-xs text-gray-500 uppercase font-semibold">Orchestra</p>
+              <p class="text-sm text-gray-900">${
+                performance.orchestra || "N/A"
+              }</p>
+            </div>
+            <div>
+              <p class="text-xs text-gray-500 uppercase font-semibold">Venue</p>
+              <p class="text-sm text-gray-900">${venue}</p>
+            </div>
+          </div>
+
+          ${
+            performance.description
+              ? `
+            <div>
+              <p class="text-xs text-gray-500 uppercase font-semibold mb-1">Description</p>
+              <p class="text-sm text-gray-700">${performance.description}</p>
+            </div>
+          `
+              : ""
+          }
+
+          <div>
+            <p class="text-xs text-gray-500 uppercase font-semibold mb-2">Showtimes</p>
+            <div class="space-y-2">${showtimesHtml}</div>
+          </div>
+
+          <div>
+            <p class="text-xs text-gray-500 uppercase font-semibold mb-2">Ticket Pricing</p>
+            <div class="space-y-2">${ticketTypesHtml}</div>
+          </div>
+
+          <div>
+            <p class="text-xs text-gray-500 uppercase font-semibold">Status</p>
+            ${getStatusBadge(
+              performance.ticketingInfo?.status || "upcoming",
+              "performance"
+            )}
+          </div>
+        </div>
+      `,
+      width: "700px",
+      confirmButtonText: "Close",
+      confirmButtonColor: SwalColors.primary,
+    });
+  },
+
+  async manageShowtimes(id) {
+    const performance = this.performances.find((p) => p.id === id);
+    if (!performance) return;
+
+    const showtimes = performance.showtimes || [];
+    const bookings = storage.getItem("bookings", []);
+
+    const showtimesHtml = showtimes
+      .map((st, index) => {
+        const showtimeBookings = bookings.filter(
+          (b) => b.showtimeId === st.id && b.status !== "cancelled"
+        );
+        const bookedSeats = showtimeBookings.reduce(
+          (sum, b) => sum + (b.seats?.length || 0),
+          0
+        );
+        const totalSeats =
+          st.capacity ||
+          performance.pricingSections?.reduce(
+            (sum, ps) => sum + (ps.capacity || 100),
+            0
+          ) ||
+          500;
+        const availableSeats = totalSeats - bookedSeats;
+        const occupancyPercent = Math.round((bookedSeats / totalSeats) * 100);
+
+        const occupancyColor =
+          occupancyPercent >= 90
+            ? "bg-red-500"
+            : occupancyPercent >= 70
+            ? "bg-yellow-500"
+            : occupancyPercent >= 40
+            ? "bg-blue-500"
+            : "bg-green-500";
+
+        return `
+          <div class="border border-gray-200 rounded-lg p-4 hover:border-indigo-300 hover:shadow-md transition-all">
+            <div class="flex items-start justify-between mb-3">
+              <div class="flex-1">
+                <div class="flex items-center gap-2 mb-1">
+                  <h4 class="text-base font-semibold text-gray-900">
+                    ${dayjs(st.dateTime || st.datetime).format(
+                      "ddd, MMM D, YYYY"
+                    )}
+                  </h4>
+                  ${
+                    st.status === "cancelled"
+                      ? '<span class="px-2 py-0.5 bg-red-100 text-red-700 rounded-full text-xs font-semibold">Cancelled</span>'
+                      : ""
+                  }
+                </div>
+                <div class="flex items-center gap-3 text-sm text-gray-600">
+                  <span class="flex items-center gap-1">
+                    <i class="fas fa-clock text-indigo-600"></i>
+                    ${dayjs(st.dateTime || st.datetime).format("h:mm A")}
+                  </span>
+                  <span class="flex items-center gap-1">
+                    <i class="fas fa-users text-indigo-600"></i>
+                    ${showtimeBookings.length} bookings
+                  </span>
+                </div>
+              </div>
+              <div class="text-right">
+                <div class="text-2xl font-bold text-indigo-600">${occupancyPercent}%</div>
+                <div class="text-xs text-gray-500">Occupied</div>
+              </div>
+            </div>
+
+            <div class="mb-3">
+              <div class="flex items-center justify-between text-xs text-gray-600 mb-1">
+                <span>${bookedSeats} / ${totalSeats} seats</span>
+                <span>${availableSeats} available</span>
+              </div>
+              <div class="w-full bg-gray-200 rounded-full h-2">
+                <div class="${occupancyColor} h-2 rounded-full transition-all" style="width: ${occupancyPercent}%"></div>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-2 pt-3 border-t border-gray-100">
+              <button
+                onclick="window.PerformancesPage.viewShowtimeDetails(${id}, ${index})"
+                class="px-3 py-1.5 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors text-sm font-medium flex items-center justify-center gap-1"
+              >
+                <i class="fas fa-eye text-xs"></i>
+                Details
+              </button>
+              <button
+                onclick="window.PerformancesPage.viewShowtimeBookings(${id}, '${
+          st.id
+        }')"
+                class="px-3 py-1.5 bg-green-50 text-green-700 rounded-lg hover:bg-green-100 transition-colors text-sm font-medium flex items-center justify-center gap-1"
+              >
+                <i class="fas fa-ticket-alt text-xs"></i>
+                Bookings
+              </button>
+            </div>
+          </div>
+        `;
+      })
+      .join("");
+
+    await Swal.fire({
+      title: `<i class="fas fa-calendar-day text-indigo-600 mr-2"></i>Manage Showtimes`,
+      html: `
+        <div class="text-left">
+          <div class="bg-gray-50 rounded-lg p-4 mb-4">
+            <h3 class="font-semibold text-gray-900 mb-1">${
+              performance.title
+            }</h3>
+            <p class="text-sm text-gray-600">${performance.composer} • ${
+        performance.conductor
+      }</p>
+          </div>
+
+          <div class="mb-3 flex items-center justify-between">
+            <h4 class="font-semibold text-gray-700">
+              ${showtimes.length} Showtime${showtimes.length !== 1 ? "s" : ""}
+            </h4>
+            <div class="text-xs text-gray-500">
+              ${dayjs(showtimes[0].dateTime || showtimes[0].datetime).format(
+                "MMM YYYY"
+              )}
+              ${
+                showtimes.length > 1
+                  ? ` - ${dayjs(
+                      showtimes[showtimes.length - 1].dateTime ||
+                        showtimes[showtimes.length - 1].datetime
+                    ).format("MMM YYYY")}`
+                  : ""
+              }
+            </div>
+          </div>
+
+          <div class="space-y-3 max-h-96 overflow-y-auto pr-2">
+            ${showtimesHtml}
+          </div>
+        </div>
+      `,
+      width: "700px",
+      showConfirmButton: true,
+      confirmButtonText: "Close",
+      confirmButtonColor: SwalColors.primary,
+    });
+  },
+
+  async duplicatePerformance(id) {
+    const performance = this.performances.find((p) => p.id === id);
+    if (!performance) return;
+
+    const result = await Swal.fire({
+      title: "Duplicate Performance",
+      html: `Create a copy of <strong>"${performance.title}"</strong>?`,
+      icon: "question",
+      showCancelButton: true,
+      confirmButtonColor: SwalColors.primary,
+      cancelButtonColor: SwalColors.cancel,
+      confirmButtonText: "Yes, duplicate it",
+      cancelButtonText: "Cancel",
+    });
+
+    if (result.isConfirmed) {
+      const newPerformance = {
+        ...performance,
+        id: Date.now(),
+        title: `${performance.title} (Copy)`,
+        showtimes: performance.showtimes
+          ? performance.showtimes.map((st) => ({
+              ...st,
+              id: `showtime_${Date.now()}_${Math.random()
+                .toString(36)
+                .substr(2, 9)}`,
+            }))
+          : [],
+      };
+
+      const storedPerformances = storage.getItem("performances", []);
+      storage.setItem("performances", [...storedPerformances, newPerformance]);
+
+      notify.success("Performance duplicated successfully!");
+
+      this.performances = await performanceService.getAll();
+      this.displayPerformances(this.performances);
+    }
+  },
+
+  async viewShowtimeDetails(performanceId, showtimeIndex) {
+    const performance = this.performances.find((p) => p.id === performanceId);
+    if (!performance || !performance.showtimes) return;
+
+    const showtime = performance.showtimes[showtimeIndex];
+    if (!showtime) return;
+
+    const sections =
+      showtime.pricingSections || performance.pricingSections || [];
+    const sectionsHtml = sections
+      .map(
+        (section) => `
+        <div class="flex items-center justify-between py-2 px-3 bg-gray-50 rounded-lg">
+          <div class="flex items-center gap-2">
+            <span class="font-medium text-gray-900">${
+              section.sectionName || section.name
+            }</span>
+            ${
+              section.tier
+                ? `<span class="text-xs px-2 py-0.5 rounded-full ${
+                    section.tier === "premium"
+                      ? "bg-purple-100 text-purple-700"
+                      : section.tier === "standard"
+                      ? "bg-blue-100 text-blue-700"
+                      : "bg-gray-100 text-gray-700"
+                  }">${section.tier}</span>`
+                : ""
+            }
+          </div>
+          <span class="font-semibold text-indigo-600">HKD ${
+            section.basePrice || section.price
+          }</span>
+        </div>
+      `
+      )
+      .join("");
+
+    await Swal.fire({
+      title: `<i class="fas fa-info-circle text-blue-600 mr-2"></i>Showtime Details`,
+      html: `
+        <div class="text-left space-y-4">
+          <div class="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-lg p-4">
+            <h3 class="font-bold text-lg text-gray-900 mb-1">${
+              performance.title
+            }</h3>
+            <div class="text-sm text-gray-700">${performance.composer}</div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <p class="text-xs text-gray-500 uppercase font-semibold mb-1">Date & Time</p>
+              <p class="text-sm font-medium text-gray-900">${dayjs(
+                showtime.dateTime || showtime.datetime
+              ).format("ddd, MMM D, YYYY")}</p>
+              <p class="text-sm text-gray-600">${dayjs(
+                showtime.dateTime || showtime.datetime
+              ).format("h:mm A")}</p>
+            </div>
+            <div>
+              <p class="text-xs text-gray-500 uppercase font-semibold mb-1">Venue</p>
+              <p class="text-sm text-gray-900">${
+                performance.venueName ||
+                performance.venue ||
+                performance.location ||
+                "N/A"
+              }</p>
+            </div>
+          </div>
+
+          ${
+            sections.length > 0
+              ? `
+            <div>
+              <p class="text-xs text-gray-500 uppercase font-semibold mb-2">Pricing Sections</p>
+              <div class="space-y-2">${sectionsHtml}</div>
+            </div>
+          `
+              : ""
+          }
+
+          <div class="bg-blue-50 border border-blue-200 rounded-lg p-3">
+            <p class="text-sm text-blue-800">
+              <i class="fas fa-id-badge mr-1"></i>
+              Showtime ID: <code class="bg-blue-100 px-2 py-0.5 rounded text-xs font-mono">${
+                showtime.id
+              }</code>
+            </p>
+          </div>
+        </div>
+      `,
+      width: "600px",
+      confirmButtonText: "Close",
+      confirmButtonColor: SwalColors.primary,
+    });
+  },
+
+  async viewShowtimeBookings(performanceId, showtimeId) {
+    const performance = this.performances.find((p) => p.id === performanceId);
+    if (!performance) return;
+
+    const bookings = storage
+      .getItem("bookings", [])
+      .filter((b) => b.showtimeId === showtimeId);
+
+    const bookingsHtml =
+      bookings.length > 0
+        ? bookings
+            .map(
+              (booking) => `
+          <div class="border border-gray-200 rounded-lg p-3 hover:border-indigo-300 transition-colors">
+            <div class="flex items-start justify-between mb-2">
+              <div class="flex-1">
+                <div class="font-semibold text-gray-900">${
+                  booking.customerInfo?.name || "Guest"
+                }</div>
+                <div class="text-xs text-gray-500">${
+                  booking.customerInfo?.email || "N/A"
+                }</div>
+              </div>
+              <div class="text-right">
+                ${getStatusBadge(booking.status, "booking")}
+              </div>
+            </div>
+
+            <div class="flex items-center gap-4 text-xs text-gray-600">
+              <span class="flex items-center gap-1">
+                <i class="fas fa-ticket-alt text-indigo-600"></i>
+                ${booking.seats?.length || 0} seat${
+                booking.seats?.length !== 1 ? "s" : ""
+              }
+              </span>
+              <span class="flex items-center gap-1">
+                <i class="fas fa-dollar-sign text-green-600"></i>
+                HKD ${booking.amount || 0}
+              </span>
+              <span class="flex items-center gap-1">
+                <i class="fas fa-calendar text-gray-600"></i>
+                ${dayjs(booking.date).format("MMM D, YYYY")}
+              </span>
+            </div>
+
+            ${
+              booking.seats?.length > 0
+                ? `
+              <div class="mt-2 pt-2 border-t border-gray-100">
+                <div class="flex flex-wrap gap-1">
+                  ${booking.seats
+                    .map(
+                      (seat) =>
+                        `<span class="px-2 py-0.5 bg-indigo-50 text-indigo-700 rounded text-xs font-mono">${seat}</span>`
+                    )
+                    .join("")}
+                </div>
+              </div>
+            `
+                : ""
+            }
+          </div>
+        `
+            )
+            .join("")
+        : '<div class="text-center py-8 text-gray-500"><i class="fas fa-inbox text-3xl mb-2"></i><p>No bookings for this showtime yet</p></div>';
+
+    const totalRevenue = bookings
+      .filter((b) => b.status !== "cancelled")
+      .reduce((sum, b) => sum + (b.amount || 0), 0);
+    const totalSeatsBooked = bookings
+      .filter((b) => b.status !== "cancelled")
+      .reduce((sum, b) => sum + (b.seats?.length || 0), 0);
+
+    await Swal.fire({
+      title: `<i class="fas fa-ticket-alt text-green-600 mr-2"></i>Showtime Bookings`,
+      html: `
+        <div class="text-left">
+          <div class="bg-gray-50 rounded-lg p-4 mb-4">
+            <h3 class="font-semibold text-gray-900 mb-2">${performance.title}</h3>
+            <div class="grid grid-cols-3 gap-3 text-center">
+              <div>
+                <div class="text-2xl font-bold text-indigo-600">${bookings.length}</div>
+                <div class="text-xs text-gray-500">Total Bookings</div>
+              </div>
+              <div>
+                <div class="text-2xl font-bold text-green-600">${totalSeatsBooked}</div>
+                <div class="text-xs text-gray-500">Seats Booked</div>
+              </div>
+              <div>
+                <div class="text-2xl font-bold text-purple-600">$${totalRevenue}</div>
+                <div class="text-xs text-gray-500">Revenue</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="space-y-2 max-h-96 overflow-y-auto pr-2">
+            ${bookingsHtml}
+          </div>
+        </div>
+      `,
+      width: "700px",
+      confirmButtonText: "Close",
+      confirmButtonColor: SwalColors.primary,
+    });
+  },
+
   async deletePerformance(id) {
     const performance = this.performances.find((p) => p.id === id);
     if (!performance) return;
@@ -2050,8 +2226,8 @@ export default {
       html: `Are you sure you want to delete <strong>"${performance.title}"</strong>?<br><span class="text-sm text-gray-600">This action cannot be undone.</span>`,
       icon: "warning",
       showCancelButton: true,
-      confirmButtonColor: "#dc2626",
-      cancelButtonColor: "#6b7280",
+      confirmButtonColor: SwalColors.dangerDark,
+      cancelButtonColor: SwalColors.cancel,
       confirmButtonText: "Yes, delete it",
       cancelButtonText: "Cancel",
     });
@@ -2111,7 +2287,7 @@ export default {
     const result = await Swal.fire({
       title: "Save as Template",
       html: `
-        <div class="text-left space-y-4">
+        <div class="text-left space-y-4 text-gray-900">
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-2">Template Name *</label>
             <input type="text" id="templateName" class="swal2-input w-full" placeholder="e.g., Standard Theater Layout">
@@ -2406,7 +2582,7 @@ export default {
                 text: `Remove "${zone.name}" zone?`,
                 icon: "warning",
                 showCancelButton: true,
-                confirmButtonColor: "#ef4444",
+                confirmButtonColor: SwalColors.danger,
                 confirmButtonText: "Delete",
               }).then((result) => {
                 if (result.isConfirmed) {
@@ -2434,7 +2610,7 @@ export default {
                 const assignResult = await Swal.fire({
                   title: `Assign Seats to "${zone.name}"`,
                   html: `
-                <div class="text-left space-y-4">
+                <div class="text-left space-y-4 text-gray-900">
                   <div class="bg-${zone.color.replace(
                     "#",
                     ""
@@ -2512,23 +2688,19 @@ export default {
                     });
                   },
                   preConfirm: () => {
-                    return [
-                      ...new Set(
-                        $("#zone-seat-map")
-                          .find(".interactive-seat")
-                          .filter(function () {
-                            const seatId = $(this).data("seat-id");
-                            return (
-                              zone.seats.includes(seatId) ||
-                              $(this).find("rect").attr("stroke") === "#ca8a04"
-                            );
-                          })
-                          .map(function () {
-                            return $(this).data("seat-id");
-                          })
-                          .get()
-                      ),
-                    ];
+                    const uniqueSeats = new Set();
+                    $("#zone-seat-map")
+                      .find(".interactive-seat")
+                      .each(function () {
+                        const seatId = $(this).data("seat-id");
+                        if (
+                          zone.seats.includes(seatId) ||
+                          $(this).find("rect").attr("stroke") === "#ca8a04"
+                        ) {
+                          uniqueSeats.add(seatId);
+                        }
+                      });
+                    return [...uniqueSeats];
                   },
                 });
 

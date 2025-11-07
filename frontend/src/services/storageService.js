@@ -1,3 +1,6 @@
+import LZString from "lz-string";
+import { encrypt, decrypt } from "/src/utils/core/crypto.js";
+
 const STORAGE_KEYS = {
   USER: "user",
   TOKEN: "token",
@@ -12,9 +15,11 @@ const STORAGE_KEYS = {
   TICKET_TYPES: "ticketTypes",
 };
 
-const STORAGE_VERSION = "3.0";
+const STORAGE_VERSION = "4.0";
 const STORAGE_NAMESPACE = "wom_";
 const MAX_STORAGE_SIZE = 5 * 1024 * 1024;
+const COMPRESSION_THRESHOLD = 1024;
+const SECURE_KEYS = ["USER", "TOKEN", "REGISTERED_USERS"];
 
 class StorageService {
   constructor() {
@@ -42,10 +47,19 @@ class StorageService {
 
   get(key, defaultValue = null) {
     try {
-      const item = localStorage.getItem(this.getKey(key));
+      let item = localStorage.getItem(this.getKey(key));
       if (item === null) return defaultValue;
 
-      const parsed = JSON.parse(item);
+      let parsed = JSON.parse(item);
+
+      if (parsed.compressed) {
+        const decompressed = LZString.decompress(parsed.value);
+        parsed.value = JSON.parse(decompressed);
+      }
+
+      if (parsed.encrypted) {
+        parsed.value = decrypt(parsed.value);
+      }
 
       if (this.isExpired(parsed)) {
         this.remove(key);
@@ -61,16 +75,39 @@ class StorageService {
 
   set(key, value, options = {}) {
     try {
-      const { ttl, compress = false } = options;
+      let { ttl, compress = false, encrypt: encryptData = false } = options;
 
       if (this.getStorageSize() > MAX_STORAGE_SIZE * 0.9) {
         this.cleanOldData();
       }
 
+      const isSecureKey = SECURE_KEYS.includes(key.toUpperCase());
+      if (isSecureKey && !encryptData) {
+        encryptData = true;
+      }
+
+      let processedValue = value;
+      let isCompressed = false;
+      let isEncrypted = false;
+
+      const tempSerialized = JSON.stringify({ value });
+
+      if (compress || tempSerialized.length > COMPRESSION_THRESHOLD) {
+        processedValue = LZString.compress(JSON.stringify(value));
+        isCompressed = true;
+      }
+
+      if (encryptData) {
+        processedValue = encrypt(isCompressed ? processedValue : value);
+        isEncrypted = true;
+      }
+
       const data = {
-        value,
+        value: processedValue,
         timestamp: Date.now(),
         ...(ttl && { expiresAt: Date.now() + ttl }),
+        ...(isCompressed && { compressed: true }),
+        ...(isEncrypted && { encrypted: true }),
       };
 
       const serialized = JSON.stringify(data);
@@ -401,6 +438,96 @@ class StorageService {
     return {
       valid: errors.length === 0,
       errors,
+    };
+  }
+
+  setSecure(key, value, options = {}) {
+    return this.set(key, value, { ...options, encrypt: true });
+  }
+
+  getSecure(key, defaultValue = null) {
+    return this.get(key, defaultValue);
+  }
+
+  setCompressed(key, value, options = {}) {
+    return this.set(key, value, { ...options, compress: true });
+  }
+
+  setMultiple(items) {
+    try {
+      items.forEach(({ key, value, options = {} }) => {
+        this.set(key, value, options);
+      });
+      return true;
+    } catch (error) {
+      console.error("Error setting multiple items:", error);
+      return false;
+    }
+  }
+
+  getMultiple(keys) {
+    try {
+      return keys.reduce((acc, key) => {
+        acc[key] = this.get(key);
+        return acc;
+      }, {});
+    } catch (error) {
+      console.error("Error getting multiple items:", error);
+      return {};
+    }
+  }
+
+  removeMultiple(keys) {
+    try {
+      keys.forEach((key) => this.remove(key));
+      return true;
+    } catch (error) {
+      console.error("Error removing multiple items:", error);
+      return false;
+    }
+  }
+
+  compressAndStore(key, value, options = {}) {
+    return this.setCompressed(key, value, options);
+  }
+
+  encryptAndStore(key, value, options = {}) {
+    return this.setSecure(key, value, options);
+  }
+
+  getStorageStats() {
+    const info = this.getStorageInfo();
+    const keys = this.keys();
+
+    let compressed = 0;
+    let encrypted = 0;
+    let expired = 0;
+
+    keys.forEach((fullKey) => {
+      try {
+        const item = localStorage.getItem(fullKey);
+        const parsed = JSON.parse(item);
+        if (parsed.compressed) compressed++;
+        if (parsed.encrypted) encrypted++;
+        if (this.isExpired(parsed)) expired++;
+      } catch (error) {
+        console.error(`Error analyzing key: ${fullKey}`, error);
+      }
+    });
+
+    return {
+      ...info,
+      compressed,
+      encrypted,
+      expired,
+      compressionRate:
+        keys.length > 0
+          ? ((compressed / keys.length) * 100).toFixed(2) + "%"
+          : "0%",
+      encryptionRate:
+        keys.length > 0
+          ? ((encrypted / keys.length) * 100).toFixed(2) + "%"
+          : "0%",
     };
   }
 }

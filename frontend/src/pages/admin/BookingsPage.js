@@ -1,7 +1,9 @@
 import { createEmptyState } from "/src/components/EmptyState.js";
 import { FormComponents } from "/src/components/FormComponents.js";
+import { createTable, initTableFeatures } from "/src/components/Table.js";
 import { statsService } from "/src/services/statsService.js";
 import { ticketTypeService } from "/src/services/ticketTypeService.js";
+import { SwalColors } from "/src/utils/colors.js";
 import dayjs from "dayjs";
 import Swal from "sweetalert2";
 import { notify } from "/src/utils/ui/notification.js";
@@ -40,22 +42,112 @@ export default {
 
         ${this.renderStats()}
 
-        ${FormComponents.filterBar({
-          searchId: "searchBookings",
-          searchPlaceholder: "Search by booking ID, user, or performance...",
-          filters: [
-            {
-              id: "statusFilter",
-              options: [
-                { value: "all", label: "All Status" },
-                { value: "confirmed", label: "Confirmed" },
-                { value: "pending", label: "Pending" },
-                { value: "cancelled", label: "Cancelled" },
-              ],
-            },
-          ],
-          clearButtonId: "clearFilters",
-        })}
+        <div class="bg-white rounded-lg shadow-md border border-gray-200 p-6 mb-6">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="text-lg font-semibold text-gray-900">
+              <i class="fas fa-filter text-indigo-600 mr-2"></i>Filters
+            </h3>
+            <button id="clearFilters" class="px-4 py-2 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors">
+              <i class="fas fa-times mr-2"></i>Clear All
+            </button>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2">
+                <i class="fas fa-search mr-1"></i>Search
+              </label>
+              <input
+                type="text"
+                id="searchBookings"
+                placeholder="Booking ID, user, performance..."
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+              />
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2">
+                <i class="fas fa-info-circle mr-1"></i>Status
+              </label>
+              <select id="statusFilter" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                <option value="all">All Status</option>
+                <option value="confirmed">Confirmed</option>
+                <option value="pending">Pending</option>
+                <option value="cancelled">Cancelled</option>
+                <option value="completed">Completed</option>
+              </select>
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2">
+                <i class="fas fa-music mr-1"></i>Performance
+              </label>
+              <select id="performanceFilter" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                <option value="all">All Performances</option>
+                ${this.performances
+                  .map((p) => `<option value="${p.id}">${p.title}</option>`)
+                  .join("")}
+              </select>
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2">
+                <i class="fas fa-sort mr-1"></i>Sort By
+              </label>
+              <select id="sortFilter" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                <option value="date-desc">Date (Newest First)</option>
+                <option value="date-asc">Date (Oldest First)</option>
+                <option value="amount-desc">Amount (High to Low)</option>
+                <option value="amount-asc">Amount (Low to High)</option>
+                <option value="status">Status</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2">
+                <i class="fas fa-calendar mr-1"></i>Date Range
+              </label>
+              <div class="flex gap-2">
+                <input
+                  type="date"
+                  id="dateFrom"
+                  class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  placeholder="From"
+                />
+                <input
+                  type="date"
+                  id="dateTo"
+                  class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  placeholder="To"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2">
+                <i class="fas fa-dollar-sign mr-1"></i>Amount Range (HKD)
+              </label>
+              <div class="flex gap-2">
+                <input
+                  type="number"
+                  id="amountFrom"
+                  min="0"
+                  placeholder="Min"
+                  class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                />
+                <input
+                  type="number"
+                  id="amountTo"
+                  min="0"
+                  placeholder="Max"
+                  class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
 
         <div id="bookingsTable"></div>
       </main>
@@ -116,21 +208,25 @@ export default {
   },
 
   attachEventListeners() {
-    $("#searchBookings").on("input", (e) => {
-      this.filterBookings();
-    });
-
-    $("#statusFilter").on("change", (e) => {
-      this.currentFilter = e.target.value;
-      this.filterBookings();
-    });
+    $("#searchBookings").on("input", () => this.filterBookings());
+    $("#statusFilter").on("change", () => this.filterBookings());
+    $("#performanceFilter").on("change", () => this.filterBookings());
+    $("#sortFilter").on("change", () => this.filterBookings());
+    $("#dateFrom").on("change", () => this.filterBookings());
+    $("#dateTo").on("change", () => this.filterBookings());
+    $("#amountFrom").on("input", () => this.filterBookings());
+    $("#amountTo").on("input", () => this.filterBookings());
 
     $("#clearFilters").on("click", () => {
       $("#searchBookings").val("");
       $("#statusFilter").val("all");
-      this.currentFilter = "all";
-      this.filteredBookings = [...this.bookings];
-      this.renderBookingsTable();
+      $("#performanceFilter").val("all");
+      $("#sortFilter").val("date-desc");
+      $("#dateFrom").val("");
+      $("#dateTo").val("");
+      $("#amountFrom").val("");
+      $("#amountTo").val("");
+      this.filterBookings();
     });
 
     $("#exportBookings").on("click", () => {
@@ -170,38 +266,92 @@ export default {
 
   filterBookings() {
     const searchTerm = $("#searchBookings").val().toLowerCase();
-    const status = this.currentFilter;
+    const statusFilter = $("#statusFilter").val();
+    const performanceFilter = $("#performanceFilter").val();
+    const sortBy = $("#sortFilter").val();
+    const dateFrom = $("#dateFrom").val();
+    const dateTo = $("#dateTo").val();
+    const amountFrom = parseFloat($("#amountFrom").val()) || 0;
+    const amountTo = parseFloat($("#amountTo").val()) || Infinity;
 
     this.filteredBookings = this.bookings.filter((booking) => {
       const performance = this.performances.find(
-        (p) => p.id === booking.performanceId
+        (p) => String(p.id) === String(booking.performanceId)
       );
-      const user = this.users.find((u) => u.id === booking.userId);
+      const user = this.users.find(
+        (u) => String(u.id) === String(booking.userId)
+      );
 
+      const bookingIdStr = String(
+        booking.bookingReference || booking.id
+      ).toLowerCase();
       const matchesSearch =
-        booking.id.toLowerCase().includes(searchTerm) ||
-        performance?.title.toLowerCase().includes(searchTerm) ||
-        user?.name.toLowerCase().includes(searchTerm);
+        !searchTerm ||
+        bookingIdStr.includes(searchTerm) ||
+        (performance?.title || "").toLowerCase().includes(searchTerm) ||
+        (user?.name || "").toLowerCase().includes(searchTerm) ||
+        (user?.email || "").toLowerCase().includes(searchTerm);
 
-      const matchesStatus = status === "all" || booking.status === status;
+      const matchesStatus =
+        statusFilter === "all" || booking.status === statusFilter;
 
-      return matchesSearch && matchesStatus;
+      const matchesPerformance =
+        performanceFilter === "all" ||
+        String(booking.performanceId) === String(performanceFilter);
+
+      const bookingDate = dayjs(booking.bookingDate || booking.date);
+      const matchesDateFrom =
+        !dateFrom || bookingDate.isAfter(dayjs(dateFrom).subtract(1, "day"));
+      const matchesDateTo =
+        !dateTo || bookingDate.isBefore(dayjs(dateTo).add(1, "day"));
+
+      const matchesAmountFrom = (booking.amount || 0) >= amountFrom;
+      const matchesAmountTo = (booking.amount || 0) <= amountTo;
+
+      return (
+        matchesSearch &&
+        matchesStatus &&
+        matchesPerformance &&
+        matchesDateFrom &&
+        matchesDateTo &&
+        matchesAmountFrom &&
+        matchesAmountTo
+      );
+    });
+
+    this.filteredBookings.sort((a, b) => {
+      switch (sortBy) {
+        case "date-desc":
+          return (
+            dayjs(b.bookingDate || b.date).valueOf() -
+            dayjs(a.bookingDate || a.date).valueOf()
+          );
+        case "date-asc":
+          return (
+            dayjs(a.bookingDate || a.date).valueOf() -
+            dayjs(b.bookingDate || b.date).valueOf()
+          );
+        case "amount-desc":
+          return (b.amount || 0) - (a.amount || 0);
+        case "amount-asc":
+          return (a.amount || 0) - (b.amount || 0);
+        case "status":
+          return (a.status || "").localeCompare(b.status || "");
+        default:
+          return 0;
+      }
     });
 
     this.renderBookingsTable();
   },
 
   renderBookingsTable() {
-    if (this.filteredBookings.length === 0) {
-      $("#bookingsTable").html(
-        createEmptyState({
-          icon: "fa-clipboard-list",
-          title: "No bookings found",
-          message: "Try adjusting your filters",
-        })
-      );
-      return;
-    }
+    const totalRevenue = this.filteredBookings
+      .filter((b) => b.status === "confirmed")
+      .reduce((sum, b) => sum + b.amount, 0);
+
+    const filteredCount = this.filteredBookings.length;
+    const totalCount = this.bookings.length;
 
     const columns = [
       {
@@ -209,20 +359,27 @@ export default {
         key: "id",
         nowrap: true,
         render: (booking) =>
-          `<span class="font-mono text-sm font-semibold text-gray-900">${booking.id}</span>`,
+          `<span class="font-mono text-sm font-semibold text-indigo-700">${
+            booking.bookingReference || booking.id
+          }</span>`,
       },
       {
         label: "Performance",
         key: "performance",
         render: (booking) => {
           const performance = this.performances.find(
-            (p) => p.id === booking.performanceId
+            (p) => String(p.id) === String(booking.performanceId)
           );
           return `
             <div class="text-sm font-medium text-gray-900">${
               performance?.title || "Unknown"
             }</div>
-            <div class="text-xs text-gray-500">${performance?.venue || ""}</div>
+            <div class="text-xs text-gray-500">${
+              performance?.venueName ||
+              performance?.location ||
+              performance?.venue ||
+              ""
+            }</div>
           `;
         },
       },
@@ -230,12 +387,16 @@ export default {
         label: "Customer",
         key: "customer",
         render: (booking) => {
-          const user = this.users.find((u) => u.id === booking.userId);
+          const user = this.users.find(
+            (u) => String(u.id) === String(booking.userId)
+          );
           return `
             <div class="text-sm font-medium text-gray-900">${
-              user?.name || "Unknown"
+              user?.name || booking.userName || "Unknown"
             }</div>
-            <div class="text-xs text-gray-500">${user?.email || ""}</div>
+            <div class="text-xs text-gray-500">${
+              user?.email || booking.userEmail || ""
+            }</div>
           `;
         },
       },
@@ -243,15 +404,28 @@ export default {
         label: "Seats",
         key: "seats",
         nowrap: true,
-        render: (booking) => `
-          <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
-            <i class="fas fa-chair mr-1"></i>
-            ${booking.seats.length} seat${booking.seats.length > 1 ? "s" : ""}
-          </span>
-          <div class="text-xs text-gray-500 mt-1">${booking.seats.join(
-            ", "
-          )}</div>
-        `,
+        render: (booking) => {
+          const seats = Array.isArray(booking.seats)
+            ? booking.seats
+                .map((s) => {
+                  if (typeof s === "string") {
+                    const parts = s.split("-");
+                    return parts.length > 1 ? parts[parts.length - 1] : s;
+                  }
+                  return s.seatNumber || s.seat || s.id || s.seatId || "";
+                })
+                .filter((s) => s)
+            : [];
+          return `
+            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
+              <i class="fas fa-chair mr-1"></i>
+              ${seats.length} seat${seats.length > 1 ? "s" : ""}
+            </span>
+            <div class="text-xs text-gray-500 mt-1 font-mono">${seats.join(
+              ", "
+            )}</div>
+          `;
+        },
       },
       {
         label: "Amount",
@@ -261,7 +435,11 @@ export default {
           <span class="text-sm font-bold text-gray-900">${statsService.formatCurrency(
             booking.amount
           )}</span>
-          <div class="text-xs text-gray-500">${booking.ticketType}</div>
+          ${
+            booking.ticketType
+              ? `<div class="text-xs text-gray-500">${booking.ticketType}</div>`
+              : ""
+          }
         `,
       },
       {
@@ -269,12 +447,12 @@ export default {
         key: "date",
         nowrap: true,
         render: (booking) => `
-          <span class="text-sm text-gray-900">${dayjs(booking.date).format(
-            "MMM D, YYYY"
-          )}</span>
-          <div class="text-xs text-gray-500">${dayjs(booking.date).format(
-            "h:mm A"
-          )}</div>
+          <span class="text-sm text-gray-900">${dayjs(
+            booking.bookingDate || booking.date
+          ).format("MMM D, YYYY")}</span>
+          <div class="text-xs text-gray-500">${dayjs(
+            booking.bookingDate || booking.date
+          ).format("h:mm A")}</div>
         `,
       },
       {
@@ -283,28 +461,32 @@ export default {
         nowrap: true,
         render: (booking) => this.renderStatusBadge(booking),
       },
-      {
-        label: "Actions",
-        key: "actions",
-        nowrap: true,
-        cellClassName: "text-sm",
-        render: (booking) => this.renderBookingActions(booking),
-      },
     ];
 
-    const tableHTML = `
-      ${FormComponents.dataTable({
-        columns,
-        data: this.filteredBookings,
-      })}
-      <div class="mt-4 flex justify-between items-center text-sm text-gray-600 px-2">
-        <p>Showing <span class="font-semibold">${
-          this.filteredBookings.length
-        }</span> of <span class="font-semibold">${
-      this.bookings.length
-    }</span> bookings</p>
-      </div>
-    `;
+    const tableHTML = createTable({
+      columns,
+      data: this.filteredBookings,
+      title: "Bookings List",
+      icon: "fa-table",
+      subtitle: `Showing <span class="font-semibold text-indigo-600">${filteredCount}</span> of <span class="font-semibold">${totalCount}</span> bookings${
+        filteredCount < totalCount
+          ? ` <span class="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full">Filtered</span>`
+          : ""
+      }`,
+      headerStats: [
+        {
+          label: "Filtered Revenue",
+          value: statsService.formatCurrency(totalRevenue),
+          colorClass: "text-green-600",
+        },
+      ],
+      rowActions: (booking) => [this.renderBookingActions(booking)],
+      emptyState: {
+        icon: "fa-clipboard-list",
+        title: "No bookings found",
+        message: "Try adjusting your filters",
+      },
+    });
 
     $("#bookingsTable").html(tableHTML);
   },
@@ -314,24 +496,31 @@ export default {
       confirmed: "green",
       pending: "yellow",
       cancelled: "red",
+      completed: "blue",
     };
 
     const statusIcons = {
       confirmed: "fa-check-circle",
       pending: "fa-clock",
       cancelled: "fa-times-circle",
+      completed: "fa-check-double",
     };
 
     const statusLabels = {
       confirmed: "Confirmed",
       pending: "Pending",
       cancelled: "Cancelled",
+      completed: "Completed",
     };
 
+    const status = booking.status || "pending";
+
     return FormComponents.badge({
-      text: statusLabels[booking.status],
-      icon: statusIcons[booking.status],
-      color: statusColors[booking.status],
+      text:
+        statusLabels[status] ||
+        status.charAt(0).toUpperCase() + status.slice(1),
+      icon: statusIcons[status] || "fa-info-circle",
+      color: statusColors[status] || "gray",
     });
   },
 
@@ -403,80 +592,225 @@ export default {
     return `<div class="flex gap-1.5">${actions.join("")}</div>`;
   },
 
+  getStatusBadgeClass(status) {
+    const statusClasses = {
+      confirmed: "bg-green-100 text-green-800",
+      pending: "bg-yellow-100 text-yellow-800",
+      cancelled: "bg-red-100 text-red-800",
+      completed: "bg-blue-100 text-blue-800",
+    };
+    return statusClasses[status] || "bg-gray-100 text-gray-800";
+  },
+
+  getStatusLabel(status) {
+    const statusLabels = {
+      confirmed: "Confirmed",
+      pending: "Pending",
+      cancelled: "Cancelled",
+      completed: "Completed",
+    };
+    return (
+      statusLabels[status] || status.charAt(0).toUpperCase() + status.slice(1)
+    );
+  },
+
+  formatBookingId(id) {
+    if (!id) return "N/A";
+    if (typeof id === "string" && id.length > 6) {
+      return id;
+    }
+    const numericId = String(id).padStart(6, "0");
+    return `BK-${numericId}`;
+  },
+
+  extractSeatNumber(seat) {
+    if (typeof seat === "string") {
+      const parts = seat.split("-");
+      return parts.length > 1 ? parts[parts.length - 1] : seat;
+    }
+    return seat.seatNumber || seat.seat || seat.id || seat.seatId || "";
+  },
+
+  renderSeatDetail(seat, index) {
+    if (typeof seat === "string") {
+      return `
+        <tr class="border-b border-gray-200 hover:bg-gray-50">
+          <td class="py-2 px-3 text-sm">${index + 1}</td>
+          <td class="py-2 px-3 text-sm font-mono font-semibold text-indigo-700">${this.extractSeatNumber(
+            seat
+          )}</td>
+          <td class="py-2 px-3 text-sm text-gray-500">-</td>
+          <td class="py-2 px-3 text-sm text-gray-500">-</td>
+          <td class="py-2 px-3 text-sm text-gray-500">-</td>
+          <td class="py-2 px-3 text-sm text-right font-semibold">-</td>
+        </tr>
+      `;
+    }
+
+    const tierColors = {
+      vip: "bg-yellow-100 text-yellow-800",
+      premium: "bg-purple-100 text-purple-800",
+      standard: "bg-green-100 text-green-800",
+      economy: "bg-blue-100 text-blue-800",
+    };
+
+    const tierColor =
+      tierColors[seat.tier?.toLowerCase()] || "bg-gray-100 text-gray-800";
+
+    return `
+      <tr class="border-b border-gray-200 hover:bg-gray-50">
+        <td class="py-2 px-3 text-sm">${index + 1}</td>
+        <td class="py-2 px-3 text-sm font-mono font-semibold text-indigo-700">${
+          seat.seatNumber || this.extractSeatNumber(seat)
+        }</td>
+        <td class="py-2 px-3 text-sm">${seat.section || "-"}</td>
+        <td class="py-2 px-3 text-sm">
+          ${
+            seat.tier
+              ? `<span class="px-2 py-0.5 rounded-full text-xs font-semibold ${tierColor}">${seat.tier}</span>`
+              : "-"
+          }
+        </td>
+        <td class="py-2 px-3 text-sm">${seat.ticketType || "-"}</td>
+        <td class="py-2 px-3 text-sm text-right font-semibold">${
+          seat.finalPrice ? statsService.formatCurrency(seat.finalPrice) : "-"
+        }</td>
+      </tr>
+    `;
+  },
+
   viewBooking(bookingId) {
     const booking = this.bookings.find((b) => b.id === bookingId);
     if (!booking) return;
 
     const performance = this.performances.find(
-      (p) => p.id === booking.performanceId
+      (p) => String(p.id) === String(booking.performanceId)
     );
-    const user = this.users.find((u) => u.id === booking.userId);
+    const user = this.users.find(
+      (u) => String(u.id) === String(booking.userId)
+    );
+
+    const seats = Array.isArray(booking.seats) ? booking.seats : [];
 
     Swal.fire({
       title: `<i class="fas fa-ticket-alt text-indigo-600"></i> Booking Details`,
       html: `
         <div class="text-left space-y-4">
           <div class="bg-gray-50 rounded-lg p-4">
-            <h3 class="font-semibold text-gray-900 mb-2">Booking Information</h3>
+            <h3 class="font-semibold text-gray-900 mb-2">
+              <i class="fas fa-info-circle text-gray-600 mr-2"></i>Booking Information
+            </h3>
             <div class="space-y-2 text-sm">
-              <p><span class="font-medium">Booking ID:</span> <span class="font-mono">${
-                booking.id
+              <p><span class="font-medium">Booking ID:</span> <span class="font-mono font-semibold text-indigo-700">${
+                booking.bookingReference || booking.id
               }</span></p>
-              <p><span class="font-medium">Date:</span> ${dayjs(
-                booking.date
+              <p><span class="font-medium">Booking Date:</span> ${dayjs(
+                booking.bookingDate || booking.date
               ).format("MMMM D, YYYY h:mm A")}</p>
-              <p><span class="font-medium">Status:</span> <span class="px-2 py-1 rounded ${
-                booking.status === "confirmed"
-                  ? "bg-green-100 text-green-800"
-                  : booking.status === "pending"
-                  ? "bg-yellow-100 text-yellow-800"
-                  : "bg-red-100 text-red-800"
-              }">${booking.status}</span></p>
+              <p>
+                <span class="font-medium">Status:</span>
+                <span class="px-3 py-1 rounded-full text-xs font-semibold inline-flex items-center gap-1 ${this.getStatusBadgeClass(
+                  booking.status
+                )}">
+                  <i class="fas ${
+                    booking.status === "confirmed"
+                      ? "fa-check-circle"
+                      : booking.status === "pending"
+                      ? "fa-clock"
+                      : booking.status === "completed"
+                      ? "fa-check-double"
+                      : "fa-times-circle"
+                  }"></i>
+                  ${this.getStatusLabel(booking.status)}
+                </span>
+              </p>
             </div>
           </div>
           <div class="bg-blue-50 rounded-lg p-4">
-            <h3 class="font-semibold text-gray-900 mb-2">Performance</h3>
+            <h3 class="font-semibold text-gray-900 mb-2">
+              <i class="fas fa-music text-indigo-600 mr-2"></i>Performance
+            </h3>
             <div class="space-y-2 text-sm">
-              <p class="font-medium text-indigo-900">${
-                performance?.title || "Unknown"
+              <p class="font-semibold text-indigo-900 text-base">${
+                performance?.title ||
+                booking.performanceTitle ||
+                "Unknown Performance"
               }</p>
               <p><span class="font-medium">Venue:</span> ${
-                performance?.venue || "N/A"
+                performance?.venueName ||
+                booking.venueName ||
+                performance?.location ||
+                performance?.venue ||
+                "N/A"
               }</p>
-              <p><span class="font-medium">Date:</span> ${dayjs(
-                performance?.date
-              ).format("MMMM D, YYYY")}</p>
+              <p><span class="font-medium">Date:</span> ${
+                performance?.date || booking.showtime
+                  ? dayjs(performance?.date || booking.showtime).format(
+                      "MMMM D, YYYY"
+                    )
+                  : "N/A"
+              }</p>
             </div>
           </div>
+
           <div class="bg-purple-50 rounded-lg p-4">
-            <h3 class="font-semibold text-gray-900 mb-2">Customer</h3>
+            <h3 class="font-semibold text-gray-900 mb-2">
+              <i class="fas fa-user text-purple-600 mr-2"></i>Customer
+            </h3>
             <div class="space-y-2 text-sm">
               <p><span class="font-medium">Name:</span> ${
-                user?.name || "Unknown"
+                user?.name || booking.userName || "Unknown"
               }</p>
               <p><span class="font-medium">Email:</span> ${
-                user?.email || "N/A"
+                user?.email || booking.userEmail || "N/A"
               }</p>
+              ${
+                user?.phone
+                  ? `<p><span class="font-medium">Phone:</span> ${user.phone}</p>`
+                  : ""
+              }
             </div>
           </div>
-          <div class="bg-green-50 rounded-lg p-4">
-            <h3 class="font-semibold text-gray-900 mb-2">Seats & Payment</h3>
-            <div class="space-y-2 text-sm">
-              <p><span class="font-medium">Seats:</span> ${booking.seats.join(
-                ", "
-              )}</p>
-              <p><span class="font-medium">Ticket Type:</span> ${
-                booking.ticketType
-              }</p>
-              <p><span class="font-medium">Amount:</span> <span class="text-lg font-bold text-green-700">${statsService.formatCurrency(
-                booking.amount
-              )}</span></p>
+
+          <div class="bg-gradient-to-br from-green-50 to-emerald-50 rounded-lg p-4 border border-green-200">
+            <h3 class="font-semibold text-gray-900 mb-3">
+              <i class="fas fa-chair text-green-600 mr-2"></i>Seats Details
+            </h3>
+            <div class="bg-white rounded-lg overflow-hidden shadow-sm">
+              <table class="w-full">
+                <thead class="bg-gray-100 border-b border-gray-200">
+                  <tr>
+                    <th class="py-2 px-3 text-left text-xs font-semibold text-gray-700">#</th>
+                    <th class="py-2 px-3 text-left text-xs font-semibold text-gray-700">Seat</th>
+                    <th class="py-2 px-3 text-left text-xs font-semibold text-gray-700">Section/Zone</th>
+                    <th class="py-2 px-3 text-left text-xs font-semibold text-gray-700">Tier</th>
+                    <th class="py-2 px-3 text-left text-xs font-semibold text-gray-700">Ticket Type</th>
+                    <th class="py-2 px-3 text-right text-xs font-semibold text-gray-700">Price</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${seats
+                    .map((seat, index) => this.renderSeatDetail(seat, index))
+                    .join("")}
+                </tbody>
+                <tfoot class="bg-gray-50 border-t-2 border-gray-300">
+                  <tr>
+                    <td colspan="5" class="py-3 px-3 text-sm font-semibold text-gray-900 text-right">Total Amount:</td>
+                    <td class="py-3 px-3 text-right">
+                      <span class="text-lg font-bold text-green-700">${statsService.formatCurrency(
+                        booking.amount || booking.totalAmount
+                      )}</span>
+                    </td>
+                  </tr>
+                </tfoot>
+              </table>
             </div>
           </div>
         </div>
       `,
-      width: "600px",
+      width: "800px",
       confirmButtonText: "Close",
+      confirmButtonColor: "#4f46e5",
     });
   },
 
@@ -489,7 +823,7 @@ export default {
       html: `Are you sure you want to cancel booking <strong>${bookingId}</strong>?<br><br><span class="text-sm text-gray-600">This action cannot be undone.</span>`,
       icon: "warning",
       showCancelButton: true,
-      confirmButtonColor: "#ef4444",
+      confirmButtonColor: SwalColors.danger,
       confirmButtonText: "Yes, Cancel Booking",
       cancelButtonText: "No, Keep It",
     });
@@ -510,7 +844,7 @@ export default {
       html: `Confirm booking <strong>${bookingId}</strong>?<br><br><span class="text-sm text-gray-600">This will change the status to confirmed.</span>`,
       icon: "question",
       showCancelButton: true,
-      confirmButtonColor: "#10b981",
+      confirmButtonColor: SwalColors.success,
       confirmButtonText: "Yes, Confirm",
       cancelButtonText: "Cancel",
     });
@@ -529,9 +863,11 @@ export default {
     const ticketTypes = ticketTypeService.getAll() || [];
 
     const performance = this.performances.find(
-      (p) => p.id === booking.performanceId
+      (p) => String(p.id) === String(booking.performanceId)
     );
-    const user = this.users.find((u) => u.id === booking.userId);
+    const user = this.users.find(
+      (u) => String(u.id) === String(booking.userId)
+    );
 
     const { value: formValues } = await Swal.fire({
       title: '<i class="fas fa-edit text-blue-600"></i> Edit Booking',
@@ -551,7 +887,9 @@ export default {
                 .map(
                   (p) => `
                 <option value="${p.id}" ${
-                    p.id === booking.performanceId ? "selected" : ""
+                    String(p.id) === String(booking.performanceId)
+                      ? "selected"
+                      : ""
                   }>
                   ${p.title}
                 </option>
@@ -568,7 +906,7 @@ export default {
                 .map(
                   (u) => `
                 <option value="${u.id}" ${
-                    u.id === booking.userId ? "selected" : ""
+                    String(u.id) === String(booking.userId) ? "selected" : ""
                   }>
                   ${u.name} (${u.email})
                 </option>
@@ -639,26 +977,26 @@ export default {
       showCancelButton: true,
       confirmButtonText: "Save Changes",
       cancelButtonText: "Cancel",
-      confirmButtonColor: "#3b82f6",
+      confirmButtonColor: SwalColors.info,
       didOpen: () => {
-        const selectSeatsBtn = document.getElementById("select-seats-btn");
-        const seatsInput = document.getElementById("edit-seats");
-
-        selectSeatsBtn.addEventListener("click", async () => {
-          const currentSeats = seatsInput.value
+        $("#select-seats-btn").on("click", async () => {
+          const $seatsInput = $("#edit-seats");
+          const currentSeats = $seatsInput
+            .val()
             .split(",")
             .map((s) => s.trim())
             .filter((s) => s);
           const selectedPerformance = this.performances.find(
-            (p) => p.id === document.getElementById("edit-performance").value
+            (p) => String(p.id) === String($("#edit-performance").val())
           );
 
           const result = await this.showSeatSelectionModal(
             currentSeats,
             selectedPerformance
           );
+
           if (result) {
-            seatsInput.value = result.join(", ");
+            $seatsInput.val(result.join(", ")).trigger("change");
           }
         });
       },
@@ -745,7 +1083,7 @@ export default {
       showCancelButton: true,
       confirmButtonText: "Process Refund",
       cancelButtonText: "Cancel",
-      confirmButtonColor: "#f97316",
+      confirmButtonColor: SwalColors.warning,
       didOpen: () => {
         const typeSelect = document.getElementById("refund-type");
         const partialContainer = document.getElementById(
@@ -838,7 +1176,9 @@ export default {
 
     const bookedSeats = this.bookings
       .filter(
-        (b) => b.performanceId === performance?.id && b.status !== "cancelled"
+        (b) =>
+          String(b.performanceId) === String(performance?.id) &&
+          b.status !== "cancelled"
       )
       .flatMap((b) => b.seats);
 
@@ -954,7 +1294,7 @@ export default {
       showCancelButton: true,
       confirmButtonText: `Confirm Selection (${selectedSeats.length})`,
       cancelButtonText: "Cancel",
-      confirmButtonColor: "#4f46e5",
+      confirmButtonColor: SwalColors.primary,
       didOpen: () => {
         const updateDisplay = () => {
           document.getElementById("selected-count").textContent =
@@ -977,75 +1317,69 @@ export default {
           });
         };
 
-        document.querySelectorAll(".seat-btn").forEach((btn) => {
-          btn.addEventListener("click", () => {
-            const seatId = btn.getAttribute("data-seat");
-            if (selectedSeats.includes(seatId)) {
-              selectedSeats = selectedSeats.filter((s) => s !== seatId);
-            } else {
-              selectedSeats.push(seatId);
-              selectedSeats.sort((a, b) => {
-                const rowA = a.match(/[A-Z]/)[0];
-                const rowB = b.match(/[A-Z]/)[0];
-                const numA = parseInt(a.match(/\d+/)[0]);
-                const numB = parseInt(b.match(/\d+/)[0]);
-                if (rowA !== rowB) return rowA.localeCompare(rowB);
-                return numA - numB;
-              });
-            }
-            updateDisplay();
-          });
+        $(".seat-btn").on("click", function () {
+          const seatId = $(this).attr("data-seat");
+          if (selectedSeats.includes(seatId)) {
+            selectedSeats = selectedSeats.filter((s) => s !== seatId);
+          } else {
+            selectedSeats.push(seatId);
+            selectedSeats.sort((a, b) => {
+              const rowA = a.match(/[A-Z]/)[0];
+              const rowB = b.match(/[A-Z]/)[0];
+              const numA = parseInt(a.match(/\d+/)[0]);
+              const numB = parseInt(b.match(/\d+/)[0]);
+              if (rowA !== rowB) return rowA.localeCompare(rowB);
+              return numA - numB;
+            });
+          }
+          updateDisplay();
         });
 
-        document
-          .getElementById("clear-selection-btn")
-          .addEventListener("click", () => {
-            selectedSeats = [];
-            updateDisplay();
+        $("#clear-selection-btn").on("click", () => {
+          selectedSeats = [];
+          updateDisplay();
+        });
+
+        $("#select-row-btn").on("click", async () => {
+          const { value: row } = await Swal.fire({
+            title: "Select Row",
+            input: "select",
+            inputOptions: rows.reduce(
+              (acc, r) => ({ ...acc, [r]: `Row ${r}` }),
+              {}
+            ),
+            inputPlaceholder: "Choose a row",
+            showCancelButton: true,
           });
 
-        document
-          .getElementById("select-row-btn")
-          .addEventListener("click", async () => {
-            const { value: row } = await Swal.fire({
-              title: "Select Row",
-              input: "select",
-              inputOptions: rows.reduce(
-                (acc, r) => ({ ...acc, [r]: `Row ${r}` }),
-                {}
-              ),
-              inputPlaceholder: "Choose a row",
-              showCancelButton: true,
+          if (row) {
+            const rowSeats = Array.from(
+              { length: seatsPerRow },
+              (_, i) => `${row}${i + 1}`
+            );
+            const availableRowSeats = rowSeats.filter(
+              (seat) =>
+                !bookedSeats.includes(seat) || currentSeats.includes(seat)
+            );
+
+            availableRowSeats.forEach((seat) => {
+              if (!selectedSeats.includes(seat)) {
+                selectedSeats.push(seat);
+              }
             });
 
-            if (row) {
-              const rowSeats = Array.from(
-                { length: seatsPerRow },
-                (_, i) => `${row}${i + 1}`
-              );
-              const availableRowSeats = rowSeats.filter(
-                (seat) =>
-                  !bookedSeats.includes(seat) || currentSeats.includes(seat)
-              );
+            selectedSeats.sort((a, b) => {
+              const rowA = a.match(/[A-Z]/)[0];
+              const rowB = b.match(/[A-Z]/)[0];
+              const numA = parseInt(a.match(/\d+/)[0]);
+              const numB = parseInt(b.match(/\d+/)[0]);
+              if (rowA !== rowB) return rowA.localeCompare(rowB);
+              return numA - numB;
+            });
 
-              availableRowSeats.forEach((seat) => {
-                if (!selectedSeats.includes(seat)) {
-                  selectedSeats.push(seat);
-                }
-              });
-
-              selectedSeats.sort((a, b) => {
-                const rowA = a.match(/[A-Z]/)[0];
-                const rowB = b.match(/[A-Z]/)[0];
-                const numA = parseInt(a.match(/\d+/)[0]);
-                const numB = parseInt(b.match(/\d+/)[0]);
-                if (rowA !== rowB) return rowA.localeCompare(rowB);
-                return numA - numB;
-              });
-
-              updateDisplay();
-            }
-          });
+            updateDisplay();
+          }
+        });
       },
     });
 
@@ -1060,9 +1394,11 @@ export default {
     if (!booking) return;
 
     const performance = this.performances.find(
-      (p) => p.id === booking.performanceId
+      (p) => String(p.id) === String(booking.performanceId)
     );
-    const user = this.users.find((u) => u.id === booking.userId);
+    const user = this.users.find(
+      (u) => String(u.id) === String(booking.userId)
+    );
 
     const { value: emailData } = await Swal.fire({
       title: '<i class="fas fa-envelope text-purple-600"></i> Send Email',
@@ -1111,7 +1447,7 @@ export default {
       showCancelButton: true,
       confirmButtonText: "Send Email",
       cancelButtonText: "Cancel",
-      confirmButtonColor: "#a855f7",
+      confirmButtonColor: SwalColors.purple,
       didOpen: () => {
         const templateSelect = document.getElementById("email-template");
         const customContainer = document.getElementById(
@@ -1208,9 +1544,11 @@ export default {
     ];
     const rows = this.filteredBookings.map((booking) => {
       const performance = this.performances.find(
-        (p) => p.id === booking.performanceId
+        (p) => String(p.id) === String(booking.performanceId)
       );
-      const user = this.users.find((u) => u.id === booking.userId);
+      const user = this.users.find(
+        (u) => String(u.id) === String(booking.userId)
+      );
       return [
         booking.id,
         performance?.title || "Unknown",
