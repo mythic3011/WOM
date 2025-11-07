@@ -17,7 +17,8 @@ export const scrollbarUtils = {
   init(element, options = {}) {
     if (!element) return null;
 
-    const el = typeof element === "string" ? document.querySelector(element) : element;
+    const el =
+      typeof element === "string" ? document.querySelector(element) : element;
     if (!el) return null;
 
     const config = { ...defaultOptions, ...options };
@@ -82,11 +83,10 @@ export const scrollbarUtils = {
 
 export const initializeScrollbars = () => {
   scrollbarUtils.initMultiple(".custom-scrollbar");
-  
+
   scrollbarUtils.initMultiple(".data-table-container", {
     overflow: { x: "scroll" },
   });
 };
 
 export default scrollbarUtils;
-
