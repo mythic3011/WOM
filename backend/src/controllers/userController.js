@@ -104,6 +104,35 @@ export const deleteUser = async (req, res, next) => {
   }
 };
 
+export const deleteSelf = async (req, res, next) => {
+  try {
+    const userId = req.session?.userId;
+    const { password } = req.body || {};
+
+    if (!userId) {
+      return res
+        .status(401)
+        .json({ success: false, message: "Authentication required. Please login." });
+    }
+
+    await userService.verifyAndDeleteUser(userId, password);
+
+    if (req.session) {
+      req.session.destroy(() => {});
+    }
+
+    res.json({ success: true, message: "Account deleted successfully" });
+  } catch (error) {
+    if (error.message === "User not found") {
+      return res.status(404).json({ success: false, message: error.message });
+    }
+    if (error.message === "Invalid password") {
+      return res.status(401).json({ success: false, message: error.message });
+    }
+    next(error);
+  }
+};
+
 export const getUserBookings = async (req, res, next) => {
   try {
     const bookings = await userService.getUserBookings(req.params.id);

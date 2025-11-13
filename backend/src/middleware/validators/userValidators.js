@@ -101,6 +101,14 @@ export const deleteUserValidator = [
   param("id").isUUID().withMessage("Invalid user ID"),
 ];
 
+export const selfDeleteValidator = [
+  body("password")
+    .notEmpty()
+    .withMessage("Password is required")
+    .isLength({ min: 6 })
+    .withMessage("Password must be at least 6 characters"),
+];
+
 export const listUsersValidator = [
   query("page").optional().isInt({ min: 1 }).withMessage("Page must be >= 1"),
 

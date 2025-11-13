@@ -3,30 +3,11 @@ import { navigate } from "/src/utils/core/navigation.js";
 import { ROUTES } from "/src/config/routes.js";
 import Swal from "sweetalert2";
 import { SwalColors } from "/src/utils/colors.js";
+import { CONTACT_INFO } from "/src/config/config.js";
 
 const FOOTER_CONFIG = {
   appName: "Western Orchestral Music Performance",
   copyrightYear: new Date().getFullYear(),
-};
-
-const CONTACT_INFO = {
-  address: {
-    line1: "Room M101, 1/F",
-    line2: "Li Ka Shing Tower (Block M)",
-    line3: "The Hong Kong Polytechnic University",
-  },
-  phone: {
-    number: "+852 2333 0600",
-    link: "tel:+85223330600",
-  },
-  email: {
-    address: "ar.jupas@polyu.edu.hk",
-    link: "mailto:ar.jupas@polyu.edu.hk",
-  },
-  hours: {
-    visitCenter: "9am-1pm & 2pm-7pm",
-    hotline: "9am-1pm & 2pm-5.35pm",
-  },
 };
 
 const FOOTER_LINKS = {
@@ -134,13 +115,17 @@ export function renderFooter() {
           </div>
           <div class="flex items-center">
             <i class="fas fa-phone mr-2 w-5 text-center text-indigo-400"></i>
-            <a href="${CONTACT_INFO.phone.link}" class="hover:text-white transition-colors">
+            <a href="${
+              CONTACT_INFO.phone.link
+            }" class="hover:text-white transition-colors">
               ${CONTACT_INFO.phone.number}
             </a>
           </div>
           <div class="flex items-center">
             <i class="fas fa-envelope mr-2 w-5 text-center text-indigo-400"></i>
-            <a href="${CONTACT_INFO.email.link}" class="hover:text-white transition-colors">
+            <a href="${
+              CONTACT_INFO.email.link
+            }" class="hover:text-white transition-colors">
               ${CONTACT_INFO.email.address}
             </a>
           </div>
@@ -162,13 +147,21 @@ export function renderFooter() {
     <div class="border-t border-gray-700 mt-8 pt-6">
       <div class="flex flex-col md:flex-row justify-between items-center">
         <p class="text-gray-400 mb-4 md:mb-0">
-          &copy; ${FOOTER_CONFIG.copyrightYear} ${FOOTER_CONFIG.appName}. All rights reserved.
+          &copy; ${FOOTER_CONFIG.copyrightYear} ${
+    FOOTER_CONFIG.appName
+  }. All rights reserved.
         </p>
+        ${
+          false
+            ? `
         <div class="flex text-sm text-gray-500 space-x-6">
           <a href="#" class="hover:text-gray-300 transition-colors duration-200">Privacy Policy</a>
           <a href="#" class="hover:text-gray-300 transition-colors duration-200">Terms of Service</a>
           <a href="#" class="hover:text-gray-300 transition-colors duration-200">Contact Us</a>
         </div>
+        `
+            : ""
+        }
       </div>
     </div>
   </div>

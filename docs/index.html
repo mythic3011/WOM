@@ -1,0 +1,780 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Seat Map</title>
+    <style>
+        :root {
+            --color-white: rgba(255, 255, 255, 1);
+            --color-black: rgba(0, 0, 0, 1);
+            --color-cream-50: rgba(252, 252, 249, 1);
+            --color-cream-100: rgba(255, 255, 253, 1);
+            --color-gray-200: rgba(245, 245, 245, 1);
+            --color-gray-300: rgba(167, 169, 169, 1);
+            --color-gray-400: rgba(119, 124, 124, 1);
+            --color-slate-500: rgba(98, 108, 113, 1);
+            --color-brown-600: rgba(94, 82, 64, 1);
+            --color-charcoal-700: rgba(31, 33, 33, 1);
+            --color-charcoal-800: rgba(38, 40, 40, 1);
+            --color-slate-900: rgba(19, 52, 59, 1);
+            --color-teal-300: rgba(50, 184, 198, 1);
+            --color-teal-400: rgba(45, 166, 178, 1);
+            --color-teal-500: rgba(33, 128, 141, 1);
+            --color-teal-600: rgba(29, 116, 128, 1);
+            --color-teal-700: rgba(26, 104, 115, 1);
+            --color-red-400: rgba(255, 84, 89, 1);
+            --color-red-500: rgba(192, 21, 47, 1);
+            --color-orange-400: rgba(230, 129, 97, 1);
+            --color-orange-500: rgba(168, 75, 47, 1);
+            --color-brown-600-rgb: 94, 82, 64;
+            --color-teal-500-rgb: 33, 128, 141;
+            --color-slate-900-rgb: 19, 52, 59;
+            --color-background: var(--color-cream-50);
+            --color-surface: var(--color-cream-100);
+            --color-text: var(--color-slate-900);
+            --color-text-secondary: var(--color-slate-500);
+            --color-primary: var(--color-teal-500);
+            --color-primary-hover: var(--color-teal-600);
+            --color-border: rgba(var(--color-brown-600-rgb), 0.2);
+            --color-card-border: rgba(var(--color-brown-600-rgb), 0.12);
+            --font-family-base: "FKGroteskNeue", "Geist", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            --font-size-base: 14px;
+            --font-size-lg: 16px;
+            --font-size-xl: 18px;
+            --font-size-2xl: 20px;
+            --font-size-3xl: 24px;
+            --font-weight-medium: 500;
+            --font-weight-semibold: 550;
+            --space-8: 8px;
+            --space-12: 12px;
+            --space-16: 16px;
+            --space-20: 20px;
+            --space-24: 24px;
+            --radius-base: 8px;
+            --radius-lg: 12px;
+            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.04), 0 2px 4px -1px rgba(0, 0, 0, 0.02);
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --color-gray-400-rgb: 119, 124, 124;
+                --color-teal-300-rgb: 50, 184, 198;
+                --color-gray-300-rgb: 167, 169, 169;
+                --color-gray-200-rgb: 245, 245, 245;
+                --color-background: var(--color-charcoal-700);
+                --color-surface: var(--color-charcoal-800);
+                --color-text: var(--color-gray-200);
+                --color-text-secondary: rgba(var(--color-gray-300-rgb), 0.7);
+                --color-primary: var(--color-teal-300);
+                --color-primary-hover: var(--color-teal-400);
+                --color-border: rgba(var(--color-gray-400-rgb), 0.3);
+                --color-card-border: rgba(var(--color-gray-400-rgb), 0.2);
+            }
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: var(--font-family-base);
+            background-color: var(--color-background);
+            color: var(--color-text);
+            line-height: 1.5;
+            padding: var(--space-20);
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: var(--space-24);
+        }
+
+        .header h1 {
+            font-size: var(--font-size-3xl);
+            font-weight: var(--font-weight-semibold);
+            margin-bottom: var(--space-8);
+        }
+
+        .header p {
+            color: var(--color-text-secondary);
+            font-size: var(--font-size-base);
+        }
+
+        .main-content {
+            display: flex;
+            gap: var(--space-24);
+            flex-wrap: wrap;
+        }
+
+        .map-container {
+            flex: 1;
+            min-width: 600px;
+            background-color: var(--color-surface);
+            border: 1px solid var(--color-card-border);
+            border-radius: var(--radius-lg);
+            padding: var(--space-16);
+            box-shadow: var(--shadow-md);
+        }
+
+        .svg-wrapper {
+            width: 100%;
+            height: 600px;
+            border: 1px solid var(--color-border);
+            border-radius: var(--radius-base);
+            overflow: hidden;
+            background-color: var(--color-background);
+        }
+
+        #seatMap {
+            width: 100%;
+            height: 100%;
+        }
+
+        .sidebar {
+            width: 280px;
+            display: flex;
+            flex-direction: column;
+            gap: var(--space-16);
+        }
+
+        .card {
+            background-color: var(--color-surface);
+            border: 1px solid var(--color-card-border);
+            border-radius: var(--radius-lg);
+            padding: var(--space-20);
+            box-shadow: var(--shadow-md);
+        }
+
+        .card h3 {
+            font-size: var(--font-size-lg);
+            font-weight: var(--font-weight-semibold);
+            margin-bottom: var(--space-16);
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: var(--space-12);
+            margin-bottom: var(--space-12);
+        }
+
+        .legend-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .legend-color {
+            width: 24px;
+            height: 24px;
+            border-radius: 4px;
+            border: 1px solid var(--color-border);
+        }
+
+        .legend-label {
+            font-size: var(--font-size-base);
+        }
+
+        .summary-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: var(--space-12);
+            padding-bottom: var(--space-12);
+            border-bottom: 1px solid var(--color-border);
+        }
+
+        .summary-item:last-child {
+            margin-bottom: 0;
+            padding-bottom: 0;
+            border-bottom: none;
+        }
+
+        .summary-label {
+            font-size: var(--font-size-base);
+            color: var(--color-text-secondary);
+        }
+
+        .summary-value {
+            font-size: var(--font-size-lg);
+            font-weight: var(--font-weight-semibold);
+        }
+
+        .total-price {
+            color: var(--color-primary);
+            font-size: var(--font-size-xl);
+        }
+
+        /* SVG Styles */
+        .seat {
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .seat:hover:not(.occupied) {
+            opacity: 0.8;
+            stroke-width: 2;
+        }
+
+        .seat.available {
+            fill: #4169E1;
+            stroke: #4169E1;
+        }
+
+        .seat.selected {
+            fill: #32CD32;
+            stroke: #32CD32;
+        }
+
+        .seat.occupied {
+            fill: #808080;
+            stroke: #808080;
+            cursor: not-allowed;
+        }
+
+        .seat-number {
+            font-size: 9px;
+            fill: white;
+            text-anchor: middle;
+            dominant-baseline: middle;
+            pointer-events: none;
+            user-select: none;
+        }
+
+        .zone-bg {
+            opacity: 0.1;
+        }
+
+        .zone-label {
+            font-size: 16px;
+            font-weight: 600;
+            fill: var(--color-text);
+            text-anchor: middle;
+            dominant-baseline: middle;
+        }
+
+        .row-label {
+            font-size: 14px;
+            font-weight: 500;
+            fill: var(--color-text-secondary);
+            text-anchor: middle;
+            dominant-baseline: middle;
+        }
+
+        .stage {
+            fill: var(--color-primary);
+            opacity: 0.3;
+        }
+
+        .stage-text {
+            font-size: 18px;
+            font-weight: 600;
+            fill: var(--color-text);
+            text-anchor: middle;
+            dominant-baseline: middle;
+        }
+
+        /* Tooltip styles */
+        .seat-tooltip {
+            position: fixed;
+            background: rgba(0, 0, 0, 0.9);
+            color: #FFFFFF;
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-size: 12px;
+            pointer-events: none;
+            z-index: 10000;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+            line-height: 1.4;
+            white-space: nowrap;
+        }
+
+        .seat-tooltip.visible {
+            opacity: 1;
+        }
+
+        .seat-tooltip-line {
+            margin: 2px 0;
+        }
+
+        .seat-tooltip-title {
+            font-weight: 600;
+            font-size: 13px;
+            margin-bottom: 4px;
+        }
+
+        @media (max-width: 968px) {
+            .main-content {
+                flex-direction: column;
+            }
+
+            .sidebar {
+                width: 100%;
+                flex-direction: row;
+                flex-wrap: wrap;
+            }
+
+            .card {
+                flex: 1;
+                min-width: 250px;
+            }
+
+            .map-container {
+                min-width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Tooltip for seat hover info -->
+    <div id="seatTooltip" class="seat-tooltip">
+        <div class="seat-tooltip-title"></div>
+        <div class="seat-tooltip-line"></div>
+        <div class="seat-tooltip-line"></div>
+    </div>
+
+    <div class="container">
+        <div class="header">
+            <h1>Interactive Seat Map</h1>
+            <p>Click seats to select, use mouse to pan and zoom</p>
+        </div>
+
+        <div class="main-content">
+            <div class="map-container">
+                <div class="svg-wrapper">
+                    <svg id="seatMap" viewBox="0 0 1000 700" xmlns="http://www.w3.org/2000/svg">
+                        <g class="svg-pan-zoom_viewport" id="viewport">
+                            <!-- Stage -->
+                            <rect class="stage" x="200" y="40" width="600" height="40" rx="4"></rect>
+                            <text class="stage-text" x="500" y="60" dominant-baseline="middle">STAGE</text>
+                            
+                            <!-- Seats will be generated here by JavaScript -->
+                        </g>
+                    </svg>
+                </div>
+            </div>
+
+            <div class="sidebar">
+                <div class="card">
+                    <h3>Legend</h3>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background-color: #4169E1;"></div>
+                        <span class="legend-label">Available</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background-color: #32CD32;"></div>
+                        <span class="legend-label">Selected</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background-color: #808080;"></div>
+                        <span class="legend-label">Occupied</span>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3>Selection Summary</h3>
+                    <div class="summary-item">
+                        <span class="summary-label">Selected Seats:</span>
+                        <span class="summary-value" id="selectedCount">0</span>
+                    </div>
+                    <div class="summary-item">
+                        <span class="summary-label">Total Price:</span>
+                        <span class="summary-value total-price" id="totalPrice">$0</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/svg-pan-zoom@3.6.1/dist/svg-pan-zoom.min.js"></script>
+    <script>
+        // Configuration
+        const zones = [
+            {
+                name: "VIP Zone",
+                rows: 5,
+                row_labels: ["A", "B", "C", "D", "E"],
+                seats_per_row: 10,
+                start_y: 120,
+                row_spacing: 32,
+                price: 150,
+                color: "#FFD700",
+                bg_color: "rgba(255, 215, 0, 0.1)",
+                zone_y_title: 100,
+                aisle_pattern: [5, 5]
+            },
+            {
+                name: "Standard Zone",
+                rows: 8,
+                row_labels: ["F", "G", "H", "I", "J", "K", "L", "M"],
+                seats_per_row: 12,
+                start_y: 300,
+                row_spacing: 32,
+                price: 100,
+                color: "#4169E1",
+                bg_color: "rgba(65, 105, 225, 0.1)",
+                zone_y_title: 280,
+                aisle_pattern: [4, 4, 4]
+            },
+            {
+                name: "Balcony Zone",
+                rows: 4,
+                row_labels: ["N", "O", "P", "Q"],
+                seats_per_row: 10,
+                start_y: 580,
+                row_spacing: 32,
+                price: 75,
+                color: "#9370DB",
+                bg_color: "rgba(147, 112, 219, 0.1)",
+                zone_y_title: 560,
+                aisle_pattern: [5, 5]
+            }
+        ];
+
+        const seatConfig = {
+            width: 18,
+            height: 18,
+            spacing_x: 28,
+            aisle_width: 15,
+            row_label_x: 35,
+            seats_start_x: 100
+        };
+
+        const aisleConfig = {
+            color: "rgba(200, 200, 200, 0.3)",
+            stroke_color: "rgba(180, 180, 180, 0.5)"
+        };
+
+        // Seat state management
+        const seatStates = new Map();
+        let panZoomInstance = null;
+
+        // Calculate seat position with aisles - CORRECTED
+        function calculateSeatPosition(seatNum, aislePattern) {
+            let x = seatConfig.seats_start_x;
+            let seatsPlaced = 0;
+            let patternIndex = 0;
+
+            // Determine which section this seat belongs to
+            let currentSeatInPattern = seatNum;
+            for (let i = 0; i < aislePattern.length; i++) {
+                if (currentSeatInPattern <= aislePattern[i]) {
+                    // Seat is in this section
+                    patternIndex = i;
+                    seatsPlaced = currentSeatInPattern - 1;
+                    break;
+                } else {
+                    currentSeatInPattern -= aislePattern[i];
+                    seatsPlaced += aislePattern[i];
+                }
+            }
+
+            // Add spacing for seats before this one
+            let seatsBefore = 0;
+            for (let i = 0; i < patternIndex; i++) {
+                seatsBefore += aislePattern[i];
+            }
+            
+            // Calculate position: start + seats before * spacing + aisles before * aisle width + position in current section * spacing
+            x = seatConfig.seats_start_x + 
+                seatsBefore * seatConfig.spacing_x + 
+                patternIndex * seatConfig.aisle_width + 
+                (seatNum - seatsBefore - 1) * seatConfig.spacing_x;
+
+            return x;
+        }
+
+        // Calculate total width with aisles
+        function calculateTotalWidth(seatsPerRow, aislePattern) {
+            let totalWidth = seatsPerRow * seatConfig.spacing_x;
+            const numAisles = aislePattern.length - 1;
+            totalWidth += numAisles * seatConfig.aisle_width;
+            return totalWidth;
+        }
+
+        // Generate seat map
+        function generateSeatMap() {
+            const viewport = document.getElementById('viewport');
+            
+            zones.forEach((zone, zoneIndex) => {
+                // Calculate zone dimensions with aisles
+                const zoneWidth = calculateTotalWidth(zone.seats_per_row, zone.aisle_pattern) + 50;
+                const zoneHeight = zone.rows * zone.row_spacing + 20;
+                const zoneX = seatConfig.seats_start_x - 20;
+                const zoneY = zone.start_y - 10;
+
+                // Zone background
+                const zoneBg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                zoneBg.setAttribute('class', 'zone-bg');
+                zoneBg.setAttribute('x', zoneX);
+                zoneBg.setAttribute('y', zoneY);
+                zoneBg.setAttribute('width', zoneWidth);
+                zoneBg.setAttribute('height', zoneHeight);
+                zoneBg.setAttribute('rx', '8');
+                zoneBg.setAttribute('fill', zone.bg_color);
+                viewport.appendChild(zoneBg);
+
+                // Zone label - positioned above zone
+                const zoneLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                zoneLabel.setAttribute('class', 'zone-label');
+                zoneLabel.setAttribute('x', '500');
+                zoneLabel.setAttribute('y', zone.zone_y_title);
+                zoneLabel.textContent = zone.name;
+                viewport.appendChild(zoneLabel);
+
+                // Draw aisles for this zone - CORRECTED positioning
+                for (let i = 0; i < zone.aisle_pattern.length - 1; i++) {
+                    // Calculate aisle x position: after seats in sections before this aisle
+                    let seatsBefore = 0;
+                    for (let j = 0; j <= i; j++) {
+                        seatsBefore += zone.aisle_pattern[j];
+                    }
+                    
+                    // Position aisle after the seats and previous aisles
+                    const aisleX = seatConfig.seats_start_x + 
+                                   seatsBefore * seatConfig.spacing_x + 
+                                   i * seatConfig.aisle_width + 
+                                   (seatConfig.spacing_x - seatConfig.aisle_width) / 2;
+                    
+                    const aisleRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                    aisleRect.setAttribute('x', aisleX);
+                    aisleRect.setAttribute('y', zone.start_y - 5);
+                    aisleRect.setAttribute('width', seatConfig.aisle_width);
+                    aisleRect.setAttribute('height', zone.rows * zone.row_spacing + 5);
+                    aisleRect.setAttribute('fill', aisleConfig.color);
+                    aisleRect.setAttribute('stroke', aisleConfig.stroke_color);
+                    aisleRect.setAttribute('stroke-dasharray', '4,4');
+                    viewport.appendChild(aisleRect);
+                }
+
+                // Generate seats
+                zone.row_labels.forEach((rowLabel, rowIndex) => {
+                    const rowY = zone.start_y + (rowIndex * zone.row_spacing);
+                    const rowCenterY = rowY + seatConfig.height / 2;
+
+                    // Row label - positioned at center Y of row
+                    const rowLabelElement = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                    rowLabelElement.setAttribute('class', 'row-label');
+                    rowLabelElement.setAttribute('x', seatConfig.row_label_x);
+                    rowLabelElement.setAttribute('y', rowCenterY);
+                    rowLabelElement.setAttribute('text-anchor', 'middle');
+                    rowLabelElement.setAttribute('dominant-baseline', 'middle');
+                    rowLabelElement.textContent = rowLabel;
+                    viewport.appendChild(rowLabelElement);
+
+                    // Generate seats for this row
+                    for (let seatNum = 1; seatNum <= zone.seats_per_row; seatNum++) {
+                        const seatX = calculateSeatPosition(seatNum, zone.aisle_pattern);
+                        const seatId = `${rowLabel}${seatNum}`;
+
+                        // Randomly mark some seats as occupied (20%)
+                        const isOccupied = Math.random() < 0.2;
+                        const initialState = isOccupied ? 'occupied' : 'available';
+
+                        // Store seat data with row and seat number for tooltip
+                        seatStates.set(seatId, {
+                            state: initialState,
+                            price: zone.price,
+                            zone: zone.name,
+                            row: rowLabel,
+                            seatNumber: seatNum,
+                            x: seatX,
+                            y: rowY
+                        });
+
+                        // Create seat rectangle
+                        const seat = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                        seat.setAttribute('class', `seat ${initialState}`);
+                        seat.setAttribute('data-seat-id', seatId);
+                        seat.setAttribute('x', seatX);
+                        seat.setAttribute('y', rowY);
+                        seat.setAttribute('width', seatConfig.width);
+                        seat.setAttribute('height', seatConfig.height);
+                        seat.setAttribute('rx', '3');
+                        viewport.appendChild(seat);
+
+                        // Create seat number text - centered in seat
+                        const seatText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                        seatText.setAttribute('class', 'seat-number');
+                        seatText.setAttribute('x', seatX + seatConfig.width / 2);
+                        seatText.setAttribute('y', rowCenterY);
+                        seatText.setAttribute('text-anchor', 'middle');
+                        seatText.setAttribute('dominant-baseline', 'middle');
+                        seatText.textContent = seatNum;
+                        viewport.appendChild(seatText);
+                    }
+                });
+            });
+        }
+
+        // Tooltip management
+        const tooltip = document.getElementById('seatTooltip');
+        let currentHoveredSeat = null;
+
+        // Show tooltip with seat info
+        function showTooltip(seatElement, event) {
+            const seatId = seatElement.getAttribute('data-seat-id');
+            const seatData = seatStates.get(seatId);
+            
+            if (!seatData) return;
+
+            // Get status label
+            let statusLabel = 'Available';
+            if (seatData.state === 'selected') statusLabel = 'Selected';
+            else if (seatData.state === 'occupied') statusLabel = 'Occupied';
+
+            // Update tooltip content
+            const tooltipTitle = tooltip.querySelector('.seat-tooltip-title');
+            const tooltipLines = tooltip.querySelectorAll('.seat-tooltip-line');
+            
+            tooltipTitle.textContent = `Seat ${seatId}`;
+            tooltipLines[0].textContent = `Status: ${statusLabel}`;
+            tooltipLines[1].textContent = `Price: $${seatData.price}`;
+
+            // Position tooltip near cursor
+            positionTooltip(event);
+            
+            // Show tooltip
+            tooltip.classList.add('visible');
+            currentHoveredSeat = seatId;
+        }
+
+        // Hide tooltip
+        function hideTooltip() {
+            tooltip.classList.remove('visible');
+            currentHoveredSeat = null;
+        }
+
+        // Position tooltip relative to cursor
+        function positionTooltip(event) {
+            const offsetX = 15;
+            const offsetY = 15;
+            const tooltipRect = tooltip.getBoundingClientRect();
+            
+            let x = event.clientX + offsetX;
+            let y = event.clientY + offsetY;
+
+            // Keep tooltip within viewport bounds
+            if (x + tooltipRect.width > window.innerWidth) {
+                x = event.clientX - tooltipRect.width - offsetX;
+            }
+            if (y + tooltipRect.height > window.innerHeight) {
+                y = event.clientY - tooltipRect.height - offsetY;
+            }
+
+            tooltip.style.left = x + 'px';
+            tooltip.style.top = y + 'px';
+        }
+
+        // Handle seat hover
+        function handleSeatHover(event) {
+            const seatElement = event.target;
+            if (seatElement.classList.contains('seat')) {
+                showTooltip(seatElement, event);
+            }
+        }
+
+        // Handle seat mouse leave
+        function handleSeatLeave(event) {
+            const seatElement = event.target;
+            if (seatElement.classList.contains('seat')) {
+                hideTooltip();
+            }
+        }
+
+        // Handle mouse move to update tooltip position
+        function handleMouseMove(event) {
+            if (currentHoveredSeat && tooltip.classList.contains('visible')) {
+                positionTooltip(event);
+            }
+        }
+
+        // Handle seat click
+        function handleSeatClick(event) {
+            const seatElement = event.target;
+            if (!seatElement.classList.contains('seat')) return;
+
+            const seatId = seatElement.getAttribute('data-seat-id');
+            const seatData = seatStates.get(seatId);
+
+            if (!seatData || seatData.state === 'occupied') return;
+
+            // Toggle seat state
+            if (seatData.state === 'available') {
+                seatData.state = 'selected';
+                seatElement.classList.remove('available');
+                seatElement.classList.add('selected');
+            } else if (seatData.state === 'selected') {
+                seatData.state = 'available';
+                seatElement.classList.remove('selected');
+                seatElement.classList.add('available');
+            }
+
+            updateSummary();
+        }
+
+        // Update selection summary
+        function updateSummary() {
+            let selectedCount = 0;
+            let totalPrice = 0;
+
+            seatStates.forEach((seatData) => {
+                if (seatData.state === 'selected') {
+                    selectedCount++;
+                    totalPrice += seatData.price;
+                }
+            });
+
+            document.getElementById('selectedCount').textContent = selectedCount;
+            document.getElementById('totalPrice').textContent = `$${totalPrice}`;
+        }
+
+        // Initialize the application
+        function init() {
+            // Generate the seat map
+            generateSeatMap();
+
+            // Add event listeners
+            const viewport = document.getElementById('viewport');
+            viewport.addEventListener('click', handleSeatClick);
+            viewport.addEventListener('mouseover', handleSeatHover);
+            viewport.addEventListener('mouseout', handleSeatLeave);
+            document.addEventListener('mousemove', handleMouseMove);
+
+            // Initialize svg-pan-zoom
+            const svg = document.getElementById('seatMap');
+            panZoomInstance = svgPanZoom(svg, {
+                panEnabled: true,
+                controlIconsEnabled: true,
+                zoomEnabled: true,
+                dblClickZoomEnabled: true,
+                mouseWheelZoomEnabled: true,
+                preventMouseEventsDefault: true,
+                zoomScaleSensitivity: 0.2,
+                minZoom: 0.5,
+                maxZoom: 4,
+                fit: true,
+                contain: false,
+                center: true
+            });
+
+            // Update summary on load
+            updateSummary();
+        }
+
+        // Wait for DOM to be fully loaded
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', init);
+        } else {
+            init();
+        }
+    </script>
+</body>
+</html>

@@ -1,5 +1,5 @@
 import { User } from "../models/index.js";
-import { hashPassword } from "../utils/hash.js";
+import { hashPassword, comparePassword } from "../utils/hash.js";
 import { Op } from "sequelize";
 
 export const getAllUsers = async (filters = {}) => {
@@ -122,6 +122,22 @@ export const deleteUser = async (id) => {
 
   await user.destroy();
 
+  return true;
+};
+
+export const verifyAndDeleteUser = async (id, password) => {
+  const user = await User.findByPk(id);
+
+  if (!user) {
+    throw new Error("User not found");
+  }
+
+  const isValid = await comparePassword(password, user.password);
+  if (!isValid) {
+    throw new Error("Invalid password");
+  }
+
+  await user.destroy();
   return true;
 };
 

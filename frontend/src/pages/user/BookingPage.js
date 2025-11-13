@@ -16,6 +16,7 @@ import { storage } from "/src/services/storageService.js";
 import { generateFullId, getDisplayLabel } from "/src/utils/seatIdHelper.js";
 import { SeatMap } from "/src/components/SeatMap.js";
 import { initSeatMapPanzoom } from "/src/utils/panzoomSeatMap.js";
+import { attachSeatTooltipListeners } from "/src/utils/booking/seatTooltip.js";
 import Swal from "sweetalert2";
 import dayjs from "dayjs";
 
@@ -31,14 +32,14 @@ export default {
   async render(params) {
     return `
       <main class="container mx-auto px-4 py-8">
-        <div class="max-w-6xl mx-auto">
+        <div class="max-w-7xl mx-auto">
           ${FormComponents.pageHeader({
             title: "Book Your Seats",
             subtitle: "Select your seats and complete your booking",
             icon: "fa-ticket-alt",
           })}
 
-          <div class="mb-8">
+          <div class="mb-6">
             <div id="progressStepsContainer" class="flex items-center justify-between">
               ${this.renderProgressSteps()}
             </div>
@@ -325,14 +326,70 @@ export default {
   },
 
   async renderBookingForm() {
+    const venue = this.performanceData.venue;
+    const layout = venue?.layout || { sections: [] };
+    const bookedSeats = await this.getBookedSeats();
+    const seatDetails = bookedSeats.reduce((acc, id) => {
+      acc[id] = { status: "reserved" };
+      return acc;
+    }, {});
+    const seatMapHTML = SeatMap.generateFromLayout(
+      layout,
+      seatDetails,
+      this.selectedSeats,
+      true
+    );
+
     const stepContent = await this.renderStepContent();
     const content = `
-      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div class="lg:col-span-2">
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <div class="lg:col-span-8">
+          <div class="bg-white rounded-lg shadow-md border border-gray-200 p-6 mb-6">
+            <div class="flex items-center justify-between mb-4">
+              <div>
+                <h2 class="text-xl font-bold text-gray-900 flex items-center gap-2">
+                  <i class="fas fa-chair text-indigo-600"></i>
+                  Seat Map
+                </h2>
+                <p class="text-sm text-gray-600 mt-1">
+                  <i class="fas fa-building mr-1"></i>${
+                    venue?.name || this.performanceData.venueName || "Venue"
+                  }
+                </p>
+              </div>
+              <div class="text-right">
+                <p class="text-xs text-gray-500">Selected</p>
+                <p class="text-2xl font-bold text-indigo-600">${
+                  this.selectedSeats.length
+                }</p>
+              </div>
+            </div>
+
+            <div class="mb-4">
+              <div class="flex flex-wrap items-center gap-4 text-sm">
+                <div class="flex items-center gap-2">
+                  <div class="w-6 h-6 bg-white border-2 border-gray-300 rounded"></div>
+                  <span class="text-gray-700">Available</span>
+                </div>
+                <div class="flex items-center gap-2">
+                  <div class="w-6 h-6 bg-indigo-600 border-2 border-indigo-700 rounded"></div>
+                  <span class="text-gray-700">Selected</span>
+                </div>
+                <div class="flex items-center gap-2">
+                  <div class="w-6 h-6 bg-gray-400 border-2 border-gray-500 rounded"></div>
+                  <span class="text-gray-700">Booked</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="bg-gray-50 rounded-lg border border-gray-200 p-4">
+              <div id="seatMap" class="min-h-[500px] flex items-center justify-center">${seatMapHTML}</div>
+            </div>
+          </div>
           ${stepContent}
         </div>
 
-        <div class="lg:col-span-1">
+        <div class="lg:col-span-4">
           ${this.renderBookingSummary()}
         </div>
       </div>
@@ -358,117 +415,39 @@ export default {
   },
 
   async renderSeatSelection() {
-    const venue = this.performanceData.venue;
-    const layout = venue?.layout || { sections: [] };
-    const bookedSeats = await this.getBookedSeats();
-    const seatDetails = bookedSeats.reduce((acc, id) => {
-      acc[id] = { status: "reserved" };
-      return acc;
-    }, {});
-    const seatMapHTML = SeatMap.generateFromLayout(
-      layout,
-      seatDetails,
-      this.selectedSeats,
-      true
-    );
     return `
       <div class="bg-white rounded-lg shadow-md border border-gray-200 p-6">
-        <div class="flex items-center justify-between mb-6">
-          <div>
-            <h2 class="text-2xl font-bold text-gray-900">
-              <i class="fas fa-chair text-indigo-600 mr-2"></i>
-              Select Your Seats
-            </h2>
-            <p class="text-sm text-gray-600 mt-1">
-              <i class="fas fa-building mr-1"></i>${
-                venue?.name || this.performanceData.venueName || "Venue"
-              }
-            </p>
-          </div>
-          <div class="text-right">
-            <p class="text-sm text-gray-600">Selected</p>
-            <p class="text-2xl font-bold text-indigo-600">${
-              this.selectedSeats.length
-            }</p>
-          </div>
-        </div>
-
-        ${FormComponents.infoBox({
-          title: "How to Select Seats",
-          message:
-            "Click on available seats to select them. Different zones may have different pricing.",
-          type: "info",
-        })}
+        <h3 class="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+          <i class="fas fa-info-circle text-indigo-600"></i>
+          Instructions
+        </h3>
 
         ${this.renderZoneSummary()}
 
-        <div class="mt-6">
-          <div class="mb-6">
-            <h3 class="text-lg font-semibold text-gray-900 mb-4">
-              <i class="fas fa-info-circle mr-2"></i>Seat Legend
-            </h3>
-            <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
-              <div class="flex items-center gap-2">
-                <div class="w-10 h-10 shrink-0 bg-white border-2 border-gray-300 rounded flex items-center justify-center text-xs font-semibold text-gray-900">
-                  A1
-                </div>
-                <span class="text-sm font-medium text-gray-700">Available</span>
-              </div>
-              <div class="flex items-center gap-2">
-                <div class="w-10 h-10 shrink-0 bg-indigo-600 border-2 border-indigo-700 rounded flex items-center justify-center text-xs font-semibold text-white">
-                  B2
-                </div>
-                <span class="text-sm font-medium text-gray-700">Selected</span>
-              </div>
-              <div class="flex items-center gap-2">
-                <div class="w-10 h-10 shrink-0 bg-gray-400 border-2 border-gray-500 rounded flex items-center justify-center text-xs font-semibold text-gray-700">
-                  C3
-                </div>
-                <span class="text-sm font-medium text-gray-700">Booked</span>
-              </div>
-            </div>
+        <div class="mt-4 p-4 bg-indigo-50 border border-indigo-200 rounded-lg">
+          <div class="mb-3">
+            <p class="text-xs text-gray-600 mb-1">Selected Seats</p>
+            <p class="text-sm font-bold text-indigo-900 min-h-[20px]">
+              ${
+                this.selectedSeats.length > 0
+                  ? this.selectedSeats.map((s) => getDisplayLabel(s)).join(", ")
+                  : "Click on available seats to select"
+              }
+            </p>
           </div>
+          ${FormComponents.button({
+            id: "continueToTickets",
+            text: "Continue to Tickets",
+            icon: "fa-arrow-right",
+            color: "indigo",
+            fullWidth: true,
+            disabled: this.selectedSeats.length === 0,
+          })}
+        </div>
 
-          <div class="bg-gray-50 p-6 rounded-lg border-2 border-gray-200">
-            <div class="text-center mb-6">
-              <div class="inline-block px-12 py-3 bg-gray-800 text-white rounded-t-lg shadow">
-                <i class="fas fa-music mr-2"></i>
-                <span class="font-bold text-lg">STAGE</span>
-              </div>
-            </div>
-
-            <div id="seatMap" class="space-y-6">${seatMapHTML}</div>
-          </div>
-
-          <div class="mt-6 p-4 bg-indigo-50 border border-indigo-200 rounded-lg">
-            <div class="flex items-center justify-between">
-              <div class="flex items-center gap-4">
-                <div class="flex items-center gap-2">
-                  <i class="fas fa-couch text-indigo-600 text-xl"></i>
-                  <div>
-                    <p class="text-xs text-gray-600">Selected Seats</p>
-                    <p class="text-lg font-bold text-indigo-900">
-                      ${
-                        this.selectedSeats.length > 0
-                          ? this.selectedSeats
-                              .map((s) => getDisplayLabel(s))
-                              .join(", ")
-                          : "None"
-                      }
-                    </p>
-                  </div>
-                </div>
-              </div>
-              ${FormComponents.button({
-                id: "continueToTickets",
-                text: "Continue",
-                icon: "fa-arrow-right",
-                color: "indigo",
-                size: "lg",
-                disabled: this.selectedSeats.length === 0,
-              })}
-            </div>
-          </div>
+        <div class="mt-4 p-3 bg-blue-50 border border-blue-200 rounded text-xs text-blue-800">
+          <i class="fas fa-lightbulb mr-1"></i>
+          <strong>Tip:</strong> Use mouse wheel to zoom, drag to pan around the seat map
         </div>
       </div>
     `;
@@ -1279,7 +1258,7 @@ export default {
     $(document)
       .off("click", "g.interactive-seat")
       .on("click", "g.interactive-seat", function (e) {
-        const fullId = $(this).data("fullId");
+        const fullId = $(this).attr("data-full-id");
         if (!fullId) return;
         self.toggleSeat(fullId);
       });
@@ -1288,7 +1267,7 @@ export default {
       .off("keydown", "g.interactive-seat")
       .on("keydown", "g.interactive-seat", function (e) {
         if (e.key !== "Enter" && e.key !== " ") return;
-        const fullId = $(this).data("fullId");
+        const fullId = $(this).attr("data-full-id");
         if (!fullId) return;
         e.preventDefault();
         self.toggleSeat(fullId);
@@ -1301,6 +1280,21 @@ export default {
     }
     setTimeout(() => {
       this._pz = initSeatMapPanzoom();
+      attachSeatTooltipListeners("#seatMap svg");
+      const $seats = $("#seatMap svg g.interactive-seat");
+      $seats.attr("tabindex", "0");
+      $seats.off("click.seat").on("click.seat", function (e) {
+        const id = $(this).attr("data-full-id") || $(this).attr("data-seat-id");
+        if (!id) return;
+        self.toggleSeat(id);
+      });
+      $seats.off("keydown.seat").on("keydown.seat", function (e) {
+        if (e.key !== "Enter" && e.key !== " ") return;
+        e.preventDefault();
+        const id = $(this).attr("data-full-id") || $(this).attr("data-seat-id");
+        if (!id) return;
+        self.toggleSeat(id);
+      });
     }, 100);
 
     $(document)
@@ -1311,8 +1305,8 @@ export default {
         if (action === "in") self._pz.smoothZoom(0, 0, 1.15);
         if (action === "out") self._pz.smoothZoom(0, 0, 0.85);
         if (action === "reset") {
-          self._pz.zoomTo(0, 0, 1);
-          if (self._pz._center) self._pz._center();
+          if (self._pz._fit) self._pz._fit();
+          else if (self._pz._center) self._pz._center();
         }
         if (self._pz._clamp) setTimeout(() => self._pz._clamp(), 160);
       });

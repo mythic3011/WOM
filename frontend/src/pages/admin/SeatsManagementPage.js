@@ -8,6 +8,7 @@ import { reportingUtils } from "/src/utils/reports/reporting.js";
 import { keyboard, registerGlobalShortcuts } from "/src/utils/ui/keyboard.js";
 import { seatMapGenerator } from "/src/utils/booking/seatMapGenerator.js";
 import { performanceOptimizer } from "/src/utils/performance.js";
+import { attachSeatTooltipListeners } from "/src/utils/booking/seatTooltip.js";
 import dayjs from "dayjs";
 import Swal from "sweetalert2";
 
@@ -576,6 +577,10 @@ export default {
           document.getElementById("interactive-map").innerHTML = mapHTML;
           document.getElementById("modal-selected-count").textContent =
             selectedSeats.length;
+
+          setTimeout(() => {
+            attachSeatTooltipListeners("#interactive-map svg");
+          }, 100);
 
           document.querySelectorAll(".interactive-seat").forEach((seat) => {
             seat.addEventListener("click", function (e) {

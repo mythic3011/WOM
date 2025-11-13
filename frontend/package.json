@@ -44,7 +44,6 @@
     "pdfmake": "^0.2.20",
     "qrcode": "^1.5.4",
     "sortablejs": "^1.15.6",
-    "svg-pan-zoom": "^3.6.1",
     "sweetalert2": "^11.26.3",
     "vanilla-context-menu": "^1.6.0"
   }

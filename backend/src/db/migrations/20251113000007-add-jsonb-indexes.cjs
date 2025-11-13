@@ -1,7 +1,6 @@
 /* eslint-disable */
 module.exports = {
   async up(queryInterface) {
-    // Add GIN indexes to accelerate JSONB containment/lookup queries on pricingSections and layout
     await queryInterface.sequelize.query(
       'CREATE INDEX IF NOT EXISTS performances_pricing_sections_gin ON performances USING GIN ("pricingSections");'
     );

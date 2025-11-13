@@ -27,6 +27,7 @@ import {
   createZoneEditor,
   showZoneEditorDialog,
 } from "/src/components/ZoneEditor.js";
+import { attachSeatTooltipListeners } from "/src/utils/booking/seatTooltip.js";
 import {
   getSectionColor,
   getSeatStatusColor,
@@ -947,6 +948,7 @@ export default {
         const exists = this.ticketTypes.some(
           (t) => t.name.toLowerCase() === name.toLowerCase()
         );
+
         if (exists) {
           Swal.showValidationMessage("This ticket type already exists");
           return false;
@@ -1387,6 +1389,10 @@ export default {
             selectedSeats
           );
           $("#interactive-seat-map").html(mapHTML);
+
+          setTimeout(() => {
+            attachSeatTooltipListeners("#interactive-seat-map svg");
+          }, 100);
 
           $(".interactive-seat").on("click", function (e) {
             e.stopPropagation();

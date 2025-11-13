@@ -46,11 +46,11 @@ export const seatMapGenerator = {
   },
 
   calculateLayoutDimensions(layoutConfig) {
-    const seatSize = 28;
-    const seatGap = 6;
-    const aisleUnit = seatSize + seatGap;
-    const defaultAisleWidth = aisleUnit;
-    const sectionGap = 60;
+    const seatSize = 18;
+    const spacingX = 28;
+    const rowSpacing = 32;
+    const aisleWidth = 15;
+    const sectionGap = 40;
     const stagePadding = 40;
     const stageHeight = 40;
 
@@ -60,19 +60,8 @@ export const seatMapGenerator = {
 
     layoutConfig.sections.forEach((section, sectionIndex) => {
       const rawAisles = Array.isArray(section.aisles) ? section.aisles : [];
-      const verticalAisles = rawAisles
-        .filter((a) => a && a.type === "vertical")
-        .map((a) => ({
-          position:
-            a.position !== undefined
-              ? a.position
-              : a.afterSeat !== undefined
-              ? a.afterSeat
-              : 0,
-          widthPx:
-            (a.width !== undefined && a.width !== null ? a.width : 1) *
-            aisleUnit,
-        }));
+      const aislePattern = this.extractAislePattern(section, rawAisles);
+
       const horizontalAisles = rawAisles
         .filter((a) => a && a.type === "horizontal")
         .map((a) => ({
@@ -82,22 +71,17 @@ export const seatMapGenerator = {
               : a.afterRow !== undefined
               ? a.afterRow
               : 0,
-          widthPx:
-            (a.width !== undefined && a.width !== null ? a.width : 1) *
-            aisleUnit,
+          label: a.label || "",
         }));
 
-      const widthFromAisles = verticalAisles.reduce(
-        (acc, a) => acc + (a.widthPx || defaultAisleWidth),
-        0
+      const sectionWidth = this.calculateTotalWidth(
+        section.seatsPerRow,
+        aislePattern,
+        spacingX,
+        aisleWidth
       );
-      const heightFromAisles = horizontalAisles.reduce(
-        (acc, a) => acc + (a.widthPx || defaultAisleWidth),
-        0
-      );
-
-      const sectionWidth = section.seatsPerRow * aisleUnit + widthFromAisles;
-      const sectionHeight = section.rows * aisleUnit + heightFromAisles;
+      const heightFromAisles = horizontalAisles.length * rowSpacing;
+      const sectionHeight = section.rows * rowSpacing + heightFromAisles;
 
       sectionLayouts.push({
         sectionIndex,
@@ -106,9 +90,10 @@ export const seatMapGenerator = {
         width: sectionWidth,
         height: sectionHeight,
         seatSize,
-        seatGap,
-        aisleUnit,
-        verticalAisles,
+        spacingX,
+        rowSpacing,
+        aisleWidth,
+        aislePattern,
         horizontalAisles,
       });
 
@@ -123,6 +108,63 @@ export const seatMapGenerator = {
     };
   },
 
+  extractAislePattern(section, rawAisles) {
+    const verticalAisles = rawAisles
+      .filter((a) => a && a.type === "vertical")
+      .map((a) =>
+        a.position !== undefined
+          ? a.position
+          : a.afterSeat !== undefined
+          ? a.afterSeat
+          : 0
+      )
+      .sort((a, b) => a - b);
+
+    if (verticalAisles.length === 0) {
+      return [section.seatsPerRow];
+    }
+
+    const pattern = [];
+    let lastPos = 0;
+
+    verticalAisles.forEach((aislePos) => {
+      pattern.push(aislePos - lastPos);
+      lastPos = aislePos;
+    });
+
+    pattern.push(section.seatsPerRow - lastPos);
+
+    return pattern;
+  },
+
+  calculateTotalWidth(seatsPerRow, aislePattern, spacingX, aisleWidth) {
+    const numAisles = aislePattern.length - 1;
+    return seatsPerRow * spacingX + numAisles * aisleWidth;
+  },
+
+  calculateSeatPosition(seatNum, aislePattern, spacingX, aisleWidth, startX) {
+    let currentSeatInPattern = seatNum;
+    let seatsBefore = 0;
+    let patternIndex = 0;
+
+    for (let i = 0; i < aislePattern.length; i++) {
+      if (currentSeatInPattern <= aislePattern[i]) {
+        patternIndex = i;
+        break;
+      } else {
+        currentSeatInPattern -= aislePattern[i];
+        seatsBefore += aislePattern[i];
+      }
+    }
+
+    return (
+      startX +
+      seatsBefore * spacingX +
+      patternIndex * aisleWidth +
+      (seatNum - seatsBefore - 1) * spacingX
+    );
+  },
+
   generateLayoutSeatsHTML(
     layoutConfig,
     sectionLayouts,
@@ -134,70 +176,71 @@ export const seatMapGenerator = {
 
     layoutConfig.sections.forEach((section, sectionIndex) => {
       const layout = sectionLayouts[sectionIndex];
-      const { seatSize, seatGap, aisleUnit } = layout;
+      const { seatSize, spacingX, rowSpacing, aisleWidth } = layout;
 
-      const sortedV = [...layout.verticalAisles].sort(
-        (a, b) => a.position - b.position
-      );
-      const sortedH = [...layout.horizontalAisles].sort(
-        (a, b) => a.position - b.position
-      );
+      const zoneX = layout.x - 20;
+      const zoneY = layout.y - 30;
+      const zoneWidth = layout.width + 50;
+      const zoneHeight = layout.height + 40;
 
-      let accV = 0;
-      const verticalRects = sortedV
-        .map((a) => {
-          const xOffset = (seatSize + seatGap) * (a.position + 1) + accV;
-          accV += a.widthPx || aisleUnit;
-          const x = layout.x + xOffset;
-          const y = layout.y;
-          const w = a.widthPx || aisleUnit;
-          const h = layout.height;
-          const label = a.label || "";
-          return `
-            <rect x="${x}" y="${y}" width="${w}" height="${h}" fill="#f3f4f6" pointer-events="none" />
-            ${
-              label
-                ? `<text x="${x + w / 2}" y="${
-                    y + 12
-                  }" fill="#6b7280" text-anchor="middle" font-size="10">${label}</text>`
-                : ""
-            }
-          `;
-        })
-        .join("");
+      html += `
+        <rect class="zone-bg" x="${zoneX}" y="${zoneY}" width="${zoneWidth}" height="${zoneHeight}" 
+          rx="8" fill="rgba(200, 200, 200, 0.1)" pointer-events="none" />
+        <text class="zone-label" x="${layout.x + layout.width / 2}" y="${
+        zoneY + 15
+      }" 
+          fill="#1f2121" text-anchor="middle" font-size="16" font-weight="600">${
+            section.name
+          }</text>
+      `;
 
-      let accH = 0;
-      const horizontalRects = sortedH
-        .map((a) => {
-          const yOffset = (seatSize + seatGap) * (a.position + 1) + accH;
-          accH += a.widthPx || aisleUnit;
-          const x = layout.x;
-          const y = layout.y + yOffset;
-          const w = layout.width;
-          const h = a.widthPx || aisleUnit;
-          const label = a.label || "";
-          return `
-            <rect x="${x}" y="${y}" width="${w}" height="${h}" fill="#f3f4f6" pointer-events="none" />
-            ${
-              label
-                ? `<text x="${x + 6}" y="${
-                    y + h / 2 + 3
-                  }" fill="#6b7280" font-size="10">${label}</text>`
-                : ""
-            }
-          `;
-        })
-        .join("");
-      html += verticalRects + horizontalRects;
+      const aislePattern = layout.aislePattern;
+      for (let i = 0; i < aislePattern.length - 1; i++) {
+        let seatsBefore = 0;
+        for (let j = 0; j <= i; j++) {
+          seatsBefore += aislePattern[j];
+        }
 
-      let currentY = layout.y;
-      console.log(
-        `Section ${sectionIndex}: Starting Y = ${currentY}, layout.x = ${layout.x}`
-      );
+        const aisleX =
+          layout.x +
+          seatsBefore * spacingX +
+          i * aisleWidth +
+          (spacingX - aisleWidth) / 2;
+
+        html += `
+          <rect x="${aisleX}" y="${
+          layout.y - 5
+        }" width="${aisleWidth}" height="${layout.height + 5}" 
+            fill="rgba(200, 200, 200, 0.3)" stroke="rgba(180, 180, 180, 0.5)" stroke-dasharray="4,4" pointer-events="none" />
+        `;
+      }
+
+      layout.horizontalAisles.forEach((aisle) => {
+        const aisleY = layout.y + aisle.position * rowSpacing + rowSpacing;
+        html += `
+          <rect x="${layout.x}" y="${aisleY}" width="${
+          layout.width
+        }" height="${rowSpacing}" 
+            fill="rgba(200, 200, 200, 0.3)" stroke="rgba(180, 180, 180, 0.5)" stroke-dasharray="4,4" pointer-events="none" />
+          ${
+            aisle.label
+              ? `<text x="${layout.x + 6}" y="${
+                  aisleY + rowSpacing / 2 + 3
+                }" fill="#6b7280" font-size="10">${aisle.label}</text>`
+              : ""
+          }
+        `;
+      });
 
       for (let rowIndex = 0; rowIndex < section.rows; rowIndex++) {
         const rowLabel = this.computeRowLabel(section, rowIndex);
-        let currentX = layout.x;
+        const rowY = layout.y + rowIndex * rowSpacing;
+        const rowCenterY = rowY + seatSize / 2;
+
+        html += `
+          <text class="row-label" x="${layout.x - 30}" y="${rowCenterY}" 
+            fill="#626c71" text-anchor="middle" font-size="14" font-weight="500">${rowLabel}</text>
+        `;
 
         for (let seatIndex = 0; seatIndex < section.seatsPerRow; seatIndex++) {
           const numbering = section.seatNumbering || {
@@ -208,13 +251,8 @@ export const seatMapGenerator = {
           if (skipIndices.includes(seatIndex)) {
             continue;
           }
-          const direction = numbering.globalDirection || "L_TO_R";
-          const startNumber = numbering.startNumber || 1;
-          const effectiveIndex =
-            direction === "R_TO_L"
-              ? section.seatsPerRow - 1 - seatIndex
-              : seatIndex;
-          const seatNumber = startNumber + effectiveIndex;
+
+          const seatNumber = seatIndex + 1;
           const seatLabel = this.computeSeatLabel(section, rowIndex, seatIndex);
 
           if (seatLabel) {
@@ -232,6 +270,14 @@ export const seatMapGenerator = {
             const isSelected =
               selectedSeats.includes(fullId) || selectedSeats.includes(seatId);
 
+            const seatX = this.calculateSeatPosition(
+              seatNumber,
+              aislePattern,
+              spacingX,
+              aisleWidth,
+              layout.x
+            );
+
             const fillColor = isSelected
               ? SeatStatusColors.selected.rgb
               : isBooked
@@ -239,42 +285,30 @@ export const seatMapGenerator = {
               : getSectionColor(sectionIndex);
 
             const gClass = interactive
-              ? `interactive-seat ${isBooked ? "opacity-60" : "cursor-pointer"}`
-              : "seat-item";
+              ? `seat interactive-seat ${isBooked ? "occupied" : "available"}`
+              : "seat";
 
             html += `
-              <g tabindex="0" class="${gClass}" data-seat-id="${seatId}" data-full-id="${fullId}" data-section="${sectionIndex}" ${
-              isBooked ? 'style="pointer-events: none;"' : ""
+              <g class="${gClass}" data-seat-id="${seatId}" data-full-id="${fullId}" data-section="${sectionIndex}" 
+                data-zone="${section.name}" data-price="${
+              seatDetail.price || 0
+            }" ${
+              isBooked
+                ? 'style="pointer-events: none; cursor: not-allowed;"'
+                : ""
             }>
-                <rect x="${currentX}" y="${currentY}" width="${seatSize}" height="${seatSize}"
-                  fill="${fillColor}" rx="4" stroke="${
-              isSelected ? "rgb(202, 138, 4)" : "#ffffff"
-            }" stroke-width="${isSelected ? "3" : "1"}" />
-                <text x="${currentX + seatSize / 2}" y="${
-              currentY + seatSize / 2 + 4
-            }" fill="white"
-                  text-anchor="middle" font-size="10" font-weight="bold">${seatId}</text>
+                <rect x="${seatX}" y="${rowY}" width="${seatSize}" height="${seatSize}"
+                  fill="${fillColor}" rx="3" stroke="${
+              isSelected ? "rgb(202, 138, 4)" : fillColor
+            }" 
+                  stroke-width="${isSelected ? "2" : "1"}" />
+                <text class="seat-number" x="${
+                  seatX + seatSize / 2
+                }" y="${rowCenterY}" 
+                  fill="white" text-anchor="middle" dominant-baseline="middle" font-size="9" font-weight="bold">${seatNumber}</text>
               </g>
             `;
           }
-
-          currentX += seatSize + seatGap;
-
-          const vertAisle = layout.verticalAisles.find(
-            (a) => a.position === seatIndex
-          );
-          if (vertAisle) {
-            currentX += vertAisle.widthPx || aisleUnit;
-          }
-        }
-
-        currentY += seatSize + seatGap;
-
-        const horizAisle = layout.horizontalAisles.find(
-          (a) => a.position === rowIndex
-        );
-        if (horizAisle) {
-          currentY += horizAisle.widthPx || aisleUnit;
         }
       }
     });
@@ -307,17 +341,10 @@ export const seatMapGenerator = {
       return "";
     }
 
-    const direction = numbering.globalDirection || "L_TO_R";
     const startNumber = numbering.startNumber || 1;
-    const prefix = numbering.prefix || "";
-    const suffix = numbering.suffix || "";
+    const seatNumber = startNumber + seatIndex;
 
-    const effectiveIndex =
-      direction === "R_TO_L" ? section.seatsPerRow - 1 - seatIndex : seatIndex;
-
-    let seatNumber = startNumber + effectiveIndex;
-
-    return `${prefix}${seatNumber}${suffix}`;
+    return `${seatNumber}`;
   },
 
   generateLegacySeatMap(rows, seats, seatDetails, selectedSeats, interactive) {
@@ -602,6 +629,11 @@ export const seatMapGenerator = {
     seatsHTML,
     className = "bg-white rounded shadow-sm mx-auto"
   ) {
+    const viewBoxWidth = svgWidth * 1.5;
+    const viewBoxHeight = svgHeight * 1.5;
+    const offsetX = -(viewBoxWidth - svgWidth) / 2;
+    const offsetY = -(viewBoxHeight - svgHeight) / 2;
+
     return `
       <div class="overflow-y-auto overflow-x-hidden">
       <div class="flex justify-end mb-2 pr-1 gap-1 text-xs">
@@ -609,7 +641,7 @@ export const seatMapGenerator = {
         <button type="button" class="zoom-btn px-2 py-1 border rounded" data-zoom="out">-</button>
         <button type="button" class="zoom-btn px-2 py-1 border rounded" data-zoom="reset">Reset</button>
       </div>
-      <svg viewBox="0 0 ${svgWidth} ${svgHeight}" width="${svgWidth}" height="${svgHeight}" class="${className}" preserveAspectRatio="xMinYMin meet" style="display: block;">
+      <svg viewBox="${offsetX} ${offsetY} ${viewBoxWidth} ${viewBoxHeight}" width="${svgWidth}" height="${svgHeight}" class="${className}" preserveAspectRatio="xMidYMid meet" style="display: block;">
         <rect x="${stagePadding}" y="${stagePadding}" width="${stageWidth}" height="${stageHeight}"
           fill="${StageColor}" rx="4" />
         <text x="${svgWidth / 2}" y="${

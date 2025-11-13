@@ -1,7 +1,5 @@
 import { notify } from "/src/utils/ui/notification.js";
-import { getCurrentUser, setUser, logout } from "/src/utils/core/auth.js";
-import { verifyPassword } from "/src/utils/core/crypto.js";
-import { formValidator } from "/src/utils/forms/formValidator.js";
+import { getCurrentUser, logout } from "/src/utils/core/auth.js";
 import { phoneUtils } from "/src/utils/forms/phoneFormat.js";
 import { ResponseExtractor } from "/src/services/responseExtractor.js";
 import {
@@ -14,6 +12,7 @@ import { SwalColors } from "/src/utils/colors.js";
 import { userAPI, handleApiError } from "/src/services/apiClient.js";
 import Swal from "sweetalert2";
 import dayjs from "dayjs";
+import { userService } from "../../services/userService";
 
 export default {
   title: "Profile | User",
@@ -27,7 +26,6 @@ export default {
       this.fullUserData =
         ResponseExtractor.extractSingle(response, "user") || user;
     } catch (error) {
-      console.error("Failed to load user data:", error);
       this.fullUserData = user;
     }
 
@@ -483,24 +481,7 @@ export default {
 
       if (confirmPassword.isConfirmed && confirmPassword.value) {
         try {
-          const userData = this.fullUserData;
-
-          if (!userData) {
-            notify.error("User not found");
-            return;
-          }
-
-          const isPasswordValid = await verifyPassword(
-            confirmPassword.value,
-            userData.password
-          );
-
-          if (!isPasswordValid) {
-            notify.error("Incorrect password. Account deletion cancelled.");
-            return;
-          }
-
-          await userAPI.delete(user.id);
+          await userAPI.deleteSelf(confirmPassword.value);
 
           await logout();
 
@@ -516,7 +497,6 @@ export default {
             window.location.href = "/";
           }, 3000);
         } catch (error) {
-          console.error("Error deleting account:", error);
           handleApiError(error, "Failed to delete account");
         }
       }
@@ -542,18 +522,17 @@ export default {
       return;
     }
 
-    const emailValidation = formValidator.validateEmail(email);
-    if (!emailValidation.valid) {
-      notify.error(emailValidation.error);
+    if (!userService.validateEmail(email)) {
+      notify.error("Invalid email address");
       return;
     }
 
-    if (!this.validateAge(birthday)) {
+    if (!userService.validateAge(birthday)) {
       notify.error("You must be at least 13 years old");
       return;
     }
 
-    if (phone && !phoneUtils.validatePhone(phone)) {
+    if (!userService.validatePhone(phone)) {
       notify.error(
         "Invalid Hong Kong phone number. Must be 8 digits starting with 2-9"
       );
@@ -565,29 +544,10 @@ export default {
         notify.error("Please enter your current password to change it");
         return;
       }
-
-      const userData = this.fullUserData;
-
-      if (!userData) {
-        notify.error("User not found");
+      if (newPassword.length < 8) {
+        notify.error("Password must be at least 8 characters");
         return;
       }
-
-      const isCurrentPasswordValid = await verifyPassword(
-        currentPassword,
-        userData.password
-      );
-      if (!isCurrentPasswordValid) {
-        notify.error("Current password is incorrect");
-        return;
-      }
-
-      const passwordValidation = formValidator.validatePassword(newPassword);
-      if (!passwordValidation.valid) {
-        notify.error(passwordValidation.error);
-        return;
-      }
-
       if (newPassword !== confirmPassword) {
         notify.error("New passwords do not match");
         return;
@@ -611,32 +571,15 @@ export default {
     }
 
     try {
-      const updatedUser = await userAPI.update(user.id, updates);
-      setUser(updatedUser);
-      notify.success("Profile updated successfully!");
-
-      setTimeout(() => {
-        window.location.reload();
-      }, 1000);
+      const result = await userService.updateUserProfile(user.id, updates);
+      if (result.success) {
+        notify.success("Profile updated successfully!");
+        setTimeout(() => window.location.reload(), 800);
+      } else {
+        notify.error(result.error || "Failed to update profile");
+      }
     } catch (error) {
-      console.error("Error updating profile:", error);
       handleApiError(error, "Failed to update profile");
     }
-  },
-
-  validateAge(birthday) {
-    const birthDate = new Date(birthday);
-    const today = new Date();
-    let age = today.getFullYear() - birthDate.getFullYear();
-    const monthDiff = today.getMonth() - birthDate.getMonth();
-
-    if (
-      monthDiff < 0 ||
-      (monthDiff === 0 && today.getDate() < birthDate.getDate())
-    ) {
-      age--;
-    }
-
-    return age >= 13;
   },
 };

@@ -169,6 +169,10 @@ export const userAPI = {
     return apiClient.delete(`/users/${id}`);
   },
 
+  async deleteSelf(password) {
+    return apiClient.post("/users/me/delete", { password });
+  },
+
   async getUserBookings(id, params = {}) {
     const queryString = new URLSearchParams(params).toString();
     const endpoint = queryString

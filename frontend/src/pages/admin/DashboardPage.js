@@ -4,6 +4,7 @@ import { getCurrentUser } from "/src/utils/core/auth.js";
 import { statsAPI, handleApiError } from "/src/services/apiClient.js";
 import { formatCurrency, formatNumber } from "/src/utils/utils.js";
 import dayjs from "dayjs";
+import { ResponseExtractor } from "../../services/responseExtractor";
 
 export default {
   title: "Admin Dashboard | WOM",
@@ -25,8 +26,12 @@ export default {
     let recentActivity = [];
 
     try {
-      const apiStats = await statsAPI.getDashboardStats();
-      statsData = apiStats;
+      const response = await statsAPI.getDashboardStats();
+      const apiData = ResponseExtractor.extractSingle(response, "stats");
+
+      if (apiData) {
+        statsData = apiData;
+      }
 
       recentActivity = statsData.recentBookings
         ? statsData.recentBookings.slice(0, 5).map((booking) => ({
@@ -44,7 +49,7 @@ export default {
         {
           title: "Total Performances",
           value: formatNumber(statsData.totalPerformances),
-          subtitle: `${statsData.upcomingPerformances?.length || 0} upcoming`,
+          subtitle: `${statsData.upcomingPerformances || 0} upcoming`,
           icon: "fa-music",
           iconColor: "text-blue-500",
           bgColor: "bg-blue-50",

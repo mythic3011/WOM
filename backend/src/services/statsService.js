@@ -56,7 +56,7 @@ export const getDashboardStats = async () => {
     totalVenues,
     totalRevenue: totalRevenue || 0,
     recentBookings,
-    upcomingPerformances,
+    upcomingPerformances: upcomingPerformances.length,
   };
 };
 

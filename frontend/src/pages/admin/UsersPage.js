@@ -7,17 +7,19 @@ import { phoneUtils } from "/src/utils/forms/phoneFormat.js";
 import { notify } from "/src/utils/ui/notification.js";
 import { SwalColors } from "/src/utils/colors.js";
 import { scrollbarUtils } from "/src/utils/ui/scrollbar.js";
-import { generateUUID } from "/src/utils/utils.js";
-import { ResponseExtractor } from "/src/services/responseExtractor.js";
 import {
   initImageUpload,
   getImageDataURL,
 } from "/src/components/ImageUpload.js";
 import { userAPI, handleApiError } from "/src/services/apiClient.js";
+import { adminUserService } from "/src/services/adminUserService.js";
+import { bookingService } from "/src/services/bookingService.js";
 import Swal from "sweetalert2";
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
 import Papa from "papaparse";
+import { userService } from "/src/services/userService.js";
+import { ResponseExtractor } from "/src/services/responseExtractor.js";
 
 dayjs.extend(relativeTime);
 
@@ -108,14 +110,16 @@ export default {
 
   async loadUsers() {
     try {
-      $("#usersTableContainer").html(createLoadingState("Loading users..."));
+      $("#usersTable").html(
+        createLoadingState({ message: "Loading users..." })
+      );
 
-      const response = await userAPI.getAll();
-      const users = ResponseExtractor.extract(response, "users");
+      const users = await adminUserService.list();
+      console.log("Fetched users:", users);
 
       this.allUsers = users.map((user) => ({
         ...user,
-        userId: user.id,
+        userId: user.userId,
         status: user.status || "active",
       }));
       this.filteredUsers = this.allUsers;
@@ -124,7 +128,7 @@ export default {
       this.renderUsersTable();
     } catch (error) {
       console.error("Failed to load users:", error);
-      $("#usersTableContainer").html(
+      $("#usersTable").html(
         createEmptyState(
           "Failed to load users",
           "Unable to fetch user data from server",
@@ -210,7 +214,7 @@ export default {
               <p class="font-semibold text-gray-900">${
                 user.title ? user.title + " " : ""
               }${user.name}</p>
-              <p class="text-xs text-gray-500">@${user.username} (ID: #${
+              <p class="text-xs text-gray-500">@${user.username} <br>(ID: #${
           user.userId
         })</p>
             </div>
@@ -343,7 +347,7 @@ export default {
               : ""
           }
           ${
-            user.userId !== storage.getUser()?.userId && user.role !== "admin"
+            user.role !== "admin"
               ? `<button
                   class="user-action-btn px-3 py-2 rounded-lg text-white bg-red-500 hover:bg-red-600 transition-colors cursor-pointer"
                   data-action="delete"
@@ -460,10 +464,7 @@ export default {
       notify.error("User not found");
       return;
     }
-
-    const bookings = storage
-      .getItem("bookings", [])
-      .filter((b) => b.userId === user.id);
+    const bookings = await bookingService.getAll();
     const totalSpent = bookings.reduce((sum, b) => sum + (b.amount || 0), 0);
 
     await Swal.fire({
@@ -966,12 +967,17 @@ export default {
         updateData.profileImage = originalUser.profileImage;
       }
 
-      const updatedUser = await userAPI.update(originalUser.id, updateData);
+      const updateResp = await adminUserService.update(
+        originalUser.id,
+        updateData
+      );
+      const updatedUser = ResponseExtractor.extractSingle(updateResp, "user");
+      if (!updatedUser) {
+        throw new Error("Invalid update user response");
+      }
 
       this.allUsers = this.allUsers.map((u) =>
-        String(u.userId) === String(userId)
-          ? { ...updatedUser, userId: updatedUser.id }
-          : u
+        String(u.userId) === String(userId) ? { ...updatedUser } : u
       );
       this.filterUsers();
       this.renderStats();
@@ -1041,14 +1047,16 @@ export default {
 
     if (result.isConfirmed) {
       try {
-        const updatedUser = await userAPI.update(user.id, {
-          status: newStatus,
-        });
+        const updatedUser = await adminUserService.toggleStatus(
+          user.id,
+          newStatus
+        );
+        if (!updatedUser) {
+          throw new Error("Invalid update user response");
+        }
 
         this.allUsers = this.allUsers.map((u) =>
-          String(u.userId) === String(userId)
-            ? { ...updatedUser, userId: updatedUser.id }
-            : u
+          String(u.userId) === String(userId) ? { ...updatedUser } : u
         );
         this.filterUsers();
         this.renderStats();
@@ -1103,7 +1111,7 @@ export default {
 
     if (result.isConfirmed) {
       try {
-        await userAPI.delete(user.id);
+        await adminUserService.remove(user.id);
 
         this.allUsers = this.allUsers.filter(
           (u) => String(u.userId) !== String(userId)
@@ -1388,25 +1396,19 @@ export default {
       return false;
     }
 
-    try {
-      const passwordHash = await hashPassword(password);
-      const profileImage = await getImageDataURL("newUserImageInput");
+    const profileImage = await getImageDataURL("newUserImageInput");
 
-      return {
-        username,
-        passwordHash,
-        name,
-        email,
-        phone,
-        gender,
-        birthday,
-        role,
-        profileImage,
-      };
-    } catch (error) {
-      notify.error("Error hashing password: " + error.message);
-      return false;
-    }
+    return {
+      username,
+      password,
+      name,
+      email,
+      phone,
+      gender,
+      birthday,
+      role,
+      profileImage,
+    };
   },
 
   async createNewUser(formValues) {
@@ -1425,9 +1427,12 @@ export default {
         profileImage: formValues.profileImage || null,
       };
 
-      const createdUser = await userAPI.create(newUserData);
+      const createdUser = await adminUserService.create(newUserData);
+      if (!createdUser) {
+        throw new Error("Invalid create user response");
+      }
 
-      this.allUsers.push({ ...createdUser, userId: createdUser.id });
+      this.allUsers.push({ ...createdUser });
       this.filterUsers();
       this.renderStats();
 
@@ -1528,62 +1533,12 @@ export default {
         skipEmptyLines: true,
         complete: async (results) => {
           try {
-            let imported = 0;
-            let errors = [];
+            const result = await adminUserService.bulkCreate(
+              results.data,
+              this.allUsers
+            );
 
-            for (const row of results.data) {
-              try {
-                if (!row.Username || !row.Password || !row.Email) {
-                  errors.push(`Skipped row: Missing required fields`);
-                  continue;
-                }
-
-                if (this.allUsers.some((u) => u.username === row.Username)) {
-                  errors.push(
-                    `Skipped: Username '${row.Username}' already exists`
-                  );
-                  continue;
-                }
-
-                if (this.allUsers.some((u) => u.email === row.Email)) {
-                  errors.push(
-                    `Skipped: Email '${row.Email}' already registered`
-                  );
-                  continue;
-                }
-
-                const passwordHash = await hashPassword(row.Password);
-
-                const newUser = {
-                  id: generateUUID(),
-                  userId:
-                    Math.max(...this.allUsers.map((u) => u.userId || 0), 0) + 1,
-                  username: row.Username,
-                  password: passwordHash,
-                  name: row.Name,
-                  email: row.Email,
-                  phone: row.Phone || "",
-                  gender: row.Gender || "prefer_not_to_say",
-                  birthday:
-                    row.Birthday ||
-                    dayjs().subtract(25, "year").format("YYYY-MM-DD"),
-                  role: row.Role?.toLowerCase() || "user",
-                  status: "active",
-                  title: "",
-                  createdAt: new Date().toISOString(),
-                  updatedAt: new Date().toISOString(),
-                  lastLoginAt: null,
-                  profileImage: null,
-                };
-
-                this.allUsers.push(newUser);
-                imported++;
-              } catch (err) {
-                errors.push(`Error importing ${row.Username}: ${err.message}`);
-              }
-            }
-
-            storage.setItem("registeredUsers", this.allUsers);
+            this.allUsers.push(...result.created);
             this.filterUsers();
             this.renderStats();
 
@@ -1594,25 +1549,29 @@ export default {
               html: `
                 <div class="text-left">
                   <p class="text-green-600 font-semibold mb-2">
-                    <i class="fas fa-check-circle mr-2"></i>${imported} users imported successfully
+                    <i class="fas fa-check-circle mr-2"></i>${
+                      result.imported
+                    } users imported successfully
                   </p>
                   ${
-                    errors.length > 0
+                    result.errors.length > 0
                       ? `
                     <p class="text-red-600 font-semibold mt-4 mb-2">
                       <i class="fas fa-exclamation-triangle mr-2"></i>${
-                        errors.length
+                        result.errors.length
                       } errors:
                     </p>
                     <div class="bg-red-50 rounded p-3 max-h-40 overflow-y-auto">
                       <ul class="text-xs text-red-700 space-y-1">
-                        ${errors
+                        ${result.errors
                           .slice(0, 10)
                           .map((e) => `<li>• ${e}</li>`)
                           .join("")}
                         ${
-                          errors.length > 10
-                            ? `<li>... and ${errors.length - 10} more</li>`
+                          result.errors.length > 10
+                            ? `<li>... and ${
+                                result.errors.length - 10
+                              } more</li>`
                             : ""
                         }
                       </ul>
@@ -1622,12 +1581,12 @@ export default {
                   }
                 </div>
               `,
-              icon: imported > 0 ? "success" : "warning",
+              icon: result.imported > 0 ? "success" : "warning",
               confirmButtonColor: SwalColors.primary,
             });
 
-            if (imported > 0) {
-              notify.success(`${imported} users imported successfully!`);
+            if (result.imported > 0) {
+              notify.success(`${result.imported} users imported successfully!`);
             }
           } catch (error) {
             notify.dismiss(loadingNotif);

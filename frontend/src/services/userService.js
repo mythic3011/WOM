@@ -1,8 +1,21 @@
 import { storage } from "./storageService.js";
 import { hashPassword } from "/src/utils/core/crypto.js";
 import { generateUUID } from "/src/utils/utils.js";
+import { bookingAPI, handleApiError, userAPI } from "./apiClient.js";
+import { ResponseExtractor } from "./responseExtractor.js";
 
 export const userService = {
+  async getAllUsers() {
+    try {
+      return ResponseExtractor.extract(await userAPI.getAll(), "users").sort(
+        (a, b) => a.userId.localeCompare(b.userId)
+      );
+    } catch (error) {
+      handleApiError(error);
+      return [];
+    }
+  },
+
   validateUsername(username) {
     if (!username) return false;
     const usernameRegex = /^[a-zA-Z0-9_-]{3,20}$/;
@@ -37,14 +50,22 @@ export const userService = {
     return age >= 13;
   },
 
-  checkDuplicateUsername(username) {
-    const users = storage.getItem("registeredUsers", []);
-    return users.some((u) => u.username === username);
+  async checkDuplicateUsername(username) {
+    try {
+      const users = await userAPI.getAll();
+      return users.some((u) => u.username === username);
+    } catch (error) {
+      handleApiError(error);
+    }
   },
 
-  checkDuplicateEmail(email) {
-    const users = storage.getItem("registeredUsers", []);
-    return users.some((u) => u.email === email.toLowerCase());
+  async checkDuplicateEmail(email) {
+    try {
+      const users = await userAPI.getAll();
+      return users.some((u) => u.email === email.toLowerCase());
+    } catch (error) {
+      handleApiError(error);
+    }
   },
 
   async registerUser(userData) {
@@ -70,7 +91,7 @@ export const userService = {
       }
 
       const hashedPassword = await hashPassword(userData.password);
-      const users = storage.getItem("registeredUsers", []);
+      const users = await userService.getAllUsers();
       const userIdCounter = users.length + 1;
 
       const newUser = {
@@ -93,9 +114,7 @@ export const userService = {
         address: userData.address || null,
       };
 
-      users.push(newUser);
-      storage.setItem("registeredUsers", users);
-
+      await userAPI.create(newUser);
       return { success: true, user: newUser };
     } catch (error) {
       return { success: false, error: error.message };
@@ -104,7 +123,7 @@ export const userService = {
 
   async loginUser(usernameOrEmail, password) {
     try {
-      const users = storage.getItem("registeredUsers", []);
+      const users = await userService.getAllUsers();
 
       const user = users.find(
         (u) =>
@@ -132,7 +151,7 @@ export const userService = {
       const userIndex = users.findIndex((u) => u.id === user.id);
       if (userIndex !== -1) {
         users[userIndex] = user;
-        storage.setItem("registeredUsers", users);
+        await userAPI.update(user.id, user);
       }
 
       const userSession = {
@@ -155,7 +174,7 @@ export const userService = {
 
   async updateUserProfile(userId, updates) {
     try {
-      const users = storage.getItem("registeredUsers", []);
+      const users = await userService.getAllUsers();
       const userIndex = users.findIndex((u) => u.id === userId);
 
       if (userIndex === -1) {
@@ -186,7 +205,7 @@ export const userService = {
         updatedAt: new Date().toISOString(),
       };
 
-      storage.setItem("registeredUsers", users);
+      await userAPI.update(userId, users[userIndex]);
 
       const currentUser = storage.getUser();
       if (currentUser && currentUser.id === userId) {

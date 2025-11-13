@@ -12,6 +12,10 @@ export const ROUTES = {
     DEV_TOOLS: "/dev-tools",
   },
 
+  TEST: {
+    SEAT_MAP: "/test/seat-map",
+  },
+
   USER: {
     DASHBOARD: "/user/dashboard",
     BOOKINGS: "/user/bookings",
@@ -235,6 +239,16 @@ export const ROUTE_METADATA = {
     roles: ["guest", "user", "admin"],
     breadcrumb: [{ label: "Developer Tools", path: null }],
     hideInNav: true,
+  },
+
+  "/test/seat-map": {
+    title: "Seat Map Test | Pan-Zoom Testing",
+    icon: "fa-vial",
+    label: "Seat Map Test",
+    requiresAuth: false,
+    roles: ["guest", "user", "admin"],
+    breadcrumb: [{ label: "Seat Map Test", path: null }],
+    hideInNav: false,
   },
 };
 

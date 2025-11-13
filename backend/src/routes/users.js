@@ -8,6 +8,7 @@ import {
   getUserValidator,
   deleteUserValidator,
   listUsersValidator,
+  selfDeleteValidator,
 } from "../middleware/validators/userValidators.js";
 
 const router = express.Router();
@@ -200,6 +201,14 @@ router.delete(
   deleteUserValidator,
   validate,
   userController.deleteUser
+);
+
+router.post(
+  "/me/delete",
+  isAuthenticated,
+  selfDeleteValidator,
+  validate,
+  userController.deleteSelf
 );
 
 /**
