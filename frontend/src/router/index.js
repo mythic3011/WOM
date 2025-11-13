@@ -59,6 +59,15 @@ function checkAdminAuth(ctx, next) {
   next();
 }
 
+function checkDevMode(ctx, next) {
+  if (import.meta.env.MODE !== "development") {
+    notify.error("Developer tools are only available in development mode.");
+    page.redirect(ROUTES.HOME);
+    return;
+  }
+  next();
+}
+
 export function updateNavigation() {
   $("#navbar").html(renderNavbar());
   initNavbar();
@@ -106,7 +115,7 @@ export function setupRouter() {
     loadPage(PerformanceDetailPage, { id: ctx.params.id })
   );
 
-  page(ROUTES.PUBLIC.DEV_TOOLS, () => loadPage(DevToolsPage));
+  page(ROUTES.PUBLIC.DEV_TOOLS, checkDevMode, () => loadPage(DevToolsPage));
 
   page(ROUTES.AUTH.LOGIN, () => loadPage(Auth.LoginPage));
   page(ROUTES.AUTH.REGISTER, () => loadPage(Auth.RegisterPage));
@@ -130,8 +139,6 @@ export function setupRouter() {
   );
 
   page(ROUTES.USER.PROFILE, checkAuth, () => loadPage(User.ProfilePage));
-
-  page(ROUTES.USER.PAYMENT, checkAuth, () => loadPage(User.PaymentPage));
 
   page(ROUTES.USER.CONFIRMATION, checkAuth, () =>
     loadPage(User.ConfirmationPage)

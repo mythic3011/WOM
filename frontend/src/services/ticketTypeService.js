@@ -1,78 +1,53 @@
-import { DEFAULT_TICKET_TYPES } from "/src/data/mockData.js";
-
-const STORAGE_KEY = "ticketTypes";
+import { ticketTypeAPI } from "./apiClient.js";
 
 export const ticketTypeService = {
-  getAll() {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) {
-      try {
-        return JSON.parse(stored);
-      } catch (e) {
-        console.error("Error parsing ticket types:", e);
-      }
+  async getAll() {
+    try {
+      const response = await ticketTypeAPI.getAll();
+      return response.success ? response.data : [];
+    } catch (error) {
+      console.error("Failed to fetch ticket types:", error);
+      return [];
     }
-
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(DEFAULT_TICKET_TYPES));
-    return DEFAULT_TICKET_TYPES;
   },
 
-  getById(id) {
-    const types = this.getAll();
-    console.log("getById - Looking for ID:", id, "Type:", typeof id);
-    console.log(
-      "Available IDs:",
-      types.map((t) => ({ id: t.id, type: typeof t.id }))
-    );
-    const found = types.find(
-      (t) => t.id === id || t.id == id || t.id === String(id)
-    );
-    console.log("Found:", found);
-    return found;
-  },
-
-  create(typeData) {
-    const types = this.getAll();
-    const newType = {
-      ...typeData,
-      id: Date.now().toString(),
-      order: types.length + 1,
-    };
-    types.push(newType);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(types));
-    return newType;
-  },
-
-  update(id, typeData) {
-    const types = this.getAll();
-    const index = types.findIndex((t) => t.id === id);
-    if (index !== -1) {
-      types[index] = { ...types[index], ...typeData };
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(types));
-      return types[index];
+  async getById(id) {
+    try {
+      const response = await ticketTypeAPI.getById(id);
+      return response.success ? response.data : null;
+    } catch (error) {
+      console.error(`Failed to fetch ticket type ${id}:`, error);
+      return null;
     }
-    return null;
   },
 
-  delete(id) {
-    const types = this.getAll();
-    const filtered = types.filter((t) => t.id !== id);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(filtered));
-    return true;
+  async create(typeData) {
+    try {
+      const response = await ticketTypeAPI.create(typeData);
+      return response.success ? response.data : null;
+    } catch (error) {
+      console.error("Failed to create ticket type:", error);
+      throw error;
+    }
   },
 
-  reorder(typeIds) {
-    const types = this.getAll();
-    const reordered = typeIds.map((id, index) => {
-      const type = types.find((t) => t.id === id);
-      return { ...type, order: index + 1 };
-    });
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(reordered));
-    return reordered;
+  async update(id, typeData) {
+    try {
+      const response = await ticketTypeAPI.update(id, typeData);
+      return response.success ? response.data : null;
+    } catch (error) {
+      console.error(`Failed to update ticket type ${id}:`, error);
+      throw error;
+    }
   },
 
-  reset() {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(DEFAULT_TICKET_TYPES));
-    return DEFAULT_TICKET_TYPES;
+  async delete(id) {
+    try {
+      const response = await ticketTypeAPI.delete(id);
+      return response.success;
+    } catch (error) {
+      console.error(`Failed to delete ticket type ${id}:`, error);
+      throw error;
+    }
   },
 };

@@ -1,9 +1,14 @@
 import { storage } from "/src/services/storageService.js";
+import { ResponseExtractor } from "/src/services/responseExtractor.js";
 import {
-  MOCK_SIMPLE_PERFORMANCES,
-  MOCK_BOOKINGS,
-  MOCK_USERS,
-} from "/src/data/mockData.js";
+  performanceAPI,
+  bookingAPI,
+  userAPI,
+} from "/src/services/apiClient.js";
+import {
+  formatCurrency as utilsFormatCurrency,
+  formatNumber as utilsFormatNumber,
+} from "/src/utils/utils.js";
 
 export const statsService = {
   migrateShowtimes(performances) {
@@ -32,9 +37,9 @@ export const statsService = {
   },
 
   async getAdminStats() {
-    const performances = this.getPerformances();
-    const bookings = this.getBookings();
-    const users = this.getUsers();
+    const performances = await this.getPerformances();
+    const bookings = await this.getBookings();
+    const users = await this.getUsers();
     const revenue = this.calculateRevenue(bookings);
 
     return {
@@ -54,26 +59,35 @@ export const statsService = {
     };
   },
 
-  getPerformances() {
-    let stored = storage.getItem("performances", []);
-    if (stored.length > 0) {
-      stored = this.migrateShowtimes(stored);
-      storage.setItem("performances", stored);
-      return stored;
+  async getPerformances() {
+    try {
+      const response = await performanceAPI.getAll();
+      const performances = ResponseExtractor.extract(response, "performances");
+      return this.migrateShowtimes(performances);
+    } catch (error) {
+      console.error("Failed to fetch performances:", error);
+      return [];
     }
-    return MOCK_SIMPLE_PERFORMANCES;
   },
 
-  getBookings() {
-    const stored = storage.getItem("bookings", []);
-    if (stored.length > 0) return stored;
-    return MOCK_BOOKINGS;
+  async getBookings() {
+    try {
+      const response = await bookingAPI.getAll();
+      return ResponseExtractor.extract(response, "bookings");
+    } catch (error) {
+      console.error("Failed to fetch bookings:", error);
+      return [];
+    }
   },
 
-  getUsers() {
-    const stored = storage.getItem("users", []);
-    if (stored.length > 0) return stored;
-    return MOCK_USERS;
+  async getUsers() {
+    try {
+      const response = await userAPI.getAll();
+      return ResponseExtractor.extract(response, "users");
+    } catch (error) {
+      console.error("Failed to fetch users:", error);
+      return [];
+    }
   },
 
   calculateRevenue(bookings) {
@@ -214,10 +228,10 @@ export const statsService = {
   },
 
   formatCurrency(amount) {
-    return `HKD ${amount.toLocaleString("en-HK")}`;
+    return utilsFormatCurrency(amount);
   },
 
   formatNumber(num) {
-    return num.toLocaleString("en-HK");
+    return utilsFormatNumber(num);
   },
 };

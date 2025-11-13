@@ -1,8 +1,9 @@
 import dayjs from "dayjs";
-import { performanceService } from "/src/services/dataService.js";
+import { performanceService } from "/src/services/performanceService.js";
 import { renderEmptyState } from "/src/utils/data/table.js";
 import { createDebounceSearch } from "/src/utils/data/filters.js";
 import { PerformanceCard } from "/src/components/PerformanceCard.js";
+import { performanceUtils } from "/src/utils/performanceUtils.js";
 
 export default {
   title: "Performances | WOM",
@@ -52,7 +53,7 @@ export default {
               </div>
 
               <div id="filtersContent">
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-4">
                   <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">
                       <i class="fas fa-search mr-1"></i>Search
@@ -77,7 +78,25 @@ export default {
               <option value="on_sale">On Sale</option>
               <option value="upcoming">Upcoming</option>
               <option value="sold_out">Sold Out</option>
+              <option value="early_bird">Early Bird</option>
+              <option value="pre_order">Pre-Order</option>
             </select>
+                  </div>
+
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">
+                      <i class="fas fa-chair mr-1"></i>Availability
+                    </label>
+                    <select
+                      id="availabilityFilter"
+                      class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
+                    >
+                      <option value="">All Availability</option>
+                      <option value="high">High Availability (>50%)</option>
+                      <option value="medium">Limited (10-50%)</option>
+                      <option value="low">Very Limited (<10%)</option>
+                      <option value="sold_out">Sold Out</option>
+                    </select>
                   </div>
 
                   <div>
@@ -93,6 +112,7 @@ export default {
                       <option value="title">Title (A-Z)</option>
                       <option value="price">Price (Low to High)</option>
                       <option value="price-desc">Price (High to Low)</option>
+                      <option value="availability">Availability (High to Low)</option>
                     </select>
                   </div>
 
@@ -180,40 +200,13 @@ export default {
       return;
     }
 
-    const onSale = this.performances.filter(
-      (p) => p.ticketingInfo?.status === "on_sale" || p.status === "on_sale"
-    ).length;
+    const stats = performanceService.getPerformanceStats(this.performances);
 
-    const upcoming = this.performances.filter(
-      (p) =>
-        p.ticketingInfo?.status === "upcoming" ||
-        p.status === "upcoming" ||
-        (!p.ticketingInfo?.status && !p.status)
-    ).length;
-
-    const soldOut = this.performances.filter(
-      (p) => p.ticketingInfo?.status === "sold_out" || p.status === "sold_out"
-    ).length;
-
-    const validPrices = this.performances
-      .map((p) => p.price || 0)
-      .filter((p) => p > 0);
-
-    let priceDisplay = "N/A";
-    if (validPrices.length > 0) {
-      const minPrice = Math.min(...validPrices);
-      const maxPrice = Math.max(...validPrices);
-      priceDisplay =
-        minPrice === maxPrice
-          ? `HKD ${maxPrice}`
-          : `HKD ${minPrice}-${maxPrice}`;
-    }
-
-    const stats = [
+    const statsConfig = [
       {
         icon: "fa-ticket-alt",
         label: "On Sale",
-        value: onSale || this.performances.length,
+        value: stats.onSale || this.performances.length,
         color: "bg-green-500",
         textColor: "text-green-700",
         bgColor: "bg-green-50",
@@ -221,7 +214,7 @@ export default {
       {
         icon: "fa-calendar-alt",
         label: "Upcoming",
-        value: upcoming,
+        value: stats.upcoming,
         color: "bg-blue-500",
         textColor: "text-blue-700",
         bgColor: "bg-blue-50",
@@ -229,7 +222,7 @@ export default {
       {
         icon: "fa-users-slash",
         label: "Sold Out",
-        value: soldOut,
+        value: stats.soldOut,
         color: "bg-red-500",
         textColor: "text-red-700",
         bgColor: "bg-red-50",
@@ -237,14 +230,14 @@ export default {
       {
         icon: "fa-dollar-sign",
         label: "Price Range",
-        value: priceDisplay,
+        value: stats.priceRange.display,
         color: "bg-indigo-500",
         textColor: "text-indigo-700",
         bgColor: "bg-indigo-50",
       },
     ];
 
-    const html = stats
+    const html = statsConfig
       .map(
         (stat) => `
       <div class="${stat.bgColor} rounded-lg p-4 border border-gray-200">
@@ -310,15 +303,15 @@ export default {
     );
 
     $("#searchInput").on("input", debouncedFilter);
-    $("#statusFilter, #sortFilter, #priceFilter").on("change", () =>
-      this.filterPerformances()
+    $("#statusFilter, #sortFilter, #priceFilter, #availabilityFilter").on(
+      "change",
+      () => this.filterPerformances()
     );
     $("#clearFilters").on("click", () => this.clearFilters());
 
     $(".view-btn").on("click", (e) => {
       const $clicked = $(e.currentTarget);
-      const view = $clicked.data("view");
-      this.viewMode = view;
+      this.viewMode = $clicked.data("view");
 
       $(".view-btn").each(function () {
         $(this)
@@ -352,71 +345,45 @@ export default {
     const search = $("#searchInput").val().toLowerCase();
     const status = $("#statusFilter").val();
     const priceRange = $("#priceFilter").val();
+    const availability = $("#availabilityFilter").val();
     const sortBy = $("#sortFilter").val();
 
-    let filtered = this.performances.filter((p) => {
-      const matchesSearch =
-        !search ||
-        p.title.toLowerCase().includes(search) ||
-        p.composer.toLowerCase().includes(search) ||
-        p.orchestra.toLowerCase().includes(search) ||
-        (p.description && p.description.toLowerCase().includes(search)) ||
-        (p.conductor && p.conductor.toLowerCase().includes(search));
+    const filters = {
+      search,
+      status,
+      availability,
+    };
 
-      const matchesStatus = !status || p.ticketingInfo?.status === status;
-
-      let matchesPrice = true;
-      if (priceRange) {
-        const price = p.price || 0;
-        if (priceRange === "0-200") matchesPrice = price < 200;
-        else if (priceRange === "200-500")
-          matchesPrice = price >= 200 && price < 500;
-        else if (priceRange === "500-1000")
-          matchesPrice = price >= 500 && price < 1000;
-        else if (priceRange === "1000+") matchesPrice = price >= 1000;
+    if (priceRange) {
+      if (priceRange === "0-200") {
+        filters.priceMin = 0;
+        filters.priceMax = 200;
+      } else if (priceRange === "200-500") {
+        filters.priceMin = 200;
+        filters.priceMax = 500;
+      } else if (priceRange === "500-1000") {
+        filters.priceMin = 500;
+        filters.priceMax = 1000;
+      } else if (priceRange === "1000+") {
+        filters.priceMin = 1000;
       }
+    }
 
-      return matchesSearch && matchesStatus && matchesPrice;
-    });
+    const filtered = performanceService.filterAndSort(
+      this.performances,
+      filters,
+      sortBy
+    );
 
-    filtered = this.sortPerformances(filtered, sortBy);
     this.displayPerformances(filtered);
   },
 
   sortPerformances(data, sortBy) {
-    const sorted = [...data];
-
-    switch (sortBy) {
-      case "date":
-        return sorted.sort((a, b) => {
-          const dateA = a.showtimes?.[0]?.dateTime || a.date || 0;
-          const dateB = b.showtimes?.[0]?.dateTime || b.date || 0;
-          return dayjs(dateA).valueOf() - dayjs(dateB).valueOf();
-        });
-
-      case "date-desc":
-        return sorted.sort((a, b) => {
-          const dateA = a.showtimes?.[0]?.dateTime || a.date || 0;
-          const dateB = b.showtimes?.[0]?.dateTime || b.date || 0;
-          return dayjs(dateB).valueOf() - dayjs(dateA).valueOf();
-        });
-
-      case "title":
-        return sorted.sort((a, b) => a.title.localeCompare(b.title));
-
-      case "price":
-        return sorted.sort((a, b) => (a.price || 0) - (b.price || 0));
-
-      case "price-desc":
-        return sorted.sort((a, b) => (b.price || 0) - (a.price || 0));
-
-      default:
-        return sorted;
-    }
+    return performanceService.sortPerformances(data, sortBy);
   },
 
   clearFilters() {
-    $("#searchInput, #statusFilter, #priceFilter").val("");
+    $("#searchInput, #statusFilter, #priceFilter, #availabilityFilter").val("");
     $("#sortFilter").val("date");
     this.sortBy = "date";
     this.displayPerformances(this.performances);

@@ -1,17 +1,48 @@
-function generateUUID() {
-  if (typeof crypto !== "undefined" && crypto.randomUUID) {
-    return crypto.randomUUID();
-  }
-  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function (c) {
-    const r = (Math.random() * 16) | 0;
-    const v = c === "x" ? r : (r & 0x3) | 0x8;
-    return v.toString(16);
-  });
-}
+import { generateUUID } from "/src/utils/utils.js";
+import { hashPassword } from "/src/utils/core/crypto.js";
+
+export const MOCK_USERS_STATIC = [
+  {
+    id: generateUUID(),
+    userId: "000001",
+    username: "admin",
+    email: "admin@wom.hk",
+    title: "Mr.",
+    name: "Administrator",
+    birthday: "1985-05-20",
+    gender: "male",
+    password: "HASHED_PASSWORD",
+    role: "admin",
+    status: "active",
+    profileImage: null,
+    createdAt: "2024-01-01T00:00:00.000Z",
+    updatedAt: "2024-01-01T00:00:00.000Z",
+    lastLoginAt: null,
+    phone: "23330600",
+    address: "Room M101, 1/F, Li Ka Shing Tower, PolyU",
+  },
+  {
+    id: generateUUID(),
+    userId: "000002",
+    username: "user",
+    email: "user@example.com",
+    title: "",
+    name: "Test User",
+    birthday: "1995-03-15",
+    gender: "prefer_not_to_say",
+    password: "HASHED_PASSWORD",
+    role: "user",
+    status: "active",
+    profileImage: null,
+    createdAt: "2024-10-15T00:00:00.000Z",
+    updatedAt: "2024-10-15T00:00:00.000Z",
+    lastLoginAt: null,
+    phone: "91234567",
+    address: "Flat 15A, Block 2, Happy Garden, Kowloon",
+  },
+];
 
 export async function generateMockUsers() {
-  const { hashPassword } = await import("/src/utils/core/crypto.js");
-
   const adminPass = await hashPassword("adminpass");
   const userPass = await hashPassword("userpass");
   const testPass = await hashPassword("test123");
@@ -247,44 +278,3 @@ export async function generateMockUsers() {
     },
   ];
 }
-
-export const MOCK_USERS_STATIC = [
-  {
-    id: generateUUID(),
-    userId: "000001",
-    username: "admin",
-    email: "admin@wom.hk",
-    title: "Mr.",
-    name: "Administrator",
-    birthday: "1985-05-20",
-    gender: "male",
-    password: "PLACEHOLDER_WILL_BE_HASHED",
-    role: "admin",
-    status: "active",
-    profileImage: null,
-    createdAt: "2024-01-01T00:00:00.000Z",
-    updatedAt: "2024-01-01T00:00:00.000Z",
-    lastLoginAt: null,
-    phone: "23330600",
-    address: "Room M101, 1/F, Li Ka Shing Tower, PolyU",
-  },
-  {
-    id: generateUUID(),
-    userId: "000002",
-    username: "user",
-    email: "user@example.com",
-    title: "",
-    name: "Test User",
-    birthday: "1995-03-15",
-    gender: "prefer_not_to_say",
-    password: "PLACEHOLDER_WILL_BE_HASHED",
-    role: "user",
-    status: "active",
-    profileImage: null,
-    createdAt: "2024-10-15T00:00:00.000Z",
-    updatedAt: "2024-10-15T00:00:00.000Z",
-    lastLoginAt: null,
-    phone: "91234567",
-    address: "Flat 15A, Block 2, Happy Garden, Kowloon",
-  },
-];

@@ -1,6 +1,10 @@
 import { notify } from "/src/utils/ui/notification.js";
 import { navigate } from "/src/utils/core/navigation.js";
-import { userService } from "/src/services/userService.js";
+import { login } from "/src/utils/core/auth.js";
+import { handleApiError } from "/src/services/apiClient.js";
+import { ROUTES } from "/src/config/routes.js";
+
+const REMEMBER_KEY = "wom_remembered_user";
 
 export default {
   title: "Login | WOM",
@@ -66,9 +70,17 @@ export default {
                     type="password"
                     required
                     autocomplete="current-password"
-                    class="w-full pl-11 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all text-gray-900 placeholder-gray-400"
+                    class="w-full pl-11 pr-12 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all text-gray-900 placeholder-gray-400"
                     placeholder="Enter your password"
                   />
+                  <button
+                    type="button"
+                    id="togglePassword"
+                    class="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-400 hover:text-gray-600 focus:outline-none transition-colors"
+                    title="Toggle password visibility"
+                  >
+                    <i class="fas fa-eye" id="togglePasswordIcon"></i>
+                  </button>
                 </div>
               </div>
 
@@ -115,13 +127,35 @@ export default {
   },
 
   async afterRender() {
-    const rememberedUserId = userService.getRememberedUserId();
-    if (rememberedUserId) {
-      $("#username").val(rememberedUserId);
+    const rememberedUser = localStorage.getItem(REMEMBER_KEY);
+    if (rememberedUser) {
+      $("#username").val(rememberedUser);
       $("#remember").prop("checked", true);
     }
 
+    const urlParams = new URLSearchParams(window.location.search);
+    const error = urlParams.get("error");
+    if (error === "unauthorized") {
+      notify.warning("Please login to continue");
+    }
+
     $("#loginForm").on("submit", (e) => this.handleLogin(e));
+
+    $("#togglePassword").on("click", () => this.togglePassword());
+  },
+
+  togglePassword() {
+    const passwordInput = $("#password");
+    const toggleIcon = $("#togglePasswordIcon");
+    const currentType = passwordInput.attr("type");
+
+    if (currentType === "password") {
+      passwordInput.attr("type", "text");
+      toggleIcon.removeClass("fa-eye").addClass("fa-eye-slash");
+    } else {
+      passwordInput.attr("type", "password");
+      toggleIcon.removeClass("fa-eye-slash").addClass("fa-eye");
+    }
   },
 
   async handleLogin(e) {
@@ -143,27 +177,32 @@ export default {
       <span>Signing in...</span>
     `);
 
-    if (remember) {
-      userService.rememberUserId(usernameOrEmail);
-    } else {
-      userService.forgetUserId();
-    }
+    try {
+      if (remember) {
+        localStorage.setItem(REMEMBER_KEY, usernameOrEmail);
+      } else {
+        localStorage.removeItem(REMEMBER_KEY);
+      }
 
-    const result = await userService.loginUser(usernameOrEmail, password);
+      const user = await login(usernameOrEmail, password);
 
-    if (result.success) {
-      notify.success(`Welcome back, ${result.user.name}!`);
+      notify.success(`Welcome back, ${user.name}!`);
+
+      const urlParams = new URLSearchParams(window.location.search);
+      const redirect = urlParams.get("redirect");
 
       setTimeout(() => {
-        if (result.user.role === "admin") {
-          navigate("/admin/dashboard");
+        if (redirect) {
+          navigate(redirect);
+        } else if (user.role === "admin") {
+          navigate(ROUTES.ADMIN.DASHBOARD);
         } else {
-          navigate("/user/dashboard");
+          navigate(ROUTES.USER.DASHBOARD);
         }
       }, 500);
-    } else {
+    } catch (error) {
       $btn.prop("disabled", false).html(originalHTML);
-      notify.error(result.error || "Login failed. Please try again.");
+      handleApiError(error, "Login failed. Please check your credentials.");
     }
   },
 };

@@ -1,63 +1,118 @@
 import { renderStatsGrid } from "/src/components/StatsCard.js";
 import { createCard } from "/src/components/Card.js";
-import { storage } from "/src/services/storageService.js";
-import { statsService } from "/src/services/statsService.js";
+import { getCurrentUser } from "/src/utils/core/auth.js";
+import { statsAPI, handleApiError } from "/src/services/apiClient.js";
+import { formatCurrency, formatNumber } from "/src/utils/utils.js";
 import dayjs from "dayjs";
 
 export default {
   title: "Admin Dashboard | WOM",
 
   async render() {
-    const userData = storage.getUser();
+    const userData = getCurrentUser();
     const username = userData?.name || "Admin";
 
-    const statsData = await statsService.getAdminStats();
-    const recentActivity = await statsService.getRecentActivity();
+    let statsData = {
+      totalPerformances: 0,
+      totalBookings: 0,
+      totalUsers: 0,
+      totalRevenue: 0,
+      recentBookings: [],
+      upcomingPerformances: [],
+    };
 
-    const stats = [
-      {
-        title: "Total Performances",
-        value: statsService.formatNumber(statsData.totalPerformances),
-        subtitle: `${statsData.upcomingPerformances} upcoming`,
-        icon: "fa-music",
-        iconColor: "text-blue-500",
-        bgColor: "bg-blue-50",
-        trend: statsData.performancesTrend.value,
-        trendUp: statsData.performancesTrend.isUp,
-      },
-      {
-        title: "Total Bookings",
-        value: statsService.formatNumber(statsData.totalBookings),
-        subtitle: `${statsData.pendingBookings} pending`,
-        icon: "fa-ticket-alt",
-        iconColor: "text-green-500",
-        bgColor: "bg-green-50",
-        trend: statsData.bookingsTrend.value,
-        trendUp: statsData.bookingsTrend.isUp,
-      },
-      {
-        title: "Total Users",
-        value: statsService.formatNumber(statsData.totalUsers),
-        subtitle: `${statsData.activeUsers} active`,
-        icon: "fa-users",
-        iconColor: "text-purple-500",
-        bgColor: "bg-purple-50",
-        trend: statsData.usersTrend.value,
-        trendUp: statsData.usersTrend.isUp,
-      },
-      {
-        title: "Total Revenue",
-        value: statsService.formatCurrency(statsData.revenue),
-        subtitle: `${statsService.formatCurrency(
-          statsData.monthlyRevenue
-        )} this month`,
-        icon: "fa-dollar-sign",
-        iconColor: "text-indigo-500",
-        bgColor: "bg-indigo-50",
-        trend: statsData.revenueTrend.value,
-        trendUp: statsData.revenueTrend.isUp,
-      },
-    ];
+    let stats = [];
+    let recentActivity = [];
+
+    try {
+      const apiStats = await statsAPI.getDashboardStats();
+      statsData = apiStats;
+
+      recentActivity = statsData.recentBookings
+        ? statsData.recentBookings.slice(0, 5).map((booking) => ({
+            description: `New booking for ${
+              booking.performance?.title || "Performance"
+            }`,
+            date: booking.bookingDate,
+            status: booking.status,
+            color: booking.status === "confirmed" ? "green" : "yellow",
+            icon: "fa-ticket-alt",
+          }))
+        : [];
+
+      stats = [
+        {
+          title: "Total Performances",
+          value: formatNumber(statsData.totalPerformances),
+          subtitle: `${statsData.upcomingPerformances?.length || 0} upcoming`,
+          icon: "fa-music",
+          iconColor: "text-blue-500",
+          bgColor: "bg-blue-50",
+        },
+        {
+          title: "Total Bookings",
+          value: formatNumber(statsData.totalBookings),
+          subtitle: "All time bookings",
+          icon: "fa-ticket-alt",
+          iconColor: "text-green-500",
+          bgColor: "bg-green-50",
+        },
+        {
+          title: "Total Users",
+          value: formatNumber(statsData.totalUsers),
+          subtitle: "Registered users",
+          icon: "fa-users",
+          iconColor: "text-purple-500",
+          bgColor: "bg-purple-50",
+        },
+        {
+          title: "Total Revenue",
+          value: formatCurrency(statsData.totalRevenue),
+          subtitle: "Total revenue",
+          icon: "fa-dollar-sign",
+          iconColor: "text-indigo-500",
+          bgColor: "bg-indigo-50",
+        },
+      ];
+    } catch (error) {
+      console.error("Failed to load dashboard stats:", error);
+      handleApiError(error, "Failed to load dashboard statistics");
+
+      stats = [
+        {
+          title: "Total Performances",
+          value: "0",
+          subtitle: "0 upcoming",
+          icon: "fa-music",
+          iconColor: "text-blue-500",
+          bgColor: "bg-blue-50",
+        },
+        {
+          title: "Total Bookings",
+          value: "0",
+          subtitle: "All time bookings",
+          icon: "fa-ticket-alt",
+          iconColor: "text-green-500",
+          bgColor: "bg-green-50",
+        },
+        {
+          title: "Total Users",
+          value: "0",
+          subtitle: "Registered users",
+          icon: "fa-users",
+          iconColor: "text-purple-500",
+          bgColor: "bg-purple-50",
+        },
+        {
+          title: "Total Revenue",
+          value: formatCurrency(0),
+          subtitle: "Total revenue",
+          icon: "fa-dollar-sign",
+          iconColor: "text-indigo-500",
+          bgColor: "bg-indigo-50",
+        },
+      ];
+    }
 
     const quickActions = [
       {

@@ -33,6 +33,33 @@ class StorageService {
       this.migrate(version, STORAGE_VERSION);
       this.set("storageVersion", STORAGE_VERSION);
     }
+
+    const oldUserKey = "user";
+    const oldUser = localStorage.getItem(oldUserKey);
+    if (oldUser && !this.has("USER")) {
+      try {
+        const userData = JSON.parse(oldUser);
+        if (userData && typeof userData === "object" && userData.id) {
+          this.setUser(userData);
+          localStorage.removeItem(oldUserKey);
+          console.info(
+            "[StorageService] Migrated user data from legacy storage to encrypted storage"
+          );
+        } else {
+          console.warn(
+            "[StorageService] Legacy user data has invalid format, skipping migration"
+          );
+          localStorage.removeItem(oldUserKey);
+        }
+      } catch (error) {
+        console.error(
+          "[StorageService] Failed to migrate legacy user data:",
+          error
+        );
+        localStorage.removeItem(oldUserKey);
+      }
+    }
+
     this.set(STORAGE_KEYS.LAST_VISIT, new Date().toISOString());
     this.cleanExpired();
   }
@@ -205,14 +232,14 @@ class StorageService {
     keys.forEach((fullKey) => {
       try {
         const item = localStorage.getItem(fullKey);
+        if (!item) return;
+
         const parsed = JSON.parse(item);
         if (this.isExpired(parsed)) {
           localStorage.removeItem(fullKey);
           cleaned++;
         }
-      } catch (error) {
-        console.error(`Error cleaning expired item: ${fullKey}`, error);
-      }
+      } catch (error) {}
     });
 
     if (cleaned > 0) {

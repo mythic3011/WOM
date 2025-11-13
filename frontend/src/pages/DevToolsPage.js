@@ -4,18 +4,47 @@ import { ticketTypeService } from "/src/services/ticketTypeService.js";
 import { FormComponents } from "/src/components/FormComponents.js";
 import { notify } from "/src/utils/ui/notification.js";
 import { ROUTES, ROUTE_METADATA } from "/src/config/routes.js";
+import { APP_CONFIG } from "/src/config/config.js";
 import { SwalColors } from "/src/utils/colors.js";
 import Swal from "sweetalert2";
 import dayjs from "dayjs";
 import {
   MOCK_BOOKINGS,
-  formatBookingForDisplay,
   formatSeatsDisplay,
   getBookingStatusLabel,
 } from "/src/data/mockData.js";
+import { StorageManager } from "/src/utils/devTools/storageManager.js";
+import { ConsoleLogger } from "/src/utils/devTools/consoleLogger.js";
+import { DataExporter } from "/src/utils/devTools/dataExporter.js";
+import { PerformanceTester } from "/src/utils/devTools/performanceTester.js";
+import { StorageViewer } from "/src/utils/devTools/storageViewer.js";
+import { MockDataGenerator } from "/src/utils/devTools/mockDataGenerator.js";
+import {
+  UTILS_STRUCTURE,
+  DOCUMENTATION_LINKS,
+  HEALTH_CHECKS,
+  NAVIGATION_SHORTCUTS,
+  NAV_SHORTCUT_STYLES,
+} from "/src/utils/devTools/devToolsConfig.js";
 
 export default {
   title: "Developer Tools | WOM",
+
+  generateNavigationShortcuts() {
+    return Object.entries(NAVIGATION_SHORTCUTS)
+      .map(([category, links]) =>
+        links
+          .map(
+            (link) => `
+            <a href="${link.href}" data-link class="px-4 py-2 ${NAV_SHORTCUT_STYLES[category]} rounded-lg text-center text-sm font-medium transition-colors">
+              <i class="fas ${link.icon} mr-2"></i>${link.label}
+            </a>
+          `
+          )
+          .join("")
+      )
+      .join("");
+  },
 
   async render() {
     return `
@@ -34,6 +63,84 @@ export default {
             type: "warning",
           })}
 
+          <div class="bg-white rounded-lg shadow-md border border-gray-200 p-6 mb-6">
+            <h2 class="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+              <i class="fas fa-magic text-yellow-600"></i>
+              Quick Setup
+            </h2>
+            <div class="space-y-3">
+              <div class="bg-gray-50 p-4 rounded-lg">
+                <h3 class="text-sm font-semibold text-gray-700 mb-2">Setup Presets</h3>
+                <p class="text-xs text-gray-600 mb-3">Generate all necessary mock data with one click</p>
+                <div class="grid grid-cols-4 gap-2">
+                  ${FormComponents.button({
+                    id: "quickSetupMinimal",
+                    text: "Minimal",
+                    icon: "fa-bolt",
+                    color: "green",
+                    size: "sm",
+                  })}
+                  ${FormComponents.button({
+                    id: "quickSetupStandard",
+                    text: "Standard",
+                    icon: "fa-star",
+                    color: "blue",
+                    size: "sm",
+                  })}
+                  ${FormComponents.button({
+                    id: "quickSetupFull",
+                    text: "Full",
+                    icon: "fa-crown",
+                    color: "purple",
+                    size: "sm",
+                  })}
+                  ${FormComponents.button({
+                    id: "quickSetupFaker",
+                    text: "Faker",
+                    icon: "fa-random",
+                    color: "orange",
+                    size: "sm",
+                  })}
+                </div>
+                <div class="mt-3 text-xs text-gray-500">
+                  <div><strong>Minimal:</strong> 5 users, 3 performances (Static)</div>
+                  <div><strong>Standard:</strong> 10 users, 10 performances, 20 bookings (Static)</div>
+                  <div><strong>Full:</strong> All available mock data (Static)</div>
+                  <div><strong>Faker:</strong> 15 users, 15 performances, 30 bookings (Randomized)</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="bg-white rounded-lg shadow-md border border-gray-200 p-6 mb-6">
+            <h2 class="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+              <i class="fas fa-link text-teal-600"></i>
+              Data Relationships
+            </h2>
+            <div class="space-y-3">
+              <div class="bg-gray-50 p-4 rounded-lg">
+                <h3 class="text-sm font-semibold text-gray-700 mb-2">Validate & Analyze</h3>
+                <p class="text-xs text-gray-600 mb-2" id="relationshipInfo">Check data integrity and relationships</p>
+                <div class="grid grid-cols-2 gap-2">
+                  ${FormComponents.button({
+                    id: "validateRelationships",
+                    text: "Validate Data",
+                    icon: "fa-check-circle",
+                    color: "green",
+                    size: "sm",
+                  })}
+                  ${FormComponents.button({
+                    id: "viewRelationshipStats",
+                    text: "View Stats",
+                    icon: "fa-chart-bar",
+                    color: "blue",
+                    size: "sm",
+                  })}
+                </div>
+              </div>
+            </div>
+          </div>
+
           <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <div class="bg-white rounded-lg shadow-md border border-gray-200 p-6">
               <h2 class="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
@@ -45,21 +152,47 @@ export default {
                   <h3 class="text-sm font-semibold text-gray-700 mb-2">Current Storage</h3>
                   <div id="storageInfo" class="text-xs text-gray-600 space-y-1"></div>
                 </div>
-                <div class="grid grid-cols-2 gap-2">
+                <div class="space-y-2">
+                  <div class="grid grid-cols-3 gap-2">
                   ${FormComponents.button({
                     id: "viewStorage",
-                    text: "View All Data",
+                    text: "View Processed",
                     icon: "fa-eye",
                     color: "blue",
                     size: "sm",
                   })}
+                    ${FormComponents.button({
+                      id: "viewRawStorage",
+                      text: "View Raw",
+                      icon: "fa-file-code",
+                      color: "indigo",
+                      size: "sm",
+                    })}
+                    ${FormComponents.button({
+                      id: "analyzeStorage",
+                      text: "Analyze",
+                      icon: "fa-chart-bar",
+                      color: "purple",
+                      size: "sm",
+                    })}
+                  </div>
+                  <div class="grid grid-cols-2 gap-2">
                   ${FormComponents.button({
                     id: "exportStorage",
-                    text: "Export JSON",
-                    icon: "fa-download",
+                    text: "Export Raw",
+                    icon: "fa-file-export",
                     color: "green",
                     size: "sm",
                   })}
+                    ${FormComponents.button({
+                      id: "exportProcessedStorage",
+                      text: "Export Processed",
+                      icon: "fa-file-download",
+                      color: "teal",
+                      size: "sm",
+                    })}
+                  </div>
+                  <div class="grid grid-cols-2 gap-2">
                   ${FormComponents.button({
                     id: "importStorage",
                     text: "Import JSON",
@@ -74,6 +207,7 @@ export default {
                     color: "red",
                     size: "sm",
                   })}
+                  </div>
                 </div>
               </div>
             </div>
@@ -335,42 +469,7 @@ export default {
               Navigation Shortcuts
             </h2>
             <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
-              <a href="/" data-link class="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-center text-sm font-medium text-gray-700 transition-colors">
-                <i class="fas fa-home mr-2"></i>Home
-              </a>
-              <a href="/performances" data-link class="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-center text-sm font-medium text-gray-700 transition-colors">
-                <i class="fas fa-music mr-2"></i>Performances
-              </a>
-              <a href="/login" data-link class="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-center text-sm font-medium text-gray-700 transition-colors">
-                <i class="fas fa-sign-in-alt mr-2"></i>Login
-              </a>
-              <a href="/register" data-link class="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-center text-sm font-medium text-gray-700 transition-colors">
-                <i class="fas fa-user-plus mr-2"></i>Register
-              </a>
-              <a href="/user/dashboard" data-link class="px-4 py-2 bg-blue-100 hover:bg-blue-200 rounded-lg text-center text-sm font-medium text-blue-700 transition-colors">
-                <i class="fas fa-tachometer-alt mr-2"></i>User Dashboard
-              </a>
-              <a href="/user/bookings" data-link class="px-4 py-2 bg-blue-100 hover:bg-blue-200 rounded-lg text-center text-sm font-medium text-blue-700 transition-colors">
-                <i class="fas fa-ticket-alt mr-2"></i>User Bookings
-              </a>
-              <a href="/user/profile" data-link class="px-4 py-2 bg-blue-100 hover:bg-blue-200 rounded-lg text-center text-sm font-medium text-blue-700 transition-colors">
-                <i class="fas fa-user mr-2"></i>Profile
-              </a>
-              <a href="/admin/dashboard" data-link class="px-4 py-2 bg-purple-100 hover:bg-purple-200 rounded-lg text-center text-sm font-medium text-purple-700 transition-colors">
-                <i class="fas fa-user-shield mr-2"></i>Admin Dashboard
-              </a>
-              <a href="/admin/performances" data-link class="px-4 py-2 bg-purple-100 hover:bg-purple-200 rounded-lg text-center text-sm font-medium text-purple-700 transition-colors">
-                <i class="fas fa-music mr-2"></i>Admin Performances
-              </a>
-              <a href="/admin/bookings" data-link class="px-4 py-2 bg-purple-100 hover:bg-purple-200 rounded-lg text-center text-sm font-medium text-purple-700 transition-colors">
-                <i class="fas fa-calendar-check mr-2"></i>Admin Bookings
-              </a>
-              <a href="/admin/users" data-link class="px-4 py-2 bg-purple-100 hover:bg-purple-200 rounded-lg text-center text-sm font-medium text-purple-700 transition-colors">
-                <i class="fas fa-users mr-2"></i>Admin Users
-              </a>
-              <a href="/admin/settings" data-link class="px-4 py-2 bg-purple-100 hover:bg-purple-200 rounded-lg text-center text-sm font-medium text-purple-700 transition-colors">
-                <i class="fas fa-cog mr-2"></i>Settings
-              </a>
+              ${this.generateNavigationShortcuts()}
             </div>
           </div>
         </div>
@@ -379,24 +478,31 @@ export default {
   },
 
   async afterRender() {
+    this.logger = new ConsoleLogger("debugConsole");
     this.updateStats();
     this.updatePerformanceMetrics();
     this.attachEventListeners();
-    this.log("Dev tools loaded successfully");
-    this.log(`Project structure improvements: ✓ Complete`, "success");
+    this.logger.log("Dev tools loaded successfully");
+    this.logger.log(`Project structure improvements: ✓ Complete`, "success");
   },
 
   updateStats() {
     const users = storage.getItem("registeredUsers", []);
     const performances = statsService.getPerformances();
     const bookings = storage.getItem("bookings", []);
-
-    const storageSize = new Blob([JSON.stringify(localStorage)]).size;
-    const storageSizeKB = (storageSize / 1024).toFixed(2);
+    const storageInfo = StorageManager.getStorageInfo();
+    const analysis = StorageManager.analyzeStorage();
 
     $("#storageInfo").html(`
-      <div>Total size: ${storageSizeKB} KB</div>
-      <div>Items: ${localStorage.length}</div>
+      <div>Total size: ${storageInfo.size} KB</div>
+      <div>Items: ${storageInfo.items}</div>
+      <div class="mt-2 pt-2 border-t border-gray-300">
+        <div class="text-xs">
+          <span class="text-blue-600">${analysis.byType.json}</span> JSON,
+          <span class="text-orange-600">${analysis.byType.encrypted}</span> Encrypted,
+          <span class="text-green-600">${analysis.byType.compressed}</span> Compressed
+        </div>
+      </div>
     `);
 
     $("#userCount").text(`${users.length} users registered`);
@@ -406,10 +512,9 @@ export default {
     $("#bookingCount").text(`${bookings.length} bookings created`);
   },
 
-  updatePerformanceMetrics() {
-    const memory = performance.memory
-      ? `${(performance.memory.usedJSHeapSize / 1048576).toFixed(2)} MB`
-      : "N/A";
+  async updatePerformanceMetrics() {
+    const memoryInfo = PerformanceTester.getMemoryUsage();
+    const memory = memoryInfo ? `${memoryInfo.used} MB` : "N/A";
     const routes = Object.keys(ROUTES).reduce(
       (acc, key) =>
         typeof ROUTES[key] === "object"
@@ -418,41 +523,52 @@ export default {
       0
     );
 
+    const totalUtilsFiles = Object.values(UTILS_STRUCTURE).reduce(
+      (sum, files) => sum + files.length,
+      0
+    );
+
+    let backendVersion = "Unknown";
+    let backendStatus = "Disconnected";
+
+    try {
+      const response = await fetch(`${APP_CONFIG.apiBaseUrl}/health`);
+      if (response.ok) {
+        const data = await response.json();
+        backendVersion = data.version || "Unknown";
+        backendStatus = data.success ? "Connected" : "Disconnected";
+      }
+    } catch (error) {
+      backendVersion = "Unknown";
+      backendStatus = "Disconnected";
+    }
+
     $("#performanceMetrics").html(`
       <div>Memory: ${memory}</div>
       <div>Routes: ${routes} registered</div>
-      <div>Utils: 6 categories, 36 files</div>
+      <div>Utils: ${
+        Object.keys(UTILS_STRUCTURE).length
+      } categories, ${totalUtilsFiles} files</div>
+      <div>Frontend: v${APP_CONFIG.version}</div>
+      <div>Backend: v${backendVersion} (${backendStatus})</div>
       <div>Status: ✓ Operational</div>
     `);
   },
 
-  log(message, type = "info") {
-    const timestamp = dayjs().format("HH:mm:ss");
-    const colors = {
-      info: "text-green-400",
-      error: "text-red-400",
-      warn: "text-yellow-400",
-      success: "text-blue-400",
-    };
-    const color = colors[type] || colors.info;
-    const icon =
-      {
-        info: "→",
-        error: "✗",
-        warn: "⚠",
-        success: "✓",
-      }[type] || "→";
-
-    $("#debugConsole").append(`
-      <div class="${color}">[${timestamp}] ${icon} ${message}</div>
-    `);
-
-    $("#debugConsole").scrollTop($("#debugConsole")[0].scrollHeight);
-  },
-
   attachEventListeners() {
+    $("#quickSetupMinimal").on("click", () => this.quickSetup("minimal"));
+    $("#quickSetupStandard").on("click", () => this.quickSetup("standard"));
+    $("#quickSetupFull").on("click", () => this.quickSetup("full"));
+    $("#quickSetupFaker").on("click", () => this.quickSetup("faker"));
+
+    $("#validateRelationships").on("click", () => this.validateRelationships());
+    $("#viewRelationshipStats").on("click", () => this.viewRelationshipStats());
+
     $("#viewStorage").on("click", () => this.viewStorage());
+    $("#viewRawStorage").on("click", () => this.viewStorage(true));
+    $("#analyzeStorage").on("click", () => this.analyzeStorage());
     $("#exportStorage").on("click", () => this.exportStorage());
+    $("#exportProcessedStorage").on("click", () => this.exportStorage(true));
     $("#importStorage").on("click", () => this.importStorage());
     $("#clearStorage").on("click", () => this.clearStorage());
 
@@ -488,50 +604,375 @@ export default {
     $("#viewLogs").on("click", () => this.viewLogs());
   },
 
-  async viewStorage() {
-    const data = {};
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i);
-      try {
-        data[key] = JSON.parse(localStorage.getItem(key));
-      } catch (e) {
-        data[key] = localStorage.getItem(key);
+  async quickSetup(preset) {
+    const presetNames = {
+      minimal: "Minimal",
+      standard: "Standard",
+      full: "Full",
+      faker: "Faker",
+    };
+
+    try {
+      this.logger.log(`Starting ${presetNames[preset]} setup...`, "info");
+      notify.info(`Setting up ${presetNames[preset]} environment...`);
+
+      const results = await MockDataGenerator.quickSetup(preset);
+
+      if (results.overall.success) {
+        const summary = [];
+        if (results.users?.created > 0)
+          summary.push(`${results.users.created} users`);
+        if (results.performances?.created > 0)
+          summary.push(`${results.performances.created} performances`);
+        if (results.bookings?.created > 0)
+          summary.push(`${results.bookings.created} bookings`);
+
+        this.logger.log(
+          `${presetNames[preset]} setup completed: ${summary.join(", ")}`,
+          "success"
+        );
+        notify.success(
+          `${presetNames[preset]} setup complete!\n${summary.join(", ")}`
+        );
+      } else {
+        this.logger.log(
+          `Setup completed with errors: ${results.overall.errors.join(", ")}`,
+          "warn"
+        );
+        notify.warning("Setup completed with some errors");
       }
+
+      this.updateStats();
+    } catch (error) {
+      this.logger.log(`Setup failed: ${error.message}`, "error");
+      notify.error(`Setup failed: ${error.message}`);
     }
-
-    await Swal.fire({
-      title: "LocalStorage Data",
-      html: `<pre class="text-left text-xs bg-gray-900 text-green-400 p-4 rounded-lg overflow-auto max-h-96">${JSON.stringify(
-        data,
-        null,
-        2
-      )}</pre>`,
-      width: 800,
-      confirmButtonText: "Close",
-    });
-
-    this.log("Viewed storage data");
   },
 
-  exportStorage() {
-    const data = {};
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i);
-      data[key] = localStorage.getItem(key);
+  async validateRelationships() {
+    try {
+      const validation = MockDataGenerator.validateRelationships();
+
+      const statusIcon = validation.isValid
+        ? '<i class="fas fa-check-circle text-green-500"></i>'
+        : '<i class="fas fa-exclamation-triangle text-yellow-500"></i>';
+
+      const html = `
+        <div class="text-left">
+          <div class="flex items-center gap-2 mb-4 pb-4 border-b">
+            ${statusIcon}
+            <h3 class="font-bold text-lg">
+              ${
+                validation.isValid
+                  ? "All relationships are valid!"
+                  : "Some issues found"
+              }
+            </h3>
+          </div>
+          <div class="space-y-3">
+            <div class="bg-gray-50 p-3 rounded">
+              <div class="text-sm font-semibold mb-2">Overview</div>
+              <div class="text-xs space-y-1">
+                <div>Total Bookings: <span class="font-mono">${
+                  validation.totalBookings
+                }</span></div>
+                <div>Valid Bookings: <span class="font-mono text-green-600">${
+                  validation.validBookings
+                }</span></div>
+                <div>Integrity Score: <span class="font-mono font-bold text-${
+                  validation.integrityScore === "100.00" ? "green" : "yellow"
+                }-600">${validation.integrityScore}%</span></div>
+              </div>
+            </div>
+            ${
+              validation.invalidPerformanceLinks > 0 ||
+              validation.invalidUserLinks > 0
+                ? `
+            <div class="bg-red-50 p-3 rounded">
+              <div class="text-sm font-semibold text-red-700 mb-2">Issues Found</div>
+              <div class="text-xs space-y-1 text-red-600">
+                ${
+                  validation.invalidPerformanceLinks > 0
+                    ? `<div>Invalid Performance Links: ${validation.invalidPerformanceLinks}</div>`
+                    : ""
+                }
+                ${
+                  validation.invalidUserLinks > 0
+                    ? `<div>Invalid User Links: ${validation.invalidUserLinks}</div>`
+                    : ""
+                }
+              </div>
+            </div>
+            `
+                : ""
+            }
+          </div>
+        </div>
+      `;
+
+      await Swal.fire({
+        title: "Data Validation Results",
+        html,
+        icon: validation.isValid ? "success" : "warning",
+        confirmButtonText: "Close",
+        customClass: {
+          title: "text-left",
+          htmlContainer: "text-left",
+        },
+      });
+
+      this.logger.log(
+        `Validation: ${validation.validBookings}/${validation.totalBookings} valid (${validation.integrityScore}%)`,
+        validation.isValid ? "success" : "warn"
+      );
+    } catch (error) {
+      this.logger.log(`Validation failed: ${error.message}`, "error");
+      notify.error("Validation failed");
     }
+  },
 
-    const blob = new Blob([JSON.stringify(data, null, 2)], {
-      type: "application/json",
+  async viewRelationshipStats() {
+    try {
+      const stats = MockDataGenerator.getRelationshipStats();
+      const allPerformances = storage.getItem("performances", []);
+      const perfStatusCounts =
+        MockDataGenerator.countPerformancesByStatus(allPerformances);
+
+      const html = `
+        <div class="text-left space-y-4">
+          <div class="bg-blue-50 p-4 rounded-lg">
+            <div class="flex items-center gap-2 mb-3">
+              <i class="fas fa-users text-blue-600"></i>
+              <h3 class="font-bold">Users</h3>
+            </div>
+            <div class="text-sm space-y-1">
+              <div>Total: <span class="font-mono font-bold">${
+                stats.users.total
+              }</span></div>
+              <div>With Bookings: <span class="font-mono text-green-600">${
+                stats.users.withBookings
+              }</span></div>
+              <div>Without Bookings: <span class="font-mono text-gray-500">${
+                stats.users.withoutBookings
+              }</span></div>
+              <div>Avg Bookings/User: <span class="font-mono">${
+                stats.users.averageBookingsPerUser
+              }</span></div>
+            </div>
+          </div>
+
+          <div class="bg-purple-50 p-4 rounded-lg">
+            <div class="flex items-center gap-2 mb-3">
+              <i class="fas fa-music text-purple-600"></i>
+              <h3 class="font-bold">Performances</h3>
+            </div>
+            <div class="text-sm space-y-1">
+              <div>Total: <span class="font-mono font-bold">${
+                stats.performances.total
+              }</span></div>
+              <div>With Bookings: <span class="font-mono text-green-600">${
+                stats.performances.withBookings
+              }</span></div>
+              <div>Without Bookings: <span class="font-mono text-gray-500">${
+                stats.performances.withoutBookings
+              }</span></div>
+              <div>Avg Bookings/Performance: <span class="font-mono">${
+                stats.performances.averageBookingsPerPerformance
+              }</span></div>
+            </div>
+            <div class="mt-3 pt-3 border-t border-purple-200">
+              <div class="text-xs font-semibold mb-2">By Status:</div>
+              <div class="text-xs space-y-1">
+                <div><span class="inline-block w-24">Available:</span> <span class="font-mono text-green-600">${
+                  perfStatusCounts.available || 0
+                }</span></div>
+                <div><span class="inline-block w-24">Limited:</span> <span class="font-mono text-yellow-600">${
+                  perfStatusCounts.limited || 0
+                }</span></div>
+                <div><span class="inline-block w-24">Sold Out:</span> <span class="font-mono text-red-600">${
+                  perfStatusCounts.sold_out || 0
+                }</span></div>
+                <div><span class="inline-block w-24">Completed:</span> <span class="font-mono text-gray-600">${
+                  perfStatusCounts.completed || 0
+                }</span></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="bg-orange-50 p-4 rounded-lg">
+            <div class="flex items-center gap-2 mb-3">
+              <i class="fas fa-ticket-alt text-orange-600"></i>
+              <h3 class="font-bold">Bookings</h3>
+            </div>
+            <div class="text-sm space-y-1">
+              <div>Total: <span class="font-mono font-bold">${
+                stats.bookings.total
+              }</span></div>
+            </div>
+          </div>
+        </div>
+      `;
+
+      await Swal.fire({
+        title: "Relationship Statistics",
+        html,
+        width: 600,
+        confirmButtonText: "Close",
+        customClass: {
+          title: "text-left",
+          htmlContainer: "text-left",
+        },
+      });
+
+      this.logger.log("Viewed relationship statistics");
+    } catch (error) {
+      this.logger.log(`Failed to view stats: ${error.message}`, "error");
+      notify.error("Failed to view stats");
+    }
+  },
+
+  async viewStorage(rawMode = false) {
+    const data = rawMode
+      ? StorageManager.getAllData()
+      : StorageManager.getProcessedData();
+    const title = rawMode
+      ? "Raw LocalStorage Data"
+      : "Processed LocalStorage Data";
+
+    const html = rawMode
+      ? StorageViewer.renderRawView(data)
+      : StorageViewer.renderProcessedView(data);
+
+    await Swal.fire({
+      title,
+      html,
+      width: 1000,
+      confirmButtonText: "Close",
+      showCloseButton: true,
+      customClass: {
+        popup: "storage-viewer-popup",
+        htmlContainer: "storage-viewer-container",
+        title: "storage-viewer-title",
+      },
+      didOpen: () => {
+        StorageViewer.attachEvents();
+        $(".storage-viewer-title").css("text-align", "left");
+        $(".storage-viewer-container").css("text-align", "left");
+      },
     });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `wom-storage-${dayjs().format("YYYY-MM-DD-HHmmss")}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
 
-    this.log("Exported storage data", "success");
-    notify.success("Storage exported successfully!");
+    this.logger.log(`Viewed storage data (${rawMode ? "raw" : "processed"})`);
+  },
+
+  formatProcessedData(data) {
+    const formatted = {};
+    Object.entries(data).forEach(([key, item]) => {
+      const entry = {
+        value: item.value,
+        storageType: item.metadata.type,
+      };
+
+      if (item.metadata.original) {
+        entry.wasEncryptedOrCompressed = item.metadata.original;
+      }
+
+      if (item.metadata.type === "json-processed") {
+        entry.note =
+          "Nested encrypted/compressed data was automatically processed";
+      }
+
+      formatted[key] = entry;
+    });
+    return JSON.stringify(formatted, null, 2);
+  },
+
+  async analyzeStorage() {
+    const analysis = StorageManager.analyzeStorage();
+
+    const itemsTable = analysis.items
+      .sort((a, b) => b.size - a.size)
+      .slice(0, 10)
+      .map(
+        (item, index) => `
+        <tr class="border-b border-gray-700">
+          <td class="py-2 pr-4 text-gray-400">${index + 1}</td>
+          <td class="py-2 pr-4 text-blue-400">${item.key}</td>
+          <td class="py-2 pr-4 text-center">
+            <span class="px-2 py-1 text-xs rounded ${this.getTypeColor(
+              item.type
+            )}">${item.type}</span>
+          </td>
+          <td class="py-2 text-right text-green-400">${item.sizeKB} KB</td>
+        </tr>
+      `
+      )
+      .join("");
+
+    await Swal.fire({
+      title: "Storage Analysis",
+      html: `
+        <div class="bg-gray-900 text-green-400 p-4 rounded-lg text-left">
+          <div class="mb-4 pb-4 border-b border-gray-700">
+            <h3 class="text-yellow-400 font-bold mb-2">Summary</h3>
+            <div class="grid grid-cols-2 gap-2 text-sm">
+              <div>Total Items: <span class="text-white">${analysis.total}</span></div>
+              <div>Total Size: <span class="text-white">${analysis.totalSizeKB} KB</span></div>
+              <div>JSON: <span class="text-blue-400">${analysis.byType.json}</span></div>
+              <div>Encrypted: <span class="text-orange-400">${analysis.byType.encrypted}</span></div>
+              <div>Compressed: <span class="text-green-400">${analysis.byType.compressed}</span></div>
+              <div>Raw: <span class="text-gray-400">${analysis.byType.raw}</span></div>
+            </div>
+          </div>
+
+          <div>
+            <h3 class="text-yellow-400 font-bold mb-2">Top 10 Largest Items</h3>
+            <table class="w-full text-xs">
+              <thead class="text-left text-gray-500">
+                <tr>
+                  <th class="pb-2">#</th>
+                  <th class="pb-2">Key</th>
+                  <th class="pb-2 text-center">Type</th>
+                  <th class="pb-2 text-right">Size</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${itemsTable}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      `,
+      width: 800,
+      confirmButtonText: "Close",
+      showCloseButton: true,
+      customClass: {
+        title: "text-left",
+        htmlContainer: "text-left",
+      },
+    });
+
+    this.logger.log("Analyzed storage");
+  },
+
+  getTypeColor(type) {
+    const colors = {
+      json: "bg-blue-900 text-blue-300",
+      encrypted: "bg-orange-900 text-orange-300",
+      compressed: "bg-green-900 text-green-300",
+      raw: "bg-gray-700 text-gray-300",
+    };
+    return colors[type] || colors.raw;
+  },
+
+  exportStorage(processed = false) {
+    StorageManager.exportToFile(processed);
+    const type = processed ? "processed (decrypted/decompressed)" : "raw";
+    this.logger.log(`Exported ${type} storage data`, "success");
+    notify.success(
+      processed
+        ? "Processed storage exported (decrypted/decompressed)!"
+        : "Raw storage exported successfully!"
+    );
   },
 
   async importStorage() {
@@ -548,22 +989,15 @@ export default {
     });
 
     if (file) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        try {
-          const data = JSON.parse(e.target.result);
-          Object.keys(data).forEach((key) => {
-            localStorage.setItem(key, data[key]);
-          });
-          this.log("Imported storage data", "success");
-          notify.success("Storage imported successfully!");
-          this.updateStats();
-        } catch (error) {
-          this.log(`Import error: ${error.message}`, "error");
-          notify.error("Failed to import storage data");
-        }
-      };
-      reader.readAsText(file);
+      try {
+        await StorageManager.importFromFile(file);
+        this.logger.log("Imported storage data", "success");
+        notify.success("Storage imported successfully!");
+        this.updateStats();
+      } catch (error) {
+        this.logger.log(`Import error: ${error.message}`, "error");
+        notify.error("Failed to import storage data");
+      }
     }
   },
 
@@ -579,41 +1013,36 @@ export default {
     });
 
     if (result.isConfirmed) {
-      localStorage.clear();
-      this.log("Cleared all storage", "warn");
+      StorageManager.clearAll();
+      this.logger.log("Cleared all storage", "warn");
       notify.success("Storage cleared!");
       this.updateStats();
     }
   },
 
   async createTestUsers() {
-    const { generateMockUsers } = await import("/src/data/mockUsers.js");
-
     try {
-      const mockUsers = await generateMockUsers();
-      const existingUsers = storage.getItem("registeredUsers", []);
+      const result = await MockDataGenerator.generateUsers();
 
-      const newUsers = mockUsers.filter(
-        (mu) => !existingUsers.some((eu) => eu.id === mu.id)
-      );
-
-      if (newUsers.length > 0) {
-        storage.setItem("registeredUsers", [...existingUsers, ...newUsers]);
-        this.log(
-          `Created ${newUsers.length} test users with proper password hashing`,
-          "success"
+      if (result.success) {
+        this.logger.log(
+          result.message,
+          result.created > 0 ? "success" : "warn"
         );
-        notify.success(
-          `Created ${newUsers.length} test users\nPasswords: admin=adminpass, user=userpass, others=test123`
+        const passwordInfo = result.details?.defaultPasswords
+          ? `\nPasswords: admin=${result.details.defaultPasswords.admin}, user=${result.details.defaultPasswords.user}, others=${result.details.defaultPasswords.others}`
+          : "";
+        notify[result.created > 0 ? "success" : "info"](
+          result.message + passwordInfo
         );
       } else {
-        this.log("Test users already exist", "warn");
-        notify.info("Test users already exist");
+        this.logger.log(result.message, "error");
+        notify.error(result.message);
       }
 
       this.updateStats();
     } catch (error) {
-      this.log(`Error creating test users: ${error.message}`, "error");
+      this.logger.log(`Error creating test users: ${error.message}`, "error");
       notify.error("Failed to create test users");
     }
   },
@@ -626,7 +1055,7 @@ export default {
       role: "admin",
     };
     storage.setUser(admin);
-    this.log("Logged in as admin", "success");
+    this.logger.log("Logged in as admin", "success");
     notify.success("Logged in as admin");
     window.location.href = "/admin/dashboard";
   },
@@ -642,28 +1071,39 @@ export default {
         email: testUser.email,
         role: testUser.role,
       });
-      this.log(`Logged in as ${testUser.name}`, "success");
+      this.logger.log(`Logged in as ${testUser.name}`, "success");
       notify.success(`Logged in as ${testUser.name}`);
       window.location.href = "/user/dashboard";
     } else {
-      this.log("No test user found", "error");
+      this.logger.log("No test user found", "error");
       notify.error("No test user found. Create test users first.");
     }
   },
 
   logoutUser() {
     storage.clearUser();
-    this.log("Logged out", "info");
+    this.logger.log("Logged out", "info");
     notify.success("Logged out successfully");
     window.location.href = "/";
   },
 
   createMockPerformances() {
-    const performances = statsService.getPerformances();
-    storage.setItem("performances", performances);
-    this.log(`Created ${performances.length} mock performances`, "success");
-    notify.success(`${performances.length} performances generated`);
-    this.updateStats();
+    try {
+      const result = MockDataGenerator.generatePerformances();
+
+      if (result.success) {
+        this.logger.log(result.message, "success");
+        notify.success(result.message);
+      } else {
+        this.logger.log(result.message, "error");
+        notify.error(result.message);
+      }
+
+      this.updateStats();
+    } catch (error) {
+      this.logger.log(`Error creating performances: ${error.message}`, "error");
+      notify.error("Failed to create performances");
+    }
   },
 
   async viewPerformances() {
@@ -677,44 +1117,47 @@ export default {
       )}</pre>`,
       width: 800,
       confirmButtonText: "Close",
+      customClass: {
+        title: "text-left",
+        htmlContainer: "text-left",
+      },
     });
-    this.log("Viewed performances data");
+    this.logger.log("Viewed performances data");
   },
 
   clearPerformances() {
-    storage.setItem("performances", []);
-    this.log("Cleared all performances", "warn");
-    notify.success("Performances cleared");
+    const result = MockDataGenerator.clearPerformances();
+    this.logger.log(result.message, result.success ? "warn" : "error");
+    notify[result.success ? "success" : "error"](result.message);
     this.updateStats();
   },
 
   async resetTicketTypes() {
     ticketTypeService.reset();
-    this.log("Reset ticket types to defaults", "success");
+    this.logger.log("Reset ticket types to defaults", "success");
     notify.success("Ticket types reset to defaults");
   },
 
   createMockBookings() {
-    const existingBookings = storage.getItem("bookings", []);
-    const newBookings = MOCK_BOOKINGS.filter(
-      (mb) => !existingBookings.some((eb) => eb.id === mb.id)
-    );
+    try {
+      const result = MockDataGenerator.generateBookings();
 
-    if (newBookings.length > 0) {
-      storage.setItem("bookings", [...existingBookings, ...newBookings]);
-      this.log(
-        `Created ${newBookings.length} mock bookings with proper data structure`,
-        "success"
-      );
-      notify.success(
-        `${newBookings.length} bookings generated with seats, amounts, and status`
-      );
-    } else {
-      this.log("Mock bookings already exist", "warn");
-      notify.info("Mock bookings already exist");
+      if (result.success) {
+        this.logger.log(
+          result.message,
+          result.created > 0 ? "success" : "warn"
+        );
+        notify[result.created > 0 ? "success" : "info"](result.message);
+      } else {
+        this.logger.log(result.message, "error");
+        notify.error(result.message);
+      }
+
+      this.updateStats();
+    } catch (error) {
+      this.logger.log(`Error creating bookings: ${error.message}`, "error");
+      notify.error("Failed to create bookings");
     }
-
-    this.updateStats();
   },
 
   async viewBookings() {
@@ -740,61 +1183,30 @@ export default {
       )}</pre>`,
       width: 800,
       confirmButtonText: "Close",
+      customClass: {
+        title: "text-left",
+        htmlContainer: "text-left",
+      },
     });
-    this.log("Viewed bookings data");
+    this.logger.log("Viewed bookings data");
   },
 
   clearBookings() {
-    storage.setItem("bookings", []);
-    this.log("Cleared all bookings", "warn");
-    notify.success("Bookings cleared");
+    const result = MockDataGenerator.clearBookings();
+    this.logger.log(result.message, result.success ? "warn" : "error");
+    notify[result.success ? "success" : "error"](result.message);
     this.updateStats();
   },
 
   exportBookings() {
     const bookings = storage.getItem("bookings", []);
-    const csv = [
-      [
-        "Booking ID",
-        "Performance",
-        "User",
-        "Seats",
-        "Amount",
-        "Status",
-        "Date",
-      ],
-      ...bookings.map((b) => {
-        const formatted = formatBookingForDisplay(b);
-        return [
-          b.id,
-          formatted.performanceTitle,
-          formatted.userName,
-          formatSeatsDisplay(b.seats),
-          b.amount || 0,
-          getBookingStatusLabel(b.status),
-          dayjs(b.bookingDate || b.date).format("YYYY-MM-DD HH:mm"),
-        ];
-      }),
-    ]
-      .map((row) => row.join(","))
-      .join("\n");
-
-    const blob = new Blob([csv], { type: "text/csv" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `bookings-${dayjs().format("YYYY-MM-DD")}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
-
-    this.log("Exported bookings to CSV", "success");
+    DataExporter.exportBookingsToCSV(bookings);
+    this.logger.log("Exported bookings to CSV", "success");
     notify.success("Bookings exported!");
   },
 
   clearConsole() {
-    $("#debugConsole").html(
-      '<div class="text-gray-500">Console cleared...</div>'
-    );
+    this.logger.clear();
   },
 
   testNotifications() {
@@ -802,7 +1214,7 @@ export default {
     setTimeout(() => notify.info("Info notification!"), 500);
     setTimeout(() => notify.warning("Warning notification!"), 1000);
     setTimeout(() => notify.error("Error notification!"), 1500);
-    this.log("Tested all notification types", "info");
+    this.logger.log("Tested all notification types", "info");
   },
 
   async testModals() {
@@ -826,45 +1238,16 @@ export default {
       await Swal.fire("Success!", "Action confirmed", "success");
     }
 
-    this.log("Tested modal dialogs", "info");
+    this.logger.log("Tested modal dialogs", "info");
   },
 
   async viewUtilsStructure() {
-    const structure = {
-      core: ["api.js", "auth.js", "crypto.js", "navigation.js", "state.js"],
-      ui: [
-        "animations.js",
-        "contextMenu.js",
-        "dialogUtils.js",
-        "dom.js",
-        "dragDrop.js",
-        "keyboard.js",
-        "modal.js",
-        "notification.js",
-        "touchGestures.js",
-        "uiPatterns.js",
-      ],
-      data: ["filters.js", "table.js", "tableUtils.js", "validation.js"],
-      forms: ["form.js", "formValidator.js", "phoneFormat.js"],
-      booking: [
-        "heatMap.js",
-        "pricing.js",
-        "seatMapGenerator.js",
-        "seatUtils.js",
-        "showtimeManager.js",
-      ],
-      reports: ["invoiceGenerator.js", "reporting.js", "ticketGenerator.js"],
-      root: [
-        "index.js",
-        "initApp.js",
-        "performance.js",
-        "seo.js",
-        "status.js",
-        "utils.js",
-      ],
-    };
+    const totalFiles = Object.values(UTILS_STRUCTURE).reduce(
+      (sum, files) => sum + files.length,
+      0
+    );
 
-    const html = Object.entries(structure)
+    const html = Object.entries(UTILS_STRUCTURE)
       .map(
         ([category, files]) => `
       <div class="mb-3">
@@ -885,14 +1268,20 @@ export default {
         <div class="text-left bg-gray-900 text-green-400 p-4 rounded-lg overflow-auto max-h-96 font-mono text-xs">
           <div class="text-yellow-400 mb-3">frontend/src/utils/</div>
           ${html}
-          <div class="mt-3 text-blue-400">Total: 36 utility files in 6 categories</div>
+          <div class="mt-3 text-blue-400">Total: ${totalFiles} utility files in ${
+        Object.keys(UTILS_STRUCTURE).length
+      } categories</div>
         </div>
       `,
       width: 700,
       confirmButtonText: "Close",
+      customClass: {
+        title: "text-left",
+        htmlContainer: "text-left",
+      },
     });
 
-    this.log("Viewed utils structure");
+    this.logger.log("Viewed utils structure");
   },
 
   async viewRoutes() {
@@ -944,146 +1333,160 @@ export default {
       html: `<div class="text-left bg-gray-900 p-4 rounded-lg overflow-auto max-h-96">${html}</div>`,
       width: 900,
       confirmButtonText: "Close",
+      customClass: {
+        title: "text-left",
+        htmlContainer: "text-left",
+      },
     });
 
-    this.log("Viewed routes configuration");
+    this.logger.log("Viewed routes configuration");
   },
 
   async viewDocs() {
-    const docs = [
-      {
-        title: "Project Structure",
-        file: "PROJECT_STRUCTURE.md",
-        desc: "Complete architecture guide",
-      },
-      {
-        title: "Contributing",
-        file: "CONTRIBUTING.md",
-        desc: "Development guidelines",
-      },
-      {
-        title: "Utils Organization",
-        file: "UTILS_ORGANIZATION.md",
-        desc: "Utilities guide",
-      },
-      {
-        title: "Quick Start",
-        file: "QUICK_START.md",
-        desc: "5-minute setup",
-      },
-      {
-        title: "Frontend README",
-        file: "frontend/README.md",
-        desc: "Frontend docs",
-      },
-    ];
-
-    const html = docs
-      .map(
-        (doc) => `
+    const html = DOCUMENTATION_LINKS.map(
+      (doc) => `
       <div class="bg-gray-800 p-3 rounded mb-2 text-left">
         <div class="text-green-400 font-bold">${doc.title}</div>
         <div class="text-xs text-gray-400">${doc.file}</div>
         <div class="text-xs text-gray-500">${doc.desc}</div>
       </div>
     `
-      )
-      .join("");
+    ).join("");
 
     await Swal.fire({
       title: "Documentation",
       html: `<div class="bg-gray-900 p-4 rounded-lg">${html}</div>`,
       width: 600,
       confirmButtonText: "Close",
+      customClass: {
+        title: "text-left",
+        htmlContainer: "text-left",
+      },
     });
 
-    this.log("Viewed documentation index");
+    this.logger.log("Viewed documentation index");
   },
 
   async checkHealth() {
-    const checks = [
-      { name: "Storage", status: localStorage.length > 0 },
-      { name: "Routes", status: Object.keys(ROUTES).length > 0 },
-      { name: "Utils", status: true },
-      { name: "Services", status: typeof storage !== "undefined" },
-      { name: "Components", status: typeof FormComponents !== "undefined" },
-    ];
+    let backendInfo = null;
+    let backendStatus = false;
 
-    const html = checks
-      .map(
-        (check) => `
-      <div class="flex justify-between items-center p-2 bg-gray-800 rounded mb-2">
-        <span class="text-gray-300">${check.name}</span>
-        <span class="${check.status ? "text-green-400" : "text-red-400"}">
-          ${check.status ? "✓ OK" : "✗ FAIL"}
-        </span>
+    try {
+      const response = await fetch(`${APP_CONFIG.apiBaseUrl}/health`);
+      if (response.ok) {
+        backendInfo = await response.json();
+        backendStatus = true;
+      }
+    } catch (error) {
+      backendStatus = false;
+    }
+
+    const checks = HEALTH_CHECKS.map((check) => ({
+      name: check.name,
+      status: check.check(ROUTES, storage, FormComponents),
+    }));
+
+    const html = `
+      <div class="bg-gray-900 p-4 rounded-lg text-left">
+        <div class="mb-4 pb-4 border-b border-gray-700">
+          <h3 class="text-yellow-400 font-bold mb-2">Version Information</h3>
+          <div class="text-sm space-y-2">
+            <div>Frontend Version: <span class="text-green-400">${
+              APP_CONFIG.version || "0.0.0"
+            }</span></div>
+            <div>Backend Version: <span class="${
+              backendInfo ? "text-green-400" : "text-red-400"
+            }">${backendInfo?.version || "Unknown"}</span></div>
+            <div>Backend Status: <span class="${
+              backendStatus ? "text-green-400" : "text-red-400"
+            }">${backendStatus ? "Connected ✓" : "Disconnected ✗"}</span></div>
+          </div>
+        </div>
+        
+        <h3 class="text-yellow-400 font-bold mb-2">System Health Checks</h3>
+        ${checks
+          .map(
+            (check) => `
+          <div class="flex justify-between items-center p-2 bg-gray-800 rounded mb-2">
+            <span class="text-gray-300">${check.name}</span>
+            <span class="${check.status ? "text-green-400" : "text-red-400"}">
+              ${check.status ? "✓ OK" : "✗ FAIL"}
+            </span>
+          </div>
+        `
+          )
+          .join("")}
       </div>
-    `
-      )
-      .join("");
+    `;
 
     await Swal.fire({
       title: "System Health Check",
-      html: `<div class="bg-gray-900 p-4 rounded-lg text-left">${html}</div>`,
-      icon: "success",
+      html,
+      width: 600,
       confirmButtonText: "Close",
+      customClass: {
+        title: "text-left",
+        htmlContainer: "text-left",
+      },
     });
 
-    this.log("System health check completed", "success");
+    this.logger.log("System health check completed", "success");
   },
 
-  clearCache() {
-    if ("caches" in window) {
-      caches.keys().then((names) => {
-        names.forEach((name) => caches.delete(name));
-      });
-      this.log("Browser cache cleared", "success");
-      notify.success("Cache cleared");
-    } else {
-      this.log("Cache API not available", "warn");
-      notify.warning("Cache API not supported");
+  async clearCache() {
+    try {
+      const success = await PerformanceTester.clearCache();
+      if (success) {
+        this.logger.log("Browser cache cleared", "success");
+        notify.success("Cache cleared");
+      } else {
+        this.logger.log("Cache API not available", "warn");
+        notify.warning("Cache API not supported");
+      }
+    } catch (error) {
+      this.logger.log(`Cache error: ${error.message}`, "error");
+      notify.error("Failed to clear cache");
     }
   },
 
   async testPerformance() {
-    this.log("Running performance test...", "info");
+    this.logger.log("Running performance test...", "info");
 
-    const start = performance.now();
-    const iterations = 10000;
-
-    for (let i = 0; i < iterations; i++) {
-      const data = { id: i, value: Math.random() };
-      JSON.stringify(data);
-    }
-
-    const end = performance.now();
-    const duration = (end - start).toFixed(2);
+    const results = await PerformanceTester.runTest();
 
     await Swal.fire({
       title: "Performance Test Results",
       html: `
         <div class="bg-gray-900 text-green-400 p-4 rounded-lg font-mono text-sm">
-          <div>Iterations: ${iterations.toLocaleString()}</div>
-          <div>Duration: ${duration}ms</div>
-          <div>Avg: ${(duration / iterations).toFixed(4)}ms/op</div>
+          <div>Iterations: ${results.iterations.toLocaleString()}</div>
+          <div>Duration: ${results.duration}ms</div>
+          <div>Avg: ${results.average}ms/op</div>
         </div>
       `,
       icon: "info",
+      customClass: {
+        title: "text-left",
+        htmlContainer: "text-left",
+      },
     });
 
-    this.log(
-      `Performance test: ${duration}ms for ${iterations} ops`,
+    this.logger.log(
+      `Performance test: ${results.duration}ms for ${results.iterations} ops`,
       "success"
     );
   },
 
   async viewLogs() {
-    const logs = $("#debugConsole").html();
+    const logs = this.logger.getAllLogs();
     await Swal.fire({
       title: "Debug Logs",
       html: `<div class="bg-gray-900 text-green-400 p-4 rounded-lg overflow-auto max-h-96 font-mono text-xs text-left">${logs}</div>`,
       width: 800,
       confirmButtonText: "Close",
+      customClass: {
+        title: "text-left",
+        htmlContainer: "text-left",
+      },
     });
   },
 };

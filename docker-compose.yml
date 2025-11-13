@@ -5,39 +5,44 @@ services:
     image: postgres:15-alpine
     container_name: orchestral_db
     restart: unless-stopped
+    env_file:
+      - .env
     environment:
-      POSTGRES_DB: western_orchestral_db
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: ${DB_NAME:-wom_booking}
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
     ports:
-      - "5432:5432"
+      - "${DB_PORT:-5432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres}"]
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - orchestral_network
 
   backend:
     build:
       context: ./backend
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.dev
     container_name: orchestral_backend
     restart: unless-stopped
+    env_file:
+      - .env
     ports:
-      - "3000:3000"
+      - "${PORT:-3000}:3000"
     environment:
-      NODE_ENV: development
-      PORT: 3000
+      NODE_ENV: ${NODE_ENV:-development}
+      PORT: ${PORT:-3000}
       DB_HOST: postgres
-      DB_PORT: 5432
-      DB_NAME: western_orchestral_db
-      DB_USER: postgres
-      DB_PASSWORD: postgres
-      JWT_SECRET: your-jwt-secret-key-change-this-in-production
-      JWT_EXPIRES_IN: 7d
-      CORS_ORIGIN: http://localhost:5173
+      DB_PORT: ${DB_PORT:-5432}
+      DB_NAME: ${DB_NAME:-wom_booking}
+      DB_USER: ${DB_USER:-postgres}
+      DB_PASSWORD: ${DB_PASSWORD:-postgres}
+      SESSION_SECRET: ${SESSION_SECRET:-dev-secret-change-in-production-12345678}
+      CORS_ORIGIN: ${CORS_ORIGIN}
     depends_on:
       postgres:
         condition: service_healthy
@@ -45,6 +50,22 @@ services:
       - ./backend:/app
       - /app/node_modules
     command: npm run dev
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "wget",
+          "--no-verbose",
+          "--tries=1",
+          "--spider",
+          "http://localhost:3000/api",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - orchestral_network
 
   frontend:
     build:
@@ -52,21 +73,61 @@ services:
       dockerfile: Dockerfile
     container_name: orchestral_frontend
     restart: unless-stopped
+    env_file:
+      - .env
     ports:
-      - "5173:5173"
+      - "${FRONTEND_PORT:-5173}:5173"
     environment:
-      VITE_API_URL: http://localhost:3000/api
+      VITE_API_URL: ${VITE_API_URL:-http://backend:3000/api}
+      VITE_BACKEND_URL: http://backend:3000
     volumes:
       - ./frontend:/app
-      - /app/node_modules
-    command: npm run dev
+    command: sh -c "rm -rf node_modules package-lock.json && npm install && npm run dev -- --host 0.0.0.0"
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
+    networks:
+      - orchestral_network
+
+  phppgadmin:
+    image: dockage/phppgadmin:latest
+    container_name: orchestral_phppgadmin
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      - PHP_PG_ADMIN_SERVER_DESC=${PHP_PG_ADMIN_SERVER_DESC:-PostgreSQL}
+      - PHP_PG_ADMIN_SERVER_HOST=${PHP_PG_ADMIN_SERVER_HOST:-postgres}
+      - PHP_PG_ADMIN_SERVER_PORT=${PHP_PG_ADMIN_SERVER_PORT:-5432}
+      - PHP_PG_ADMIN_SERVER_SSL_MODE=${PHP_PG_ADMIN_SERVER_SSL_MODE:-allow}
+      - PHP_PG_ADMIN_SERVER_DEFAULT_DB=${PHP_PG_ADMIN_SERVER_DEFAULT_DB:-template1}
+      - PHP_PG_ADMIN_DEFAULT_LANG=${PHP_PG_ADMIN_DEFAULT_LANG:-auto}
+      - PHP_PG_ADMIN_AUTO_COMPLETE=${PHP_PG_ADMIN_AUTO_COMPLETE:-default on}
+      - PHP_PG_ADMIN_EXTRA_LOGIN_SECURITY=${PHP_PG_ADMIN_EXTRA_LOGIN_SECURITY:-false}
+      - PHP_PG_ADMIN_OWNED_ONLY=${PHP_PG_ADMIN_OWNED_ONLY:-false}
+      - PHP_PG_ADMIN_SHOW_COMMENTS=${PHP_PG_ADMIN_SHOW_COMMENTS:-true}
+      - PHP_PG_ADMIN_SHOW_ADVANCED=${PHP_PG_ADMIN_SHOW_ADVANCED:-false}
+      - PHP_PG_ADMIN_SHOW_SYSTEM=${PHP_PG_ADMIN_SHOW_SYSTEM:-false}
+      - PHP_PG_ADMIN_MIN_PASSWORD_LENGTH=${PHP_PG_ADMIN_MIN_PASSWORD_LENGTH:-1}
+      - PHP_PG_ADMIN_LEFT_WIDTH=${PHP_PG_ADMIN_LEFT_WIDTH:-200}
+      - PHP_PG_ADMIN_THEME=${PHP_PG_ADMIN_THEME:-default}
+      - PHP_PG_ADMIN_SHOW_OIDS=${PHP_PG_ADMIN_SHOW_OIDS:-false}
+      - PHP_PG_ADMIN_MAX_ROWS=${PHP_PG_ADMIN_MAX_ROWS:-30}
+      - PHP_PG_ADMIN_MAX_CHARS=${PHP_PG_ADMIN_MAX_CHARS:-50}
+      - PHP_PG_ADMIN_USE_XHTML_STRICT=${PHP_PG_ADMIN_USE_XHTML_STRICT:-false}
+      - PHP_PG_ADMIN_HELP_BASE=${PHP_PG_ADMIN_HELP_BASE:-http://www.postgresql.org/docs/%s/}
+      - PHP_PG_ADMIN_AJAX_REFRESH=${PHP_PG_ADMIN_AJAX_REFRESH:-3}
+    ports:
+      - "${PHPPGADMIN_PORT:-5050}:80"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - orchestral_network
+
+networks:
+  orchestral_network:
+    driver: bridge
 
 volumes:
   postgres_data:
-
-
-
-
-

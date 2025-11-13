@@ -1,8 +1,9 @@
 import { notify } from "/src/utils/ui/notification.js";
 import { navigate } from "/src/utils/core/navigation.js";
 import { formValidator } from "/src/utils/forms/formValidator.js";
-import { userService } from "/src/services/userService.js";
 import { phoneUtils } from "/src/utils/forms/phoneFormat.js";
+import { authAPI, handleApiError } from "/src/services/apiClient.js";
+import { setUser } from "/src/utils/core/auth.js";
 import {
   createImageUpload,
   initImageUpload,
@@ -109,9 +110,17 @@ export default {
                       type="password"
                       required
                       autocomplete="new-password"
-                      class="w-full pl-11 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all text-gray-900 placeholder-gray-400"
+                      class="w-full pl-11 pr-12 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all text-gray-900 placeholder-gray-400"
                       placeholder="••••••••"
                     />
+                    <button
+                      type="button"
+                      id="togglePassword"
+                      class="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-400 hover:text-gray-600 focus:outline-none transition-colors"
+                      title="Toggle password visibility"
+                    >
+                      <i class="fas fa-eye" id="togglePasswordIcon"></i>
+                    </button>
                   </div>
                   <p class="mt-1.5 text-xs text-gray-500">At least 8 characters, include uppercase, lowercase, and number</p>
                 </div>
@@ -130,9 +139,17 @@ export default {
                       type="password"
                       required
                       autocomplete="new-password"
-                      class="w-full pl-11 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all text-gray-900 placeholder-gray-400"
+                      class="w-full pl-11 pr-12 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all text-gray-900 placeholder-gray-400"
                       placeholder="••••••••"
                     />
+                    <button
+                      type="button"
+                      id="toggleConfirmPassword"
+                      class="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-400 hover:text-gray-600 focus:outline-none transition-colors"
+                      title="Toggle password visibility"
+                    >
+                      <i class="fas fa-eye" id="toggleConfirmPasswordIcon"></i>
+                    </button>
                   </div>
                 </div>
 
@@ -305,6 +322,31 @@ export default {
     });
 
     $("#registerForm").on("submit", (e) => this.handleRegister(e));
+
+    // Toggle password visibility
+    $("#togglePassword").on("click", () =>
+      this.togglePasswordVisibility("password", "togglePasswordIcon")
+    );
+    $("#toggleConfirmPassword").on("click", () =>
+      this.togglePasswordVisibility(
+        "confirmPassword",
+        "toggleConfirmPasswordIcon"
+      )
+    );
+  },
+
+  togglePasswordVisibility(inputId, iconId) {
+    const passwordInput = $(`#${inputId}`);
+    const toggleIcon = $(`#${iconId}`);
+    const currentType = passwordInput.attr("type");
+
+    if (currentType === "password") {
+      passwordInput.attr("type", "text");
+      toggleIcon.removeClass("fa-eye").addClass("fa-eye-slash");
+    } else {
+      passwordInput.attr("type", "password");
+      toggleIcon.removeClass("fa-eye-slash").addClass("fa-eye");
+    }
   },
 
   async handleRegister(e) {
@@ -334,16 +376,14 @@ export default {
       return;
     }
 
-    if (!userService.validateUsername(username)) {
-      notify.error(
-        "Username must be 3-20 characters, letters, numbers, underscore, or hyphen only"
-      );
+    if (username.length < 3 || username.length > 30) {
+      notify.error("Username must be 3-30 characters");
       return;
     }
 
-    if (userService.checkDuplicateUsername(username)) {
+    if (!/^[a-zA-Z0-9_-]+$/.test(username)) {
       notify.error(
-        "This username is already taken. Please choose another one."
+        "Username can only contain letters, numbers, underscore, or hyphen"
       );
       return;
     }
@@ -365,19 +405,15 @@ export default {
       return;
     }
 
-    if (userService.checkDuplicateEmail(email)) {
-      notify.error(
-        "This email is already registered. Please use another email or login."
-      );
-      return;
-    }
-
-    if (!userService.validateAge(birthday)) {
+    const birthDate = new Date(birthday);
+    const today = new Date();
+    const age = today.getFullYear() - birthDate.getFullYear();
+    if (age < 13) {
       notify.error("You must be at least 13 years old to register");
       return;
     }
 
-    if (phone && !userService.validatePhone(phone)) {
+    if (phone && (phone.length !== 8 || !/^[2-9]/.test(phone))) {
       notify.error(
         "Invalid Hong Kong phone number. Must be 8 digits starting with 2-9"
       );
@@ -409,27 +445,26 @@ export default {
         birthday,
         phone,
         profileImage: profileImageData,
+        role: "user",
+        status: "active",
       };
 
-      const result = await userService.registerUser(userData);
+      const response = await authAPI.register(userData);
 
-      if (result.success) {
-        notify.success(`Registration successful! Welcome to WOM, ${name}!`);
+      setUser(response.user);
 
-        setTimeout(() => {
-          navigate("/user/dashboard");
-        }, 1000);
-      } else {
-        $btn.prop("disabled", false).html(originalHTML);
-        notify.error(result.error || "Registration failed. Please try again.");
-      }
+      notify.success(`Registration successful! Welcome to WOM, ${name}!`);
+
+      setTimeout(() => {
+        navigate("/user/dashboard");
+      }, 1000);
     } catch (error) {
       console.error("Registration error:", error);
       $("#registerBtn").prop("disabled", false).html(`
         <i class="fas fa-user-plus"></i>
         <span>Create Account</span>
       `);
-      notify.error("Registration failed. Please try again.");
+      handleApiError(error, "Registration failed. Please try again.");
     }
   },
 };

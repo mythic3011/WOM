@@ -1,5 +1,6 @@
-import { venueService } from "/src/services/venueService.js";
+import { venueAPI } from "/src/services/apiClient.js";
 import { DEFAULT_VENUE_TEMPLATES } from "/src/data/defaultTemplates.js";
+import { ResponseExtractor } from "/src/services/responseExtractor.js";
 
 export class VenueModel {
   constructor() {
@@ -11,9 +12,28 @@ export class VenueModel {
 
   async loadVenues() {
     try {
-      this.venues = await venueService.search(this.searchQuery, {
-        status: this.filterStatus,
-      });
+      const response = await venueAPI.getAll();
+      const allVenues = ResponseExtractor.extract(response, "venues");
+
+      let filteredVenues = allVenues;
+
+      if (this.searchQuery) {
+        const query = this.searchQuery.toLowerCase();
+        filteredVenues = filteredVenues.filter(
+          (v) =>
+            v.name.toLowerCase().includes(query) ||
+            (v.address && v.address.toLowerCase().includes(query)) ||
+            (v.description && v.description.toLowerCase().includes(query))
+        );
+      }
+
+      if (this.filterStatus) {
+        filteredVenues = filteredVenues.filter(
+          (v) => v.status === this.filterStatus
+        );
+      }
+
+      this.venues = filteredVenues;
       return this.venues;
     } catch (error) {
       throw new Error(`Failed to load venues: ${error.message}`);
@@ -22,7 +42,8 @@ export class VenueModel {
 
   async getVenueById(venueId) {
     try {
-      this.currentVenue = await venueService.getById(venueId);
+      const response = await venueAPI.getById(venueId);
+      this.currentVenue = ResponseExtractor.extractSingle(response, "venue");
       return this.currentVenue;
     } catch (error) {
       throw new Error(`Failed to get venue: ${error.message}`);
@@ -31,7 +52,7 @@ export class VenueModel {
 
   async createVenue(venueData) {
     try {
-      const newVenue = await venueService.create(venueData);
+      const newVenue = await venueAPI.create(venueData);
       await this.loadVenues();
       return newVenue;
     } catch (error) {
@@ -41,7 +62,7 @@ export class VenueModel {
 
   async updateVenue(venueId, venueData) {
     try {
-      const updatedVenue = await venueService.update(venueId, venueData);
+      const updatedVenue = await venueAPI.update(venueId, venueData);
       await this.loadVenues();
       return updatedVenue;
     } catch (error) {
@@ -51,7 +72,7 @@ export class VenueModel {
 
   async deleteVenue(venueId) {
     try {
-      await venueService.delete(venueId);
+      await venueAPI.delete(venueId);
       await this.loadVenues();
       return true;
     } catch (error) {
@@ -61,7 +82,20 @@ export class VenueModel {
 
   async cloneVenue(venueId) {
     try {
-      const cloned = await venueService.clone(venueId);
+      const response = await venueAPI.getById(venueId);
+      const venue = ResponseExtractor.extractSingle(response, "venue");
+      if (!venue) throw new Error("Venue not found");
+
+      const clonedData = {
+        ...venue,
+        name: `${venue.name} (Copy)`,
+      };
+
+      delete clonedData.id;
+      delete clonedData.createdAt;
+      delete clonedData.updatedAt;
+
+      const cloned = await venueAPI.create(clonedData);
       await this.loadVenues();
       return cloned;
     } catch (error) {
@@ -71,7 +105,26 @@ export class VenueModel {
 
   async exportVenue(venueId) {
     try {
-      await venueService.exportVenue(venueId);
+      const response = await venueAPI.getById(venueId);
+      const venue = ResponseExtractor.extractSingle(response, "venue");
+      if (!venue) throw new Error("Venue not found");
+
+      const dataStr = JSON.stringify(venue, null, 2);
+      const dataBlob = new Blob([dataStr], { type: "application/json" });
+      const url = URL.createObjectURL(dataBlob);
+
+      const $link = $("<a>")
+        .attr("href", url)
+        .attr(
+          "download",
+          `venue-${venue.name.replace(/\s+/g, "-").toLowerCase()}.json`
+        )
+        .appendTo("body");
+
+      $link[0].click();
+      $link.remove();
+      URL.revokeObjectURL(url);
+
       return true;
     } catch (error) {
       throw new Error(`Failed to export venue: ${error.message}`);
@@ -80,7 +133,13 @@ export class VenueModel {
 
   async importVenue(fileContent) {
     try {
-      await venueService.importVenue(fileContent);
+      const venueData = JSON.parse(fileContent);
+
+      delete venueData.id;
+      delete venueData.createdAt;
+      delete venueData.updatedAt;
+
+      await venueAPI.create(venueData);
       await this.loadVenues();
       return true;
     } catch (error) {
@@ -93,7 +152,12 @@ export class VenueModel {
   }
 
   calculateCapacity(layout) {
-    return venueService.calculateCapacity(layout);
+    if (!layout || !layout.sections) return 0;
+
+    return layout.sections.reduce((total, section) => {
+      const sectionCapacity = (section.rows || 0) * (section.seatsPerRow || 0);
+      return total + sectionCapacity;
+    }, 0);
   }
 
   setSearchQuery(query) {
@@ -139,5 +203,3 @@ export class VenueModel {
     };
   }
 }
-
-

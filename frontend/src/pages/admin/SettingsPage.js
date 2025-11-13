@@ -1,9 +1,10 @@
-import { ticketTypeService } from "/src/services/ticketTypeService.js";
 import { notify } from "/src/utils/ui/notification.js";
 import { SwalColors } from "/src/utils/colors.js";
 import { SYSTEM_TICKET_TYPE_IDS } from "/src/data/mockData.js";
 import { createEmptyState } from "/src/components/EmptyState.js";
 import { FormComponents } from "/src/components/FormComponents.js";
+import { ResponseExtractor } from "/src/services/responseExtractor.js";
+import { ticketTypeAPI, handleApiError } from "/src/services/apiClient.js";
 import Swal from "sweetalert2";
 
 export default {
@@ -558,9 +559,17 @@ export default {
   },
 
   async loadTicketTypes() {
-    this.ticketTypes = await ticketTypeService.getAll();
-    this.renderTicketTypes();
-    $("#ticket-count-badge").text(this.ticketTypes.length);
+    try {
+      const response = await ticketTypeAPI.getAll();
+      this.ticketTypes = ResponseExtractor.extract(response, "ticketTypes");
+      this.renderTicketTypes();
+      $("#ticket-count-badge").text(this.ticketTypes.length);
+    } catch (error) {
+      console.error("Failed to load ticket types:", error);
+      handleApiError(error, "Failed to load ticket types");
+      this.ticketTypes = [];
+      this.renderTicketTypes();
+    }
   },
 
   renderTicketTypes() {
@@ -592,49 +601,62 @@ export default {
   },
 
   async showTicketTypeModal(typeId = null) {
-    const type = typeId ? await ticketTypeService.getById(typeId) : null;
-    const isEdit = !!type;
+    try {
+      const response = typeId ? await ticketTypeAPI.getById(typeId) : null;
+      const type = response
+        ? ResponseExtractor.extractSingle(response, "ticketType")
+        : null;
+      const isEdit = !!type;
 
-    const result = await Swal.fire({
-      title: isEdit
-        ? '<i class="fas fa-edit text-blue-600 mr-2"></i>Edit Ticket Type'
-        : '<i class="fas fa-plus text-indigo-600 mr-2"></i>Add Ticket Type',
-      html: `
-        <div class="text-left space-y-4">
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">Type Name</label>
-            <input type="text" id="typeName" class="swal2-input w-full" placeholder="e.g., Student, Senior" value="${
-              type?.name || ""
-            }">
+      const result = await Swal.fire({
+        title: isEdit
+          ? '<i class="fas fa-edit text-blue-600 mr-2"></i>Edit Ticket Type'
+          : '<i class="fas fa-plus text-indigo-600 mr-2"></i>Add Ticket Type',
+        html: `
+          <div class="text-left space-y-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2">Type Name</label>
+              <input type="text" id="typeName" class="swal2-input w-full" placeholder="e.g., Student, Senior" value="${
+                type?.name || ""
+              }">
+            </div>
+            <div class="text-xs text-gray-500 bg-gray-50 p-3 rounded">
+              <i class="fas fa-lightbulb mr-1"></i>
+              This name will appear in pricing sections when creating performances.
+            </div>
           </div>
-          <div class="text-xs text-gray-500 bg-gray-50 p-3 rounded">
-            <i class="fas fa-lightbulb mr-1"></i>
-            This name will appear in pricing sections when creating performances.
-          </div>
-        </div>
-      `,
-      width: "500px",
-      showCancelButton: true,
-      confirmButtonText: isEdit ? "Save Changes" : "Add Type",
-      preConfirm: () => {
-        const name = document.getElementById("typeName").value.trim();
-        if (!name) {
-          Swal.showValidationMessage("Please enter a type name");
-          return false;
+        `,
+        width: "500px",
+        showCancelButton: true,
+        confirmButtonText: isEdit ? "Save Changes" : "Add Type",
+        preConfirm: () => {
+          const name = document.getElementById("typeName").value.trim();
+          if (!name) {
+            Swal.showValidationMessage("Please enter a type name");
+            return false;
+          }
+          return { name };
+        },
+      });
+
+      if (result.isConfirmed) {
+        try {
+          if (isEdit) {
+            await ticketTypeAPI.update(typeId, result.value);
+            notify.success("Ticket type updated successfully");
+          } else {
+            await ticketTypeAPI.create(result.value);
+            notify.success("Ticket type added successfully");
+          }
+          await this.loadTicketTypes();
+        } catch (error) {
+          console.error("Error saving ticket type:", error);
+          handleApiError(error, "Failed to save ticket type");
         }
-        return { name };
-      },
-    });
-
-    if (result.isConfirmed) {
-      if (isEdit) {
-        await ticketTypeService.update(typeId, result.value);
-        notify.success("Ticket type updated successfully");
-      } else {
-        await ticketTypeService.create(result.value);
-        notify.success("Ticket type added successfully");
       }
-      await this.loadTicketTypes();
+    } catch (error) {
+      console.error("Error loading ticket type:", error);
+      handleApiError(error, "Failed to load ticket type");
     }
   },
 
@@ -664,7 +686,8 @@ export default {
     }
 
     try {
-      const type = await ticketTypeService.getById(typeId);
+      const response = await ticketTypeAPI.getById(typeId);
+      const type = ResponseExtractor.extractSingle(response, "ticketType");
 
       if (!type) {
         notify.error("Ticket type not found");
@@ -692,13 +715,13 @@ export default {
       });
 
       if (result.isConfirmed) {
-        await ticketTypeService.delete(typeId);
+        await ticketTypeAPI.delete(typeId);
         notify.success(`"${type.name}" deleted successfully`);
         await this.loadTicketTypes();
       }
     } catch (error) {
       console.error("Error deleting ticket type:", error);
-      notify.error("Failed to delete ticket type");
+      handleApiError(error, "Failed to delete ticket type");
     }
   },
 
@@ -725,21 +748,28 @@ export default {
     });
 
     if (result.isConfirmed) {
-      await ticketTypeService.reset();
-      notify.success("Ticket types reset to defaults");
-      await this.loadTicketTypes();
+      notify.info("Reset to defaults feature is coming soon");
     }
   },
 
   async duplicateTicketType(typeId) {
-    const type = await ticketTypeService.getById(typeId);
-    const newType = {
-      name: `${type.name} (Copy)`,
-      pricing: type.pricing,
-    };
-    await ticketTypeService.create(newType);
-    notify.success(`"${type.name}" duplicated successfully`);
-    await this.loadTicketTypes();
+    try {
+      const response = await ticketTypeAPI.getById(typeId);
+      const type = ResponseExtractor.extractSingle(response, "ticketType");
+      const newType = {
+        name: `${type.name} (Copy)`,
+        description: type.description,
+        discount: type.discount,
+        eligibility: type.eligibility,
+        isActive: type.isActive,
+      };
+      await ticketTypeAPI.create(newType);
+      notify.success(`"${type.name}" duplicated successfully`);
+      await this.loadTicketTypes();
+    } catch (error) {
+      console.error("Error duplicating ticket type:", error);
+      handleApiError(error, "Failed to duplicate ticket type");
+    }
   },
 
   exportTicketTypes() {

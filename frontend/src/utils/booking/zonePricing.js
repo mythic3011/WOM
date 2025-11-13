@@ -120,8 +120,8 @@ export const ZonePricing = {
       tier: section.tier,
       tierLabel: SEAT_TIER_LABELS[section.tier] || section.tier,
       basePrice: section.basePrice,
-      rows: section.rows || [],
-      rowsDisplay: section.rows ? section.rows.join(", ") : "N/A",
+      rows: section.rows || 0,
+      rowsDisplay: section.rows ? `${section.rows} rows` : "N/A",
     }));
   },
 
@@ -134,7 +134,7 @@ export const ZonePricing = {
 
     const tableRows = zones.map((zone) => {
       const prices = ticketTypes.map((type) => {
-        const sampleSeat = zone.rows[0] ? `${zone.rows[0]}1` : "A1";
+        const sampleSeat = "A1";
         return this.getPriceForSeat(sampleSeat, type, pricingSections);
       });
 

@@ -1,9 +1,9 @@
-import { storage } from "/src/services/storageService.js";
 import { notify } from "/src/utils/ui/notification.js";
+import { getCurrentUser, setUser, logout } from "/src/utils/core/auth.js";
 import { verifyPassword } from "/src/utils/core/crypto.js";
 import { formValidator } from "/src/utils/forms/formValidator.js";
-import { userService } from "/src/services/userService.js";
 import { phoneUtils } from "/src/utils/forms/phoneFormat.js";
+import { ResponseExtractor } from "/src/services/responseExtractor.js";
 import {
   createImageUpload,
   initImageUpload,
@@ -11,16 +11,27 @@ import {
 } from "/src/components/ImageUpload.js";
 import { FormComponents } from "/src/components/FormComponents.js";
 import { SwalColors } from "/src/utils/colors.js";
+import { userAPI, handleApiError } from "/src/services/apiClient.js";
 import Swal from "sweetalert2";
 import dayjs from "dayjs";
 
 export default {
   title: "Profile | User",
+  fullUserData: null,
 
   async render() {
-    const user = storage.getUser();
-    const registeredUsers = storage.getItem("registeredUsers", []);
-    const fullUserData = registeredUsers.find((u) => u.id === user.id);
+    const user = getCurrentUser();
+
+    try {
+      const response = await userAPI.getById(user.id);
+      this.fullUserData =
+        ResponseExtractor.extractSingle(response, "user") || user;
+    } catch (error) {
+      console.error("Failed to load user data:", error);
+      this.fullUserData = user;
+    }
+
+    const fullUserData = this.fullUserData;
 
     return `
       <main class="container mx-auto px-4 py-8">
@@ -388,7 +399,7 @@ export default {
   },
 
   async afterRender() {
-    const user = storage.getUser();
+    const user = getCurrentUser();
 
     $("#profileImageUpload").html(
       createImageUpload({
@@ -420,7 +431,7 @@ export default {
   },
 
   async handleDeleteAccount() {
-    const user = storage.getUser();
+    const user = getCurrentUser();
 
     const result = await Swal.fire({
       title: "Delete Account",
@@ -471,44 +482,43 @@ export default {
       });
 
       if (confirmPassword.isConfirmed && confirmPassword.value) {
-        const registeredUsers = storage.getItem("registeredUsers", []);
-        const userData = registeredUsers.find((u) => u.id === user.id);
+        try {
+          const userData = this.fullUserData;
 
-        if (!userData) {
-          notify.error("User not found");
-          return;
+          if (!userData) {
+            notify.error("User not found");
+            return;
+          }
+
+          const isPasswordValid = await verifyPassword(
+            confirmPassword.value,
+            userData.password
+          );
+
+          if (!isPasswordValid) {
+            notify.error("Incorrect password. Account deletion cancelled.");
+            return;
+          }
+
+          await userAPI.delete(user.id);
+
+          await logout();
+
+          Swal.fire({
+            title: "Account Deleted",
+            text: "Your account has been permanently deleted. We're sorry to see you go!",
+            icon: "success",
+            timer: 3000,
+            showConfirmButton: false,
+          });
+
+          setTimeout(() => {
+            window.location.href = "/";
+          }, 3000);
+        } catch (error) {
+          console.error("Error deleting account:", error);
+          handleApiError(error, "Failed to delete account");
         }
-
-        const isPasswordValid = await verifyPassword(
-          confirmPassword.value,
-          userData.password
-        );
-
-        if (!isPasswordValid) {
-          notify.error("Incorrect password. Account deletion cancelled.");
-          return;
-        }
-
-        const updatedUsers = registeredUsers.filter((u) => u.id !== user.id);
-        storage.setItem("registeredUsers", updatedUsers);
-
-        const bookings = storage.getItem("bookings", []);
-        const updatedBookings = bookings.filter((b) => b.userId !== user.id);
-        storage.setItem("bookings", updatedBookings);
-
-        storage.clearUser();
-
-        Swal.fire({
-          title: "Account Deleted",
-          text: "Your account has been permanently deleted. We're sorry to see you go!",
-          icon: "success",
-          timer: 3000,
-          showConfirmButton: false,
-        });
-
-        setTimeout(() => {
-          window.location.href = "/";
-        }, 3000);
       }
     }
   },
@@ -516,7 +526,7 @@ export default {
   async handleUpdate(e) {
     e.preventDefault();
 
-    const user = storage.getUser();
+    const user = getCurrentUser();
     const title = $("#title").val();
     const name = $("#name").val().trim();
     const email = $("#email").val().trim();
@@ -538,12 +548,12 @@ export default {
       return;
     }
 
-    if (!userService.validateAge(birthday)) {
+    if (!this.validateAge(birthday)) {
       notify.error("You must be at least 13 years old");
       return;
     }
 
-    if (phone && !userService.validatePhone(phone)) {
+    if (phone && !phoneUtils.validatePhone(phone)) {
       notify.error(
         "Invalid Hong Kong phone number. Must be 8 digits starting with 2-9"
       );
@@ -556,8 +566,7 @@ export default {
         return;
       }
 
-      const registeredUsers = storage.getItem("registeredUsers", []);
-      const userData = registeredUsers.find((u) => u.id === user.id);
+      const userData = this.fullUserData;
 
       if (!userData) {
         notify.error("User not found");
@@ -601,16 +610,33 @@ export default {
       updates.password = newPassword;
     }
 
-    const result = await userService.updateUserProfile(user.id, updates);
-
-    if (result.success) {
+    try {
+      const updatedUser = await userAPI.update(user.id, updates);
+      setUser(updatedUser);
       notify.success("Profile updated successfully!");
 
       setTimeout(() => {
         window.location.reload();
       }, 1000);
-    } else {
-      notify.error(result.error || "Profile update failed. Please try again.");
+    } catch (error) {
+      console.error("Error updating profile:", error);
+      handleApiError(error, "Failed to update profile");
     }
+  },
+
+  validateAge(birthday) {
+    const birthDate = new Date(birthday);
+    const today = new Date();
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const monthDiff = today.getMonth() - birthDate.getMonth();
+
+    if (
+      monthDiff < 0 ||
+      (monthDiff === 0 && today.getDate() < birthDate.getDate())
+    ) {
+      age--;
+    }
+
+    return age >= 13;
   },
 };

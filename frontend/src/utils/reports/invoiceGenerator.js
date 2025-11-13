@@ -1,6 +1,8 @@
 import dayjs from "dayjs";
 import { statsService } from "/src/services/statsService.js";
 import pdfMake from "pdfmake/build/pdfmake";
+import { COMPANY_INFO } from "/src/config/config.js";
+import { getDisplayLabel } from "/src/utils/seatIdHelper.js";
 
 const initPdfMake = async () => {
   try {
@@ -20,15 +22,29 @@ const initPdfMake = async () => {
 initPdfMake();
 
 export const InvoiceGenerator = {
-  generatePDFDefinition(booking, performance, customerInfo) {
+  generatePDFDefinition(booking, performance, customerInfo, showtime = null) {
     const invoiceNumber = `INV-${booking.id}`;
     const invoiceDate = dayjs().format("MMMM D, YYYY");
     const dueDate = dayjs().add(7, "days").format("MMMM D, YYYY");
     const issueDate = dayjs(booking.bookingDate).format("MMMM D, YYYY");
 
+    const performanceTitle =
+      performance?.title || performance?.name || "Unknown Performance";
+    const performanceDate =
+      showtime?.dateTime || showtime?.date || performance?.date;
+    const performanceVenue =
+      performance?.venueName ||
+      performance?.location ||
+      performance?.venue ||
+      "TBA";
+
     const seatTableBody = booking.seatTicketTypes
       ? Object.entries(booking.seatTicketTypes).map(([seat, ticket]) => [
-          { text: seat, style: "tableCell", alignment: "center" },
+          {
+            text: getDisplayLabel(seat),
+            style: "tableCell",
+            alignment: "center",
+          },
           { text: ticket.name, style: "tableCell" },
           { text: "1", style: "tableCell", alignment: "center" },
           {
@@ -43,29 +59,37 @@ export const InvoiceGenerator = {
             bold: true,
           },
         ])
-      : booking.seats.map((seat) => [
-          { text: seat, style: "tableCell", alignment: "center" },
-          {
-            text: booking.ticketType || "Standard",
-            style: "tableCell",
-          },
-          { text: "1", style: "tableCell", alignment: "center" },
-          {
-            text: statsService.formatCurrency(
-              booking.amount / booking.seats.length
-            ),
-            style: "tableCell",
-            alignment: "right",
-          },
-          {
-            text: statsService.formatCurrency(
-              booking.amount / booking.seats.length
-            ),
-            style: "tableCell",
-            alignment: "right",
-            bold: true,
-          },
-        ]);
+      : booking.seats.map((seat) => {
+          const seatId =
+            typeof seat === "string" ? seat : seat.fullId || seat.seatId || "";
+          return [
+            {
+              text: getDisplayLabel(seatId),
+              style: "tableCell",
+              alignment: "center",
+            },
+            {
+              text: booking.ticketType || "Standard",
+              style: "tableCell",
+            },
+            { text: "1", style: "tableCell", alignment: "center" },
+            {
+              text: statsService.formatCurrency(
+                booking.amount / booking.seats.length
+              ),
+              style: "tableCell",
+              alignment: "right",
+            },
+            {
+              text: statsService.formatCurrency(
+                booking.amount / booking.seats.length
+              ),
+              style: "tableCell",
+              alignment: "right",
+              bold: true,
+            },
+          ];
+        });
 
     const subtotal = booking.amount;
     const tax = 0;
@@ -74,9 +98,19 @@ export const InvoiceGenerator = {
     const paymentMethod = booking.paymentMethod || "Credit Card";
     const paymentStatus = booking.status === "confirmed" ? "PAID" : "PENDING";
 
+    const companyAddress = [
+      COMPANY_INFO.address.line1,
+      COMPANY_INFO.address.line2 ? COMPANY_INFO.address.line2 + "\n" : "",
+      COMPANY_INFO.address.city + "\n",
+      `Tel: ${COMPANY_INFO.contact.phone}\n`,
+      `Email: ${COMPANY_INFO.contact.email}`,
+    ]
+      .filter((line) => line && line !== "\n")
+      .join("");
+
     return {
       pageSize: "A4",
-      pageMargins: [40, 40, 40, 40],
+      pageMargins: [30, 30, 30, 30],
       content: [
         {
           columns: [
@@ -86,19 +120,14 @@ export const InvoiceGenerator = {
                 {
                   text: "INVOICE",
                   style: "header",
-                  margin: [0, 0, 0, 5],
+                  margin: [0, 0, 0, 3],
                 },
                 {
-                  text: "Western Orchestral Music",
+                  text: COMPANY_INFO.name,
                   style: "companyName",
                 },
                 {
-                  text: [
-                    "123 Concert Hall Avenue\n",
-                    "Hong Kong\n",
-                    "Tel: +852 2333 0600\n",
-                    "Email: info@wom.hk",
-                  ],
+                  text: companyAddress,
                   style: "companyDetails",
                 },
               ],
@@ -130,12 +159,12 @@ export const InvoiceGenerator = {
                     ],
                   },
                   layout: "noBorders",
-                  margin: [0, 10, 0, 0],
+                  margin: [0, 5, 0, 0],
                 },
               ],
             },
           ],
-          margin: [0, 0, 0, 30],
+          margin: [0, 0, 0, 15],
         },
         {
           canvas: [
@@ -144,11 +173,11 @@ export const InvoiceGenerator = {
               x: 0,
               y: 0,
               w: 515,
-              h: 2,
+              h: 1,
               color: "#6366f1",
             },
           ],
-          margin: [0, 0, 0, 20],
+          margin: [0, 0, 0, 12],
         },
         {
           columns: [
@@ -159,7 +188,7 @@ export const InvoiceGenerator = {
                 {
                   text: customerInfo?.name || "Guest",
                   style: "customerName",
-                  margin: [0, 5, 0, 3],
+                  margin: [0, 3, 0, 2],
                 },
                 {
                   text: [
@@ -175,25 +204,25 @@ export const InvoiceGenerator = {
               stack: [
                 { text: "PERFORMANCE DETAILS", style: "sectionLabel" },
                 {
-                  text: performance?.title || "Unknown Performance",
+                  text: performanceTitle,
                   style: "performanceName",
-                  margin: [0, 5, 0, 3],
+                  margin: [0, 3, 0, 2],
                 },
                 {
                   text: [
-              performance?.date
-                ? dayjs(performance.date).format(
+                    performanceDate
+                      ? dayjs(performanceDate).format(
                           "MMMM D, YYYY [at] h:mm A"
                         ) + "\n"
                       : "",
-                    performance?.venue || "",
+                    performanceVenue,
                   ],
                   style: "performanceDetails",
                 },
               ],
             },
           ],
-          margin: [0, 0, 0, 30],
+          margin: [0, 0, 0, 15],
         },
         {
           table: {
@@ -221,12 +250,12 @@ export const InvoiceGenerator = {
             hLineColor: (i) => (i === 0 || i === 1 ? "#1e293b" : "#e5e7eb"),
             fillColor: (i) =>
               i === 0 ? "#f1f5f9" : i % 2 === 0 ? "#f9fafb" : null,
-            paddingLeft: () => 10,
-            paddingRight: () => 10,
-            paddingTop: () => 8,
-            paddingBottom: () => 8,
+            paddingLeft: () => 8,
+            paddingRight: () => 8,
+            paddingTop: () => 6,
+            paddingBottom: () => 6,
           },
-          margin: [0, 0, 0, 20],
+          margin: [0, 0, 0, 12],
         },
         {
           columns: [
@@ -235,9 +264,9 @@ export const InvoiceGenerator = {
               text: "",
             },
             {
-              width: 200,
+              width: 180,
               table: {
-                widths: ["*", 80],
+                widths: ["*", 70],
                 body: [
                   [
                     { text: "Subtotal", style: "summaryLabel" },
@@ -270,17 +299,17 @@ export const InvoiceGenerator = {
               },
               layout: {
                 hLineWidth: (i, node) =>
-                  i === node.table.body.length - 1 ? 2 : 0,
+                  i === node.table.body.length - 1 ? 1 : 0,
                 vLineWidth: () => 0,
                 hLineColor: () => "#6366f1",
                 paddingLeft: () => 0,
                 paddingRight: () => 0,
-                paddingTop: () => 6,
-                paddingBottom: () => 6,
+                paddingTop: () => 4,
+                paddingBottom: () => 4,
               },
             },
           ],
-          margin: [0, 0, 0, 30],
+          margin: [0, 0, 0, 15],
         },
         {
           table: {
@@ -292,7 +321,7 @@ export const InvoiceGenerator = {
                     {
                       text: "PAYMENT INFORMATION",
                       style: "paymentHeader",
-                      margin: [0, 0, 0, 8],
+                      margin: [0, 0, 0, 5],
                     },
                     {
                       columns: [
@@ -303,7 +332,7 @@ export const InvoiceGenerator = {
                             {
                               text: paymentMethod,
                               style: "paymentValue",
-                              margin: [0, 3, 0, 0],
+                              margin: [0, 2, 0, 0],
                             },
                           ],
                         },
@@ -314,10 +343,10 @@ export const InvoiceGenerator = {
                             {
                               text: paymentStatus,
                               style:
-              paymentStatus === "PAID"
+                                paymentStatus === "PAID"
                                   ? "statusPaid"
                                   : "statusPending",
-                              margin: [0, 3, 0, 0],
+                              margin: [0, 2, 0, 0],
                             },
                           ],
                         },
@@ -328,7 +357,7 @@ export const InvoiceGenerator = {
                             {
                               text: booking.id,
                               style: "paymentValue",
-                              margin: [0, 3, 0, 0],
+                              margin: [0, 2, 0, 0],
                             },
                           ],
                         },
@@ -345,12 +374,12 @@ export const InvoiceGenerator = {
             vLineWidth: () => 1,
             hLineColor: () => "#e2e8f0",
             vLineColor: () => "#e2e8f0",
-            paddingLeft: () => 15,
-            paddingRight: () => 15,
-            paddingTop: () => 15,
-            paddingBottom: () => 15,
+            paddingLeft: () => 10,
+            paddingRight: () => 10,
+            paddingTop: () => 10,
+            paddingBottom: () => 10,
           },
-          margin: [0, 0, 0, 30],
+          margin: [0, 0, 0, 15],
         },
         {
           table: {
@@ -362,7 +391,7 @@ export const InvoiceGenerator = {
                     {
                       text: "TERMS & CONDITIONS",
                       style: "termsHeader",
-                      margin: [0, 0, 0, 8],
+                      margin: [0, 0, 0, 5],
                     },
                     {
                       ol: [
@@ -380,7 +409,7 @@ export const InvoiceGenerator = {
             ],
           },
           layout: "noBorders",
-          margin: [0, 0, 0, 20],
+          margin: [0, 0, 0, 12],
         },
         {
           canvas: [
@@ -393,13 +422,13 @@ export const InvoiceGenerator = {
               color: "#e5e7eb",
             },
           ],
-          margin: [0, 0, 0, 15],
+          margin: [0, 0, 0, 10],
         },
         {
           text: [
             { text: "Thank you for your business!\n", bold: true },
             "For questions about this invoice, please contact:\n",
-            "Email: info@wom.hk | Phone: +852 2333 0600",
+            `Email: ${COMPANY_INFO.contact.email} | Phone: ${COMPANY_INFO.contact.phone}`,
           ],
           style: "footer",
           alignment: "center",
@@ -407,126 +436,126 @@ export const InvoiceGenerator = {
       ],
       styles: {
         header: {
-          fontSize: 28,
+          fontSize: 22,
           bold: true,
           color: "#6366f1",
         },
         companyName: {
-          fontSize: 14,
+          fontSize: 11,
           bold: true,
           color: "#1e293b",
-          margin: [0, 0, 0, 5],
+          margin: [0, 0, 0, 3],
         },
         companyDetails: {
-          fontSize: 10,
+          fontSize: 8,
           color: "#64748b",
-          lineHeight: 1.4,
+          lineHeight: 1.3,
         },
         invoiceNumber: {
-          fontSize: 20,
+          fontSize: 16,
           bold: true,
           color: "#1e293b",
         },
         infoLabel: {
-          fontSize: 10,
+          fontSize: 8,
           color: "#64748b",
         },
         infoValue: {
-          fontSize: 10,
+          fontSize: 8,
           color: "#1e293b",
           bold: true,
         },
         sectionLabel: {
-          fontSize: 11,
+          fontSize: 9,
           bold: true,
           color: "#64748b",
         },
         customerName: {
-          fontSize: 13,
+          fontSize: 10,
           bold: true,
           color: "#1e293b",
         },
         customerDetails: {
-          fontSize: 10,
+          fontSize: 8,
           color: "#64748b",
-          lineHeight: 1.4,
+          lineHeight: 1.3,
         },
         performanceName: {
-          fontSize: 13,
+          fontSize: 10,
           bold: true,
           color: "#6366f1",
         },
         performanceDetails: {
-          fontSize: 10,
+          fontSize: 8,
           color: "#64748b",
-          lineHeight: 1.4,
+          lineHeight: 1.3,
         },
         tableHeader: {
-          fontSize: 10,
+          fontSize: 9,
           bold: true,
           color: "#1e293b",
         },
         tableCell: {
-          fontSize: 10,
+          fontSize: 8,
           color: "#1e293b",
         },
         summaryLabel: {
-          fontSize: 11,
+          fontSize: 9,
           color: "#64748b",
         },
         summaryValue: {
-          fontSize: 11,
+          fontSize: 9,
           color: "#1e293b",
           bold: true,
         },
         totalLabel: {
-          fontSize: 14,
+          fontSize: 11,
           bold: true,
           color: "#1e293b",
         },
         totalValue: {
-          fontSize: 16,
+          fontSize: 13,
           bold: true,
           color: "#6366f1",
         },
         paymentHeader: {
-          fontSize: 12,
+          fontSize: 10,
           bold: true,
           color: "#1e293b",
         },
         paymentLabel: {
-          fontSize: 10,
+          fontSize: 8,
           color: "#64748b",
           bold: true,
         },
         paymentValue: {
-          fontSize: 11,
+          fontSize: 9,
           color: "#1e293b",
         },
         statusPaid: {
-          fontSize: 12,
+          fontSize: 10,
           bold: true,
           color: "#16a34a",
         },
         statusPending: {
-          fontSize: 12,
+          fontSize: 10,
           bold: true,
           color: "#ea580c",
         },
         termsHeader: {
-          fontSize: 12,
+          fontSize: 10,
           bold: true,
           color: "#1e293b",
         },
         termsList: {
-          fontSize: 9,
+          fontSize: 8,
           color: "#64748b",
-          lineHeight: 1.5,
+          lineHeight: 1.4,
         },
         footer: {
-          fontSize: 10,
+          fontSize: 8,
           color: "#64748b",
-          lineHeight: 1.5,
+          lineHeight: 1.4,
         },
       },
       defaultStyle: {
@@ -535,30 +564,33 @@ export const InvoiceGenerator = {
     };
   },
 
-  downloadAsPDF(booking, performance, customerInfo) {
+  downloadAsPDF(booking, performance, customerInfo, showtime = null) {
     const docDefinition = this.generatePDFDefinition(
       booking,
       performance,
-      customerInfo
+      customerInfo,
+      showtime
     );
     const invoiceNumber = `INV-${booking.id}`;
     pdfMake.createPdf(docDefinition).download(`${invoiceNumber}.pdf`);
   },
 
-  printInvoice(booking, performance, customerInfo) {
+  printInvoice(booking, performance, customerInfo, showtime = null) {
     const docDefinition = this.generatePDFDefinition(
       booking,
       performance,
-      customerInfo
+      customerInfo,
+      showtime
     );
     pdfMake.createPdf(docDefinition).print();
   },
 
-  openInvoice(booking, performance, customerInfo) {
+  openInvoice(booking, performance, customerInfo, showtime = null) {
     const docDefinition = this.generatePDFDefinition(
       booking,
       performance,
-      customerInfo
+      customerInfo,
+      showtime
     );
     pdfMake.createPdf(docDefinition).open();
   },

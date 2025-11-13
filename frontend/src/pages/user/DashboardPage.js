@@ -1,9 +1,11 @@
-import { storage } from "/src/services/storageService.js";
-import { statsService } from "/src/services/statsService.js";
+import { getCurrentUser } from "/src/utils/core/auth.js";
 import { FormComponents } from "/src/components/FormComponents.js";
 import { createEmptyState } from "/src/components/EmptyState.js";
 import { createLoadingState } from "/src/components/LoadingState.js";
 import { BookingCard } from "/src/components/BookingCard.js";
+import { bookingService } from "/src/services/bookingService.js";
+import { performanceService } from "/src/services/performanceService.js";
+import { handleApiError } from "/src/services/apiClient.js";
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
 
@@ -25,32 +27,19 @@ export default {
   },
 
   async afterRender() {
-    this.loadDashboard();
+    await this.loadDashboard();
   },
 
-  loadDashboard() {
-    const user = storage.getUser();
-    const bookings = storage.getItem("bookings", []);
-    const userBookings = bookings.filter((b) => b.userId === user?.userId);
-    const performances = statsService.getPerformances();
+  async loadDashboard() {
+    try {
+      const user = getCurrentUser();
 
-    const now = dayjs();
-    const upcomingBookings = userBookings.filter(
-      (b) => dayjs(b.performanceDate).isAfter(now) && b.status === "confirmed"
-    );
-    const pastBookings = userBookings.filter((b) =>
-      dayjs(b.performanceDate).isBefore(now)
-    );
-    const totalSpent = userBookings.reduce(
-      (sum, b) => sum + (b.amount || 0),
-      0
-    );
+      const [bookingStats, upcomingPerformances] = await Promise.all([
+        bookingService.getUserStats(user?.id),
+        performanceService.getUpcoming(),
+      ]);
 
-    const upcomingPerformances = performances.filter(
-      (p) => dayjs(p.date).isAfter(now) && p.status !== "sold_out"
-    );
-
-    const content = `
+      const content = `
       <div class="mb-8">
         <div class="flex items-center justify-between">
           <div>
@@ -74,28 +63,28 @@ export default {
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         ${FormComponents.statCard({
           title: "Total Bookings",
-          value: userBookings.length,
+          value: bookingStats.total,
           icon: "fa-ticket-alt",
           bgColor: "bg-blue-500",
-          subtitle: `${upcomingBookings.length} upcoming`,
+          subtitle: `${bookingStats.upcoming} upcoming`,
         })}
         ${FormComponents.statCard({
           title: "Confirmed",
-          value: userBookings.filter((b) => b.status === "confirmed").length,
+          value: bookingStats.confirmed,
           icon: "fa-check-circle",
           bgColor: "bg-green-500",
           subtitle: "Ready to attend",
         })}
         ${FormComponents.statCard({
           title: "Total Spent",
-          value: `$${totalSpent}`,
+          value: `$${bookingStats.totalSpent}`,
           icon: "fa-dollar-sign",
           bgColor: "bg-purple-500",
           subtitle: "All time",
         })}
         ${FormComponents.statCard({
           title: "Past Events",
-          value: pastBookings.length,
+          value: bookingStats.past,
           icon: "fa-history",
           bgColor: "bg-gray-500",
           subtitle: "Attended",
@@ -104,7 +93,7 @@ export default {
 
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
         <div class="lg:col-span-2">
-          ${this.renderUpcomingBookings(upcomingBookings)}
+          ${this.renderUpcomingBookings(bookingStats.upcomingBookings)}
         </div>
         <div class="lg:col-span-1">
           ${this.renderQuickActions()}
@@ -113,11 +102,22 @@ export default {
 
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
         ${this.renderUpcomingPerformances(upcomingPerformances.slice(0, 3))}
-        ${this.renderRecentBookings(userBookings.slice(0, 5))}
+        ${this.renderRecentBookings(bookingStats.pastBookings.slice(0, 5))}
       </div>
     `;
 
-    $("#dashboardContent").html(content);
+      $("#dashboardContent").html(content);
+    } catch (error) {
+      console.error("Failed to load dashboard:", error);
+      $("#dashboardContent").html(
+        createEmptyState(
+          "Failed to load dashboard",
+          "Unable to fetch your booking data from server",
+          "fa-exclamation-circle"
+        )
+      );
+      handleApiError(error, "Failed to load dashboard");
+    }
   },
 
   renderUpcomingBookings(bookings) {

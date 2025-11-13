@@ -1,14 +1,19 @@
 import { createEmptyState } from "/src/components/EmptyState.js";
 import { FormComponents } from "/src/components/FormComponents.js";
 import { BookingCard } from "/src/components/BookingCard.js";
-import { statsService } from "/src/services/statsService.js";
-import { storage } from "/src/services/storageService.js";
 import { SwalColors } from "/src/utils/colors.js";
+import { bookingService } from "/src/services/bookingService.js";
+import { performanceService } from "/src/services/performanceService.js";
 import dayjs from "dayjs";
 import Swal from "sweetalert2";
 import { notify } from "/src/utils/ui/notification.js";
 import { TicketGenerator } from "/src/utils/reports/ticketGenerator.js";
 import { InvoiceGenerator } from "/src/utils/reports/invoiceGenerator.js";
+import { getStatusConfig } from "/src/utils/status.js";
+import { handleApiError } from "/src/services/apiClient.js";
+import { getCurrentUser } from "/src/utils/core/auth.js";
+import { formatCurrency } from "/src/utils/utils.js";
+import { getDisplayLabel } from "/src/utils/seatIdHelper.js";
 
 export default {
   title: "My Bookings | User",
@@ -18,28 +23,29 @@ export default {
   currentFilter: "all",
 
   async render() {
-    const currentUser = storage.getUser();
+    const currentUser = getCurrentUser();
 
     if (!currentUser) {
       this.bookings = [];
-      this.performances = statsService.getPerformances();
+      this.performances = [];
       this.filteredBookings = [];
     } else {
-      const storedBookings = storage.getItem("bookings", []);
-      const allBookings =
-        storedBookings.length > 0 ? storedBookings : statsService.getBookings();
+      try {
+        const [userBookings, allPerformances] = await Promise.all([
+          bookingService.getUserBookings(currentUser.id),
+          performanceService.getAll(),
+        ]);
 
-      this.bookings = allBookings.filter((b) => {
-        return (
-          b.userId === currentUser.id ||
-          b.userId === String(currentUser.id) ||
-          String(b.userId) === String(currentUser.id) ||
-          b.customerInfo?.id === currentUser.id
-        );
-      });
-
-      this.performances = statsService.getPerformances();
-      this.filteredBookings = [...this.bookings];
+        this.bookings = userBookings;
+        this.performances = allPerformances;
+        this.filteredBookings = [...this.bookings];
+      } catch (error) {
+        console.error("Error loading bookings:", error);
+        handleApiError(error);
+        this.bookings = [];
+        this.performances = [];
+        this.filteredBookings = [];
+      }
     }
 
     return `
@@ -118,7 +124,7 @@ export default {
       },
       {
         title: "Total Spent",
-        value: statsService.formatCurrency(totalSpent),
+        value: formatCurrency(totalSpent),
         icon: "fa-dollar-sign",
         color: "purple",
       },
@@ -136,8 +142,8 @@ export default {
     this.attachEventListeners();
   },
 
-  refreshBookings() {
-    const currentUser = storage.getUser();
+  async refreshBookings() {
+    const currentUser = getCurrentUser();
 
     if (!currentUser) {
       this.bookings = [];
@@ -146,27 +152,21 @@ export default {
       return;
     }
 
-    const storedBookings = storage.getItem("bookings", []);
-    const allBookings =
-      storedBookings.length > 0 ? storedBookings : statsService.getBookings();
+    try {
+      this.bookings = await bookingService.getUserBookings(currentUser.id);
 
-    this.bookings = allBookings.filter((b) => {
-      return (
-        b.userId === currentUser.id ||
-        b.userId === String(currentUser.id) ||
-        String(b.userId) === String(currentUser.id) ||
-        b.customerInfo?.id === currentUser.id
-      );
-    });
+      this.filteredBookings = [...this.bookings];
 
-    this.filteredBookings = [...this.bookings];
-
-    $("#bookingsList")
-      .closest("main")
-      .find(".grid.grid-cols-1.md\\:grid-cols-4")
-      .first()
-      .replaceWith(this.renderStats());
-    this.renderBookingsList();
+      $("#bookingsList")
+        .closest("main")
+        .find(".grid.grid-cols-1.md\\:grid-cols-4")
+        .first()
+        .replaceWith(this.renderStats());
+      this.renderBookingsList();
+    } catch (error) {
+      console.error("Error refreshing bookings:", error);
+      handleApiError(error);
+    }
   },
 
   attachEventListeners() {
@@ -196,10 +196,14 @@ export default {
       this.viewBooking(bookingId);
     });
 
-    $(document).on("click", ".download-ticket-btn", async (e) => {
-      const bookingId = $(e.currentTarget).attr("data-id");
-      await this.downloadTicket(bookingId);
-    });
+    $(document).on(
+      "click",
+      ".download-ticket-btn, .download-ticket-btn-modal",
+      async (e) => {
+        const bookingId = $(e.currentTarget).attr("data-id");
+        await this.downloadTicket(bookingId);
+      }
+    );
 
     $(document).on("click", ".print-ticket-btn", async (e) => {
       const bookingId = $(e.currentTarget).attr("data-id");
@@ -226,18 +230,9 @@ export default {
     const searchTerm = $("#searchBookings").val().toLowerCase();
     const status = this.currentFilter;
 
-    this.filteredBookings = this.bookings.filter((booking) => {
-      const performance = this.performances.find(
-        (p) => String(p.id) === String(booking.performanceId)
-      );
-
-      const matchesSearch =
-        booking.id.toLowerCase().includes(searchTerm) ||
-        performance?.title.toLowerCase().includes(searchTerm);
-
-      const matchesStatus = status === "all" || booking.status === status;
-
-      return matchesSearch && matchesStatus;
+    this.filteredBookings = bookingService.filterAndSearch(this.bookings, {
+      search: searchTerm,
+      status: status,
     });
 
     this.renderBookingsList();
@@ -313,29 +308,15 @@ export default {
       ? new Date(performance.date)
       : null;
 
-    const statusColors = {
-      confirmed: {
-        bg: "bg-green-100",
-        text: "text-green-800",
-        icon: "fa-check-circle",
-      },
-      pending: {
-        bg: "bg-yellow-100",
-        text: "text-yellow-800",
-        icon: "fa-clock",
-      },
-      cancelled: {
-        bg: "bg-red-100",
-        text: "text-red-800",
-        icon: "fa-times-circle",
-      },
-      completed: {
-        bg: "bg-blue-100",
-        text: "text-blue-800",
-        icon: "fa-check-double",
-      },
+    const statusConfig = getStatusConfig(
+      booking.status || "pending",
+      "booking"
+    );
+    const statusStyle = {
+      bg: statusConfig.badgeClass.split(" ")[0],
+      text: statusConfig.badgeClass.split(" ")[1],
+      icon: statusConfig.icon,
     };
-    const statusStyle = statusColors[booking.status] || statusColors.pending;
 
     Swal.fire({
       title: `<div class="flex items-center justify-center gap-3 text-indigo-900">
@@ -353,9 +334,7 @@ export default {
               <span class="px-3 py-1.5 rounded-lg text-xs font-bold ${
                 statusStyle.bg
               } ${statusStyle.text} shadow-md">
-                <i class="fas ${statusStyle.icon} mr-1"></i>${
-        booking.status.charAt(0).toUpperCase() + booking.status.slice(1)
-      }
+                <i class="fas ${statusStyle.icon} mr-1"></i>${statusConfig.text}
               </span>
             </div>
             <div class="flex items-center gap-2 text-xs opacity-90">
@@ -460,7 +439,7 @@ export default {
                         </div>
                       </div>
                     </div>
-                    <span class="font-bold text-gray-900 text-xs whitespace-nowrap">${statsService.formatCurrency(
+                    <span class="font-bold text-gray-900 text-xs whitespace-nowrap">${formatCurrency(
                       ticket.price
                     )}</span>
                   </div>
@@ -492,7 +471,7 @@ export default {
                         }</span>
                       </div>
                     </div>
-                    <span class="font-bold text-gray-900 text-xs whitespace-nowrap">${statsService.formatCurrency(
+                    <span class="font-bold text-gray-900 text-xs whitespace-nowrap">${formatCurrency(
                       booking.amount / booking.seats.length
                     )}</span>
                   </div>
@@ -508,7 +487,7 @@ export default {
             <div class="flex justify-between items-center">
               <div>
                 <p class="text-xs font-semibold text-green-700 uppercase tracking-wide mb-1">Total Amount</p>
-                <p class="text-2xl font-black text-green-700">${statsService.formatCurrency(
+                <p class="text-2xl font-black text-green-700">${formatCurrency(
                   booking.amount
                 )}</p>
               </div>
@@ -530,29 +509,37 @@ export default {
           `
               : ""
           }
+
+          ${
+            booking.status === "confirmed"
+              ? `
+          <div class="border-t border-gray-200 pt-3 mt-3">
+            <p class="text-xs font-semibold text-gray-700 uppercase tracking-wide mb-2">
+              <i class="fas fa-file-download mr-1"></i>Download Documents
+            </p>
+            <div class="grid grid-cols-2 gap-2">
+              <button class="download-ticket-btn-modal px-3 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-medium text-xs shadow-sm hover:shadow-md" data-id="${booking.id}">
+                <i class="fas fa-ticket-alt mr-1.5"></i>E-Ticket
+              </button>
+              <button class="download-invoice-btn px-3 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors font-medium text-xs shadow-sm hover:shadow-md" data-id="${booking.id}">
+                <i class="fas fa-file-invoice-dollar mr-1.5"></i>Invoice
+              </button>
+            </div>
+          </div>
+          `
+              : ""
+          }
         </div>
       `,
       width: "550px",
-      showCancelButton: booking.status === "confirmed",
+      showConfirmButton: true,
+      showCancelButton: false,
       confirmButtonText: '<i class="fas fa-times mr-2"></i>Close',
-      cancelButtonText:
-        booking.status === "confirmed"
-          ? '<i class="fas fa-download mr-2"></i>Download E-Ticket'
-          : "",
       confirmButtonColor: "#6366f1",
-      cancelButtonColor: "#10b981",
       customClass: {
         popup: "booking-details-modal",
         confirmButton: "swal2-confirm-styled",
-        cancelButton: "swal2-cancel-styled",
       },
-    }).then((result) => {
-      if (
-        result.dismiss === Swal.DismissReason.cancel &&
-        booking.status === "confirmed"
-      ) {
-        this.downloadTicket(bookingId);
-      }
     });
   },
 
@@ -571,7 +558,7 @@ export default {
       );
     }
 
-    const currentUser = storage.getUser();
+    const currentUser = getCurrentUser();
 
     try {
       notify.info("Generating PDF...");
@@ -603,7 +590,7 @@ export default {
       );
     }
 
-    const currentUser = storage.getUser();
+    const currentUser = getCurrentUser();
 
     try {
       notify.info("Preparing print...");
@@ -625,13 +612,26 @@ export default {
     if (!booking) return;
 
     const performance = this.performances.find(
-      (p) => p.id === booking.performanceId
+      (p) => String(p.id) === String(booking.performanceId)
     );
-    const currentUser = storage.getUser();
+
+    let showtime = null;
+    if (booking.showtimeId && performance?.showtimes) {
+      showtime = performance.showtimes.find(
+        (s) => String(s.id) === String(booking.showtimeId)
+      );
+    }
+
+    const currentUser = getCurrentUser();
 
     try {
-      notify.info("Generating PDF...");
-      await InvoiceGenerator.downloadAsPDF(booking, performance, currentUser);
+      notify.info("Generating invoice PDF...");
+      await InvoiceGenerator.downloadAsPDF(
+        booking,
+        performance,
+        currentUser,
+        showtime
+      );
       notify.success("Invoice PDF downloaded successfully");
     } catch (error) {
       console.error("Error generating invoice:", error);
@@ -644,13 +644,26 @@ export default {
     if (!booking) return;
 
     const performance = this.performances.find(
-      (p) => p.id === booking.performanceId
+      (p) => String(p.id) === String(booking.performanceId)
     );
-    const currentUser = storage.getUser();
+
+    let showtime = null;
+    if (booking.showtimeId && performance?.showtimes) {
+      showtime = performance.showtimes.find(
+        (s) => String(s.id) === String(booking.showtimeId)
+      );
+    }
+
+    const currentUser = getCurrentUser();
 
     try {
-      notify.info("Preparing print...");
-      await InvoiceGenerator.printInvoice(booking, performance, currentUser);
+      notify.info("Preparing invoice print...");
+      await InvoiceGenerator.printInvoice(
+        booking,
+        performance,
+        currentUser,
+        showtime
+      );
       notify.success("Opening print dialog...");
     } catch (error) {
       console.error("Error printing invoice:", error);

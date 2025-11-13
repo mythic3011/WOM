@@ -2,6 +2,20 @@ import { seatMapGenerator } from "/src/utils/booking/seatMapGenerator.js";
 import { getSectionColor, getSeatStatusColor } from "/src/utils/colors.js";
 
 export const SeatMap = {
+  generateFromLayout(
+    layoutConfig,
+    seatDetails,
+    selectedSeats,
+    interactive = false
+  ) {
+    return seatMapGenerator.generateFromLayout(
+      layoutConfig,
+      seatDetails,
+      selectedSeats,
+      interactive
+    );
+  },
+
   generateInteractive(rows, seats, seatDetails, selectedSeats, getSeatColorFn) {
     return seatMapGenerator.generateInteractiveSeatMap(
       rows,
@@ -125,8 +139,7 @@ export const SeatMap = {
       getSeatColorFn
     );
 
-    const legend =
-      sections && sections.length > 0 ? this.createLegend(sections, false) : "";
+    const legend = this.createLegend(sections, true);
 
     return `
       <div>
@@ -145,4 +158,3 @@ export const SeatMap = {
     return seatMapGenerator.initializeSeatDetails(rows, seats);
   },
 };
-

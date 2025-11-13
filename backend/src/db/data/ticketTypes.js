@@ -1,0 +1,42 @@
+export const ticketTypesData = [
+  {
+    id: "STANDARD",
+    name: "Standard",
+    description: "Full price admission",
+    discount: 1.0,
+    eligibility: "General admission",
+    isActive: true,
+  },
+  {
+    id: "STUDENT",
+    name: "Student",
+    description: "50% discount for students",
+    discount: 0.5,
+    eligibility: "Valid student ID required",
+    isActive: true,
+  },
+  {
+    id: "SENIOR",
+    name: "Senior",
+    description: "50% discount for seniors",
+    discount: 0.5,
+    eligibility: "Age 65 or above",
+    isActive: true,
+  },
+  {
+    id: "CHILD",
+    name: "Child",
+    description: "50% discount for children",
+    discount: 0.5,
+    eligibility: "Age 12 or below",
+    isActive: true,
+  },
+  {
+    id: "GROUP",
+    name: "Group",
+    description: "20% discount for groups",
+    discount: 0.8,
+    eligibility: "Minimum 10 people",
+    isActive: true,
+  },
+];

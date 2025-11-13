@@ -2,6 +2,7 @@ import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
 import { createBadge } from "/src/components/Badge.js";
 import { statsService } from "/src/services/statsService.js";
+import { getDisplayLabel } from "/src/utils/seatIdHelper.js";
 
 dayjs.extend(relativeTime);
 
@@ -36,8 +37,16 @@ export const BookingCard = {
                 <i class="fas fa-chair text-indigo-600 w-5"></i>
                 ${
                   Array.isArray(booking.seats)
-                    ? booking.seats.join(", ")
-                    : booking.seats
+                    ? booking.seats
+                        .map((s) => {
+                          const seatId =
+                            typeof s === "string"
+                              ? s
+                              : s.fullId || s.seatId || s;
+                          return getDisplayLabel(seatId);
+                        })
+                        .join(", ")
+                    : getDisplayLabel(booking.seats)
                 }
               </p>
             </div>
@@ -256,17 +265,24 @@ export const BookingCard = {
             </div>
           </div>
 
-          <div class="grid grid-cols-2 gap-2">
-            <button class="view-booking-btn flex-1 px-4 py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-semibold shadow-md hover:shadow-lg text-sm" data-id="${
+          <div class="space-y-2">
+            <button class="view-booking-btn w-full px-4 py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-semibold shadow-md hover:shadow-lg text-sm" data-id="${
               booking.id
             }">
-              <i class="fas fa-eye mr-2"></i>Details
+              <i class="fas fa-eye mr-2"></i>View Details
             </button>
-            <button class="download-ticket-btn flex-1 px-4 py-2.5 bg-white border-2 border-gray-200 text-gray-700 rounded-lg hover:border-indigo-600 hover:text-indigo-600 transition-colors font-semibold text-sm" data-id="${
-              booking.id
-            }">
-              <i class="fas fa-download mr-2"></i>Ticket
-            </button>
+            <div class="grid grid-cols-2 gap-2">
+              <button class="download-ticket-btn px-3 py-2 bg-white border-2 border-gray-200 text-gray-700 rounded-lg hover:border-indigo-600 hover:text-indigo-600 transition-colors font-medium text-xs" data-id="${
+                booking.id
+              }">
+                <i class="fas fa-ticket-alt mr-1"></i>E-Ticket
+              </button>
+              <button class="download-invoice-btn px-3 py-2 bg-white border-2 border-gray-200 text-gray-700 rounded-lg hover:border-emerald-600 hover:text-emerald-600 transition-colors font-medium text-xs" data-id="${
+                booking.id
+              }">
+                <i class="fas fa-file-invoice mr-1"></i>Invoice
+              </button>
+            </div>
           </div>
         </div>
       </div>

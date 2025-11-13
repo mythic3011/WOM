@@ -1,12 +1,21 @@
-import { storage } from "/src/services/storageService.js";
-import { statsService } from "/src/services/statsService.js";
-import { performanceService } from "/src/services/dataService.js";
+import { performanceService } from "/src/services/performanceService.js";
 import { ticketTypeService } from "/src/services/ticketTypeService.js";
+import { bookingAPI, handleApiError } from "/src/services/apiClient.js";
+import { ResponseExtractor } from "/src/services/responseExtractor.js";
 import { FormComponents } from "/src/components/FormComponents.js";
 import { createLoadingState } from "/src/components/LoadingState.js";
 import { notify } from "/src/utils/ui/notification.js";
 import { SwalColors } from "/src/utils/colors.js";
 import { ZonePricing } from "/src/utils/booking/zonePricing.js";
+import {
+  getTierColors,
+  getTierLabel,
+  getTierBadge,
+} from "/src/config/tierConfig.js";
+import { storage } from "/src/services/storageService.js";
+import { generateFullId, getDisplayLabel } from "/src/utils/seatIdHelper.js";
+import { SeatMap } from "/src/components/SeatMap.js";
+import { initSeatMapPanzoom } from "/src/utils/panzoomSeatMap.js";
 import Swal from "sweetalert2";
 import dayjs from "dayjs";
 
@@ -17,6 +26,7 @@ export default {
   seatTicketTypes: {},
   bookingStep: 1,
   selectedShowtimeId: null,
+  _zoom: { scale: 1, tx: 0, ty: 0 },
 
   async render(params) {
     return `
@@ -40,6 +50,19 @@ export default {
         </div>
       </main>
     `;
+  },
+
+  updateZoom(newScale, tx = this._zoom.tx, ty = this._zoom.ty) {
+    const clamped = Math.max(0.6, Math.min(3, newScale));
+    this._zoom = { scale: clamped, tx, ty };
+    this.applyZoomTransform();
+  },
+
+  applyZoomTransform() {
+    const g = document.querySelector("#seatMap svg #seats-layer");
+    if (!g) return;
+    const { scale, tx, ty } = this._zoom;
+    g.setAttribute("transform", `translate(${tx},${ty}) scale(${scale})`);
   },
 
   async afterRender(params) {
@@ -86,6 +109,7 @@ export default {
     this.seatTicketTypes = {};
     this.bookingStep = 1;
     this.selectedShowtimeId = null;
+    this._zoom = { scale: 1, tx: 0, ty: 0 };
   },
 
   detectCardType(number) {
@@ -300,11 +324,12 @@ export default {
     `;
   },
 
-  renderBookingForm() {
+  async renderBookingForm() {
+    const stepContent = await this.renderStepContent();
     const content = `
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div class="lg:col-span-2">
-          ${this.renderStepContent()}
+          ${stepContent}
         </div>
 
         <div class="lg:col-span-1">
@@ -317,10 +342,10 @@ export default {
     this.attachEventListeners();
   },
 
-  renderStepContent() {
+  async renderStepContent() {
     switch (this.bookingStep) {
       case 1:
-        return this.renderSeatSelection();
+        return await this.renderSeatSelection();
       case 2:
         return this.renderTicketSelection();
       case 3:
@@ -332,8 +357,20 @@ export default {
     }
   },
 
-  renderSeatSelection() {
+  async renderSeatSelection() {
     const venue = this.performanceData.venue;
+    const layout = venue?.layout || { sections: [] };
+    const bookedSeats = await this.getBookedSeats();
+    const seatDetails = bookedSeats.reduce((acc, id) => {
+      acc[id] = { status: "reserved" };
+      return acc;
+    }, {});
+    const seatMapHTML = SeatMap.generateFromLayout(
+      layout,
+      seatDetails,
+      this.selectedSeats,
+      true
+    );
     return `
       <div class="bg-white rounded-lg shadow-md border border-gray-200 p-6">
         <div class="flex items-center justify-between mb-6">
@@ -343,7 +380,9 @@ export default {
               Select Your Seats
             </h2>
             <p class="text-sm text-gray-600 mt-1">
-              <i class="fas fa-building mr-1"></i>${venue || "Concert Hall"}
+              <i class="fas fa-building mr-1"></i>${
+                venue?.name || this.performanceData.venueName || "Venue"
+              }
             </p>
           </div>
           <div class="text-right">
@@ -361,62 +400,7 @@ export default {
           type: "info",
         })}
 
-        ${
-          this.performanceData.pricingSections &&
-          this.performanceData.pricingSections.length > 0
-            ? `
-        <div class="mt-6 bg-gray-50 rounded-lg p-4 border border-gray-200">
-          <h3 class="text-lg font-semibold text-gray-900 mb-3">
-            <i class="fas fa-tags mr-2"></i>Pricing Zones
-          </h3>
-          <div class="overflow-x-auto">
-            <table class="w-full text-sm">
-              <thead>
-                <tr class="border-b border-gray-300">
-                  <th class="text-left py-2 px-3 text-gray-700 font-semibold">Section</th>
-                  <th class="text-left py-2 px-3 text-gray-700 font-semibold">Zone</th>
-                  <th class="text-left py-2 px-3 text-gray-700 font-semibold">Rows</th>
-                  <th class="text-right py-2 px-3 text-gray-700 font-semibold">Base Price</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${ZonePricing.getZoneSummary(
-                  this.performanceData.pricingSections
-                )
-                  .map(
-                    (zone) => `
-                  <tr class="border-b border-gray-200 hover:bg-gray-100">
-                    <td class="py-2 px-3 font-medium text-gray-900">${
-                      zone.sectionName
-                    }</td>
-                    <td class="py-2 px-3">
-                      <span class="px-2 py-1 rounded text-xs font-semibold ${
-                        zone.tier === "premium"
-                          ? "bg-purple-100 text-purple-700"
-                          : zone.tier === "economy"
-                          ? "bg-blue-100 text-blue-700"
-                          : "bg-green-100 text-green-700"
-                      }">
-                        ${zone.tierLabel}
-                      </span>
-                    </td>
-                    <td class="py-2 px-3 text-gray-600">${zone.rowsDisplay}</td>
-                    <td class="py-2 px-3 text-right font-bold text-gray-900">HKD ${zone.basePrice.toLocaleString()}</td>
-                  </tr>
-                `
-                  )
-                  .join("")}
-              </tbody>
-            </table>
-          </div>
-          <p class="text-xs text-gray-600 mt-3">
-            <i class="fas fa-info-circle mr-1"></i>
-            Final prices vary based on ticket type (Student, Senior, etc.) which apply discounts to the base price.
-          </p>
-        </div>
-        `
-            : ""
-        }
+        ${this.renderZoneSummary()}
 
         <div class="mt-6">
           <div class="mb-6">
@@ -445,17 +429,15 @@ export default {
             </div>
           </div>
 
-          <div class="bg-gradient-to-b from-gray-50 to-gray-100 p-6 rounded-lg border-2 border-gray-200">
+          <div class="bg-gray-50 p-6 rounded-lg border-2 border-gray-200">
             <div class="text-center mb-6">
-              <div class="inline-block px-12 py-3 bg-gradient-to-r from-gray-800 to-gray-700 text-white rounded-t-lg shadow-lg">
+              <div class="inline-block px-12 py-3 bg-gray-800 text-white rounded-t-lg shadow">
                 <i class="fas fa-music mr-2"></i>
                 <span class="font-bold text-lg">STAGE</span>
               </div>
             </div>
 
-            <div id="seatMap" class="space-y-6">
-              ${this.generateSeatMapWithZones()}
-            </div>
+            <div id="seatMap" class="space-y-6">${seatMapHTML}</div>
           </div>
 
           <div class="mt-6 p-4 bg-indigo-50 border border-indigo-200 rounded-lg">
@@ -468,7 +450,9 @@ export default {
                     <p class="text-lg font-bold text-indigo-900">
                       ${
                         this.selectedSeats.length > 0
-                          ? this.selectedSeats.join(", ")
+                          ? this.selectedSeats
+                              .map((s) => getDisplayLabel(s))
+                              .join(", ")
                           : "None"
                       }
                     </p>
@@ -490,145 +474,12 @@ export default {
     `;
   },
 
-  generateSeatMapWithZones() {
-    const pricingSections = this.performanceData.pricingSections || [];
+  // Legacy HTML layout generator removed in favor of SVG SeatMap.
 
-    const zones =
-      pricingSections.length > 0
-        ? pricingSections.map((section) => ({
-            name: section.sectionName,
-            rows: section.rows || [],
-            seatsPerRow: 12,
-            tier: section.tier,
-            color:
-              section.tier === "premium"
-                ? "blue"
-                : section.tier === "economy"
-                ? "amber"
-                : section.tier === "vip"
-                ? "purple"
-                : "green",
-          }))
-        : [
-            {
-              name: "Orchestra Stalls",
-              rows: ["A", "B", "C", "D"],
-              seatsPerRow: 12,
-              tier: "premium",
-              color: "blue",
-            },
-            {
-              name: "Dress Circle",
-              rows: ["E", "F", "G"],
-              seatsPerRow: 10,
-              tier: "standard",
-              color: "green",
-            },
-            {
-              name: "Grand Circle",
-              rows: ["H", "I"],
-              seatsPerRow: 8,
-              tier: "economy",
-              color: "amber",
-            },
-          ];
-
-    const bookedSeats = this.getBookedSeats();
-
-    return zones
-      .map((zone) => {
-        const tierColors = {
-          vip: {
-            bg: "bg-purple-50",
-            border: "border-purple-300",
-            text: "text-purple-700",
-            badge: "bg-purple-100 text-purple-800",
-          },
-          premium: {
-            bg: "bg-blue-50",
-            border: "border-blue-300",
-            text: "text-blue-700",
-            badge: "bg-blue-100 text-blue-800",
-          },
-          standard: {
-            bg: "bg-green-50",
-            border: "border-green-300",
-            text: "text-green-700",
-            badge: "bg-green-100 text-green-800",
-          },
-          economy: {
-            bg: "bg-amber-50",
-            border: "border-amber-300",
-            text: "text-amber-700",
-            badge: "bg-amber-100 text-amber-800",
-          },
-        };
-
-        const colors = tierColors[zone.tier] || tierColors.standard;
-
-        const rows = zone.rows
-          .map((row) => {
-            const seats = [];
-            for (let i = 1; i <= zone.seatsPerRow; i++) {
-              const seatId = `${row}${i}`;
-              const isBooked = bookedSeats.includes(seatId);
-              const isSelected = this.selectedSeats.includes(seatId);
-
-              seats.push(`
-            <button
-              class="seat-btn w-10 h-10 rounded ${
-                isBooked
-                  ? "bg-gray-400 border-gray-500 text-gray-700 cursor-not-allowed"
-                  : isSelected
-                  ? "bg-indigo-600 border-indigo-700 text-white hover:bg-indigo-700"
-                  : `bg-white ${colors.border} ${colors.text} hover:${colors.bg}`
-              } border-2 transition-all text-xs font-semibold"
-              data-seat="${seatId}"
-              data-zone="${zone.name}"
-              ${isBooked ? "disabled" : ""}
-            >
-              ${seatId}
-            </button>
-          `);
-            }
-
-            return `
-          <div class="flex items-center justify-center gap-1">
-            <span class="w-8 text-center font-bold text-gray-700">${row}</span>
-            ${seats.join("")}
-          </div>
-        `;
-          })
-          .join("");
-
-        return `
-        <div class="mb-4">
-          <div class="flex items-center justify-between mb-3">
-            <h4 class="text-sm font-bold text-gray-900 flex items-center gap-2">
-              <i class="fas fa-layer-group"></i>
-              ${zone.name}
-            </h4>
-            <span class="text-xs px-2 py-1 rounded-full font-semibold ${
-              colors.badge
-            }">
-              ${zone.tier.toUpperCase()}
-            </span>
-          </div>
-          <div class="space-y-2 ${colors.bg} p-4 rounded-lg border-2 ${
-          colors.border
-        }">
-            ${rows}
-          </div>
-        </div>
-      `;
-      })
-      .join("");
-  },
-
-  generateSeatMap() {
+  async generateSeatMap() {
     const rows = ["A", "B", "C", "D", "E", "F", "G", "H"];
     const seatsPerRow = 12;
-    const bookedSeats = this.getBookedSeats();
+    const bookedSeats = await this.getBookedSeats();
 
     return rows
       .map((row) => {
@@ -665,13 +516,26 @@ export default {
       .join("");
   },
 
-  getBookedSeats() {
-    const bookings = storage.getItem("bookings", []);
-    const performanceBookings = bookings.filter(
-      (b) =>
-        b.performanceId === this.performanceData.id && b.status !== "cancelled"
-    );
-    return performanceBookings.flatMap((b) => b.seats);
+  async getBookedSeats() {
+    try {
+      const response = await bookingAPI.getAll();
+      const bookings = ResponseExtractor.extract(response, "bookings");
+      const performanceBookings = bookings.filter(
+        (b) =>
+          b.performanceId === this.performanceData.id &&
+          b.status !== "cancelled"
+      );
+      return performanceBookings.flatMap((b) =>
+        (b.seats || []).map((seat) =>
+          typeof seat === "string"
+            ? seat
+            : seat.fullId || seat.seatId || seat.id || ""
+        )
+      );
+    } catch (error) {
+      console.error("Error loading booked seats:", error);
+      return [];
+    }
   },
 
   renderTicketSelection() {
@@ -850,7 +714,7 @@ export default {
             .join("")}
         </div>
 
-        <div class="mt-6 p-4 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg">
+        <div class="mt-6 p-4 bg-indigo-600 text-white rounded-lg">
           <div class="flex items-center justify-between">
             <div>
               <p class="text-sm opacity-90">Total Amount</p>
@@ -1021,7 +885,7 @@ export default {
           `
           }
 
-          <div class="bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg p-6">
+          <div class="bg-indigo-600 text-white rounded-lg p-6">
             <div class="flex items-center justify-between">
               <div>
                 <p class="text-indigo-100 text-sm">Total Amount</p>
@@ -1067,7 +931,7 @@ export default {
 
     return `
       <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-        <div class="bg-gradient-to-r from-indigo-600 to-indigo-700 px-8 py-6">
+        <div class="bg-indigo-700 px-8 py-6">
           <div class="flex items-center justify-between text-white">
             <div>
               <p class="text-sm font-medium opacity-90">Total Amount</p>
@@ -1099,7 +963,7 @@ export default {
                       <p class="text-xs text-gray-500">Visa, Mastercard</p>
                     </div>
                   </div>
-                  <div class="payment-check hidden w-6 h-6 flex items-center justify-center shrink-0">
+                  <div class="payment-check hidden w-6 h-6 items-center justify-center shrink-0">
                     <i class="fas fa-check-circle block text-lg leading-none text-indigo-600"></i>
                   </div>
                 </div>
@@ -1116,7 +980,7 @@ export default {
                       <p class="text-xs text-gray-500">Mobile</p>
                     </div>
                   </div>
-                  <div class="payment-check hidden w-6 h-6 flex items-center justify-center shrink-0">
+                  <div class="payment-check hidden w-6 h-6 items-center justify-center shrink-0">
                     <i class="fas fa-check-circle block text-lg leading-none text-blue-600"></i>
                   </div>
                 </div>
@@ -1133,7 +997,7 @@ export default {
                       <p class="text-xs text-gray-500">Mobile</p>
                     </div>
                   </div>
-                  <div class="payment-check hidden w-6 h-6 flex items-center justify-center shrink-0">
+                  <div class="payment-check hidden w-6 h-6 items-center justify-center shrink-0">
                     <i class="fas fa-check-circle block text-lg leading-none text-green-600"></i>
                   </div>
                 </div>
@@ -1150,7 +1014,7 @@ export default {
                       <p class="text-xs text-gray-500">Online</p>
                     </div>
                   </div>
-                  <div class="payment-check hidden w-6 h-6 flex items-center justify-center shrink-0">
+                  <div class="payment-check hidden w-6 h-6 items-center justify-center shrink-0">
                     <i class="fas fa-check-circle block text-lg leading-none text-yellow-600"></i>
                   </div>
                 </div>
@@ -1225,7 +1089,7 @@ export default {
                     class="w-full px-4 py-3.5 pr-16 border-2 border-gray-300 rounded-xl bg-white text-lg font-mono text-gray-900 placeholder:text-gray-400 placeholder:opacity-100 transition-all duration-150 ease-in-out outline-none hover:border-gray-400 focus:border-[#635bff] focus:ring-4 focus:ring-purple-100/50 focus:shadow-sm disabled:bg-gray-50 disabled:text-gray-500 disabled:cursor-not-allowed"
                   />
                   <div class="absolute right-3 top-1/2 -translate-y-1/2 flex items-center justify-end gap-2 h-10">
-                    <div class="cvv-valid-icon hidden flex items-center justify-center">
+                    <div class="cvv-valid-icon hidden items-center justify-center">
                       <i class="fas fa-check-circle text-green-500 text-lg leading-none"></i>
                     </div>
                     <div class="group/tooltip relative flex items-center justify-center">
@@ -1266,7 +1130,7 @@ export default {
               </p>
             </div>
 
-            <div class="bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-200 rounded-xl p-4 mt-4">
+            <div class="bg-green-50 border-2 border-green-200 rounded-xl p-4 mt-4">
               <div class="flex items-start gap-3">
                 <div class="flex-shrink-0 w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
                   <i class="fas fa-shield-alt text-green-600 text-lg"></i>
@@ -1348,11 +1212,12 @@ export default {
                 ${this.selectedSeats
                   .map((seat) => {
                     const ticket = this.seatTicketTypes[seat];
+                    const displayLabel = getDisplayLabel(seat);
                     if (ticket) {
                       return `
                         <div class="flex items-center justify-between text-xs bg-gray-50 p-2 rounded">
                           <div class="flex items-center gap-2">
-                            <span class="px-2 py-1 bg-indigo-600 text-white rounded font-medium">${seat}</span>
+                            <span class="px-2 py-1 bg-indigo-600 text-white rounded font-medium">${displayLabel}</span>
                             <span class="text-gray-700">${ticket.name}</span>
                           </div>
                           <span class="font-semibold text-gray-900">$${ticket.price}</span>
@@ -1361,7 +1226,7 @@ export default {
                     }
                     return `
                       <div class="flex items-center justify-between text-xs bg-gray-50 p-2 rounded">
-                        <span class="px-2 py-1 bg-indigo-600 text-white rounded font-medium">${seat}</span>
+                        <span class="px-2 py-1 bg-indigo-600 text-white rounded font-medium">${displayLabel}</span>
                         <span class="text-gray-400 italic">Not assigned</span>
                       </div>
                     `;
@@ -1412,11 +1277,55 @@ export default {
       });
 
     $(document)
+      .off("click", "g.interactive-seat")
+      .on("click", "g.interactive-seat", function (e) {
+        const fullId = $(this).data("fullId");
+        if (!fullId) return;
+        self.toggleSeat(fullId);
+      });
+
+    $(document)
+      .off("keydown", "g.interactive-seat")
+      .on("keydown", "g.interactive-seat", function (e) {
+        if (e.key !== "Enter" && e.key !== " ") return;
+        const fullId = $(this).data("fullId");
+        if (!fullId) return;
+        e.preventDefault();
+        self.toggleSeat(fullId);
+      });
+
+    if (this._pz && this._pz.dispose) {
+      try {
+        this._pz.dispose();
+      } catch (e) {}
+    }
+    setTimeout(() => {
+      this._pz = initSeatMapPanzoom();
+    }, 100);
+
+    $(document)
+      .off("click", ".zoom-btn")
+      .on("click", ".zoom-btn", function () {
+        const action = $(this).data("zoom");
+        if (!self._pz) return;
+        if (action === "in") self._pz.smoothZoom(0, 0, 1.15);
+        if (action === "out") self._pz.smoothZoom(0, 0, 0.85);
+        if (action === "reset") {
+          self._pz.zoomTo(0, 0, 1);
+          if (self._pz._center) self._pz._center();
+        }
+        if (self._pz._clamp) setTimeout(() => self._pz._clamp(), 160);
+      });
+
+    $(document)
+      .off("wheel.seatzoom")
+      .on("wheel.seatzoom", function () {});
+    $(document)
       .off("click", "#continueToTickets")
-      .on("click", "#continueToTickets", function () {
+      .on("click", "#continueToTickets", async function () {
         if (self.selectedSeats.length > 0) {
           self.bookingStep = 2;
-          self.renderBookingForm();
+          await self.renderBookingForm();
           self.updateProgressSteps();
         } else {
           notify.warning("Please select at least one seat");
@@ -1425,40 +1334,40 @@ export default {
 
     $(document)
       .off("click", ".assign-ticket-btn")
-      .on("click", ".assign-ticket-btn", function () {
+      .on("click", ".assign-ticket-btn", async function () {
         const seat = $(this).data("seat");
         const ticketData = $(this).data("ticket");
         self.seatTicketTypes[seat] = ticketData;
-        self.renderBookingForm();
+        await self.renderBookingForm();
         self.updateProgressSteps();
       });
 
     $(document)
       .off("click", ".change-ticket-btn")
-      .on("click", ".change-ticket-btn", function () {
+      .on("click", ".change-ticket-btn", async function () {
         const seat = $(this).data("seat");
         delete self.seatTicketTypes[seat];
-        self.renderBookingForm();
+        await self.renderBookingForm();
         self.updateProgressSteps();
       });
 
     $(document)
       .off("click", "#backToSeats")
-      .on("click", "#backToSeats", function () {
+      .on("click", "#backToSeats", async function () {
         self.bookingStep = 1;
-        self.renderBookingForm();
+        await self.renderBookingForm();
         self.updateProgressSteps();
       });
 
     $(document)
       .off("click", "#continueToReview")
-      .on("click", "#continueToReview", function () {
+      .on("click", "#continueToReview", async function () {
         const allAssigned = self.selectedSeats.every(
           (seat) => self.seatTicketTypes[seat]
         );
         if (allAssigned) {
           self.bookingStep = 3;
-          self.renderBookingForm();
+          await self.renderBookingForm();
           self.updateProgressSteps();
         } else {
           notify.warning("Please assign ticket types to all seats");
@@ -1467,25 +1376,25 @@ export default {
 
     $(document)
       .off("click", "#backToTickets")
-      .on("click", "#backToTickets", function () {
+      .on("click", "#backToTickets", async function () {
         self.bookingStep = 2;
-        self.renderBookingForm();
+        await self.renderBookingForm();
         self.updateProgressSteps();
       });
 
     $(document)
       .off("click", "#continueToPayment")
-      .on("click", "#continueToPayment", function () {
+      .on("click", "#continueToPayment", async function () {
         self.bookingStep = 4;
-        self.renderBookingForm();
+        await self.renderBookingForm();
         self.updateProgressSteps();
       });
 
     $(document)
       .off("click", "#backToReview")
-      .on("click", "#backToReview", function () {
+      .on("click", "#backToReview", async function () {
         self.bookingStep = 3;
-        self.renderBookingForm();
+        await self.renderBookingForm();
         self.updateProgressSteps();
       });
 
@@ -1495,10 +1404,10 @@ export default {
         $(".payment-method").removeClass(
           "border-indigo-600 bg-indigo-50 border-blue-600 bg-blue-50 border-green-600 bg-green-50 border-yellow-600 bg-yellow-50"
         );
-        $(".payment-check").addClass("hidden");
+        $(".payment-check").addClass("hidden").removeClass("flex");
 
         const method = $(this).data("method");
-        $(this).find(".payment-check").removeClass("hidden");
+        $(this).find(".payment-check").removeClass("hidden").addClass("flex");
 
         if (method === "credit-card") {
           $(this).addClass("border-indigo-600 bg-indigo-50");
@@ -1527,7 +1436,7 @@ export default {
         $(this).val(formatted);
 
         self.clearFieldError("cardNumber");
-        $(".card-valid-icon").addClass("hidden");
+        $(".card-valid-icon").addClass("hidden").removeClass("flex");
 
         const cardType = self.detectCardType(formatted);
         self.updateCardBrandIcon(cardType);
@@ -1537,7 +1446,7 @@ export default {
           if (!validation.valid) {
             self.showFieldError("cardNumber", validation.message);
           } else {
-            $(".card-valid-icon").removeClass("hidden");
+            $(".card-valid-icon").removeClass("hidden").addClass("flex");
           }
         }
 
@@ -1552,14 +1461,14 @@ export default {
         $(this).val(formatted);
 
         self.clearFieldError("expiryDate");
-        $(".expiry-valid-icon").addClass("hidden");
+        $(".expiry-valid-icon").addClass("hidden").removeClass("flex");
 
         if (formatted.replace(/\s/g, "").replace(/\//g, "").length === 4) {
           const validation = self.validateExpiryDate(formatted);
           if (!validation.valid) {
             self.showFieldError("expiryDate", validation.message);
           } else {
-            $(".expiry-valid-icon").removeClass("hidden");
+            $(".expiry-valid-icon").removeClass("hidden").addClass("flex");
           }
         }
 
@@ -1573,7 +1482,7 @@ export default {
         $(this).val(value);
 
         self.clearFieldError("cvv");
-        $(".cvv-valid-icon").addClass("hidden");
+        $(".cvv-valid-icon").addClass("hidden").removeClass("flex");
 
         const cardType = self.detectCardType($("#cardNumber").val());
         const expectedLength = cardType === "amex" ? 4 : 3;
@@ -1583,7 +1492,7 @@ export default {
           if (!validation.valid) {
             self.showFieldError("cvv", validation.message);
           } else {
-            $(".cvv-valid-icon").removeClass("hidden");
+            $(".cvv-valid-icon").removeClass("hidden").addClass("flex");
           }
         }
 
@@ -1615,7 +1524,7 @@ export default {
       });
   },
 
-  toggleSeat(seatId) {
+  async toggleSeat(seatId) {
     const index = this.selectedSeats.indexOf(seatId);
     if (index > -1) {
       this.selectedSeats.splice(index, 1);
@@ -1624,7 +1533,7 @@ export default {
       this.selectedSeats.push(seatId);
     }
     this.selectedSeats.sort();
-    this.renderBookingForm();
+    await this.renderBookingForm();
     this.updateProgressSteps();
   },
 
@@ -1635,36 +1544,17 @@ export default {
   async confirmBooking() {
     const user = storage.getUser();
     let customerInfo = null;
-
     if (!user) {
-      const guestName = $("#guestName").val()?.trim();
-      const guestEmail = $("#guestEmail").val()?.trim();
-      const guestPhone = $("#guestPhone").val()?.trim();
-
-      if (!guestName || !guestEmail || !guestPhone) {
-        notify.error("Please fill in all guest information fields");
-        return;
-      }
-
-      customerInfo = {
-        name: guestName,
-        email: guestEmail,
-        phone: guestPhone,
-        isGuest: true,
-      };
-    } else {
-      customerInfo = {
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        isGuest: false,
-      };
+      notify.error("Login required to complete booking");
+      return;
     }
+    customerInfo = { id: user.id, name: user.name, email: user.email };
 
-    const paymentMethod =
+    const rawMethod =
       $(
         ".payment-method.border-indigo-600, .payment-method.border-blue-600, .payment-method.border-green-600, .payment-method.border-yellow-600"
       ).data("method") || "credit-card";
+    const paymentMethod = rawMethod === "paypal" ? "paypal" : "credit_card";
     const paymentDetails = {};
 
     if (paymentMethod === "credit-card") {
@@ -1732,33 +1622,22 @@ export default {
     });
 
     if (result.isConfirmed) {
-      const bookingId = "BK" + Date.now();
-      const booking = {
-        id: bookingId,
-        performanceId: this.performanceData.id,
-        userId: user?.id || "guest",
-        customerInfo: customerInfo,
-        seats: this.selectedSeats,
-        seatTicketTypes: this.seatTicketTypes,
-        ticketType: "Multiple",
-        amount: totalPrice,
-        status: "confirmed",
-        date: new Date().toISOString(),
-        performanceDate: this.performanceData.date,
-        performanceTitle: this.performanceData.title,
-        venue: this.performanceData.venue,
-        paymentMethod: paymentMethod,
-        paymentDetails: paymentDetails,
-        paymentDate: new Date().toISOString(),
-      };
+      try {
+        const booking = {
+          performanceId: this.performanceData.id,
+          showtimeId: this.selectedShowtimeId,
+          seats: this.selectedSeats,
+          amount: totalPrice,
+          paymentMethod,
+          customerInfo,
+        };
 
-      const bookings = storage.getItem("bookings", []);
-      bookings.push(booking);
-      storage.setItem("bookings", bookings);
+        const createdBooking = await bookingAPI.create(booking);
+        const bookingId = createdBooking.bookingReference || createdBooking.id;
 
-      Swal.fire({
-        title: "Booking Confirmed!",
-        html: `
+        Swal.fire({
+          title: "Booking Confirmed!",
+          html: `
           <div class="text-center space-y-4">
             <div class="text-6xl text-green-500 mb-4">
               <i class="fas fa-check-circle"></i>
@@ -1771,12 +1650,22 @@ export default {
             <p class="text-sm text-gray-600">A confirmation email will be sent to ${customerInfo.email}</p>
           </div>
         `,
-        icon: "success",
-        confirmButtonText: user ? "View My Bookings" : "Go to Homepage",
-        confirmButtonColor: SwalColors.success,
-      }).then(() => {
-        window.location.href = user ? "/user/bookings" : "/";
-      });
+          icon: "success",
+          confirmButtonText: user ? "View My Bookings" : "Go to Homepage",
+          confirmButtonColor: SwalColors.success,
+        }).then(() => {
+          window.location.href = "/user/bookings";
+        });
+      } catch (error) {
+        console.error("Error creating booking:", error);
+        handleApiError(error);
+        Swal.fire({
+          title: "Booking Failed",
+          text: "There was an error creating your booking. Please try again.",
+          icon: "error",
+          confirmButtonColor: SwalColors.danger,
+        });
+      }
     }
   },
 
@@ -1791,5 +1680,23 @@ export default {
         </a>
       </div>
     `);
+  },
+
+  renderZoneSummary() {
+    const sections = this.performanceData.pricingSections || [];
+    if (!sections.length) return "";
+    const rows = ZonePricing.getZoneSummary(sections)
+      .map((zone) => {
+        const badge = getTierBadge(zone.tier);
+        return `<tr class="border-b border-gray-200 hover:bg-gray-100"><td class="py-2 px-3 font-medium text-gray-900">${
+          zone.sectionName
+        }</td><td class="py-2 px-3"><span class="px-2 py-1 rounded text-xs font-semibold ${badge}">${
+          zone.tierLabel
+        }</span></td><td class="py-2 px-3 text-gray-600">${
+          zone.rowsDisplay
+        }</td><td class="py-2 px-3 text-right font-bold text-gray-900">HKD ${zone.basePrice.toLocaleString()}</td></tr>`;
+      })
+      .join("");
+    return `<div class="mt-6 bg-gray-50 rounded-lg p-4 border border-gray-200"><h3 class="text-lg font-semibold text-gray-900 mb-3"><i class="fas fa-tags mr-2"></i>Pricing Zones</h3><div class="overflow-x-auto"><table class="w-full text-sm"><thead><tr class="border-b border-gray-300"><th class="text-left py-2 px-3 text-gray-700 font-semibold">Section</th><th class="text-left py-2 px-3 text-gray-700 font-semibold">Zone</th><th class="text-left py-2 px-3 text-gray-700 font-semibold">Rows</th><th class="text-right py-2 px-3 text-gray-700 font-semibold">Base Price</th></tr></thead><tbody>${rows}</tbody></table></div><p class="text-xs text-gray-600 mt-3"><i class="fas fa-info-circle mr-1"></i>Final prices vary based on ticket type discounts.</p></div>`;
   },
 };

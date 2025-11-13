@@ -2,6 +2,10 @@ import { createEmptyState } from "/src/components/EmptyState.js";
 import { createButton } from "/src/components/Button.js";
 import { createBadge } from "/src/components/Badge.js";
 import { createImageUpload } from "/src/components/ImageUpload.js";
+import { VenueLayoutEditor } from "/src/components/VenueLayoutEditor.js";
+import { SeatLayoutEditor } from "/src/components/SeatLayoutEditor.js";
+import { SeatMap } from "/src/components/SeatMap.js";
+import { SeatNumberingSystem } from "/src/utils/SeatNumberingSystem.js";
 
 export class VenueView {
   constructor() {
@@ -431,6 +435,8 @@ export class VenueView {
   }
 
   renderLayoutTab(sections) {
+    const layoutConfig = { sections: sections || [], globalAisles: [] };
+
     return `
       <div class="space-y-5">
         <div class="bg-gradient-to-r from-indigo-50 to-blue-50 rounded-xl p-5 border border-indigo-100">
@@ -440,27 +446,18 @@ export class VenueView {
                 <i class="fas fa-th-large text-white"></i>
               </div>
               <div>
-                <h4 class="font-semibold text-gray-900">Seating Sections</h4>
-                <p class="text-xs text-gray-600 mt-1">Define the layout and capacity of your venue</p>
+                <h4 class="font-semibold text-gray-900">Advanced Seating Layout</h4>
+                <p class="text-xs text-gray-600 mt-1">Configure sections, aisles, and seat numbering</p>
               </div>
             </div>
-            <button id="addSectionBtn" class="px-4 py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 active:scale-95 transition-all text-sm font-medium shadow-sm flex items-center gap-2">
-              <i class="fas fa-plus"></i>
-              <span>Add Section</span>
-            </button>
           </div>
         </div>
-
-        <div id="sectionsList" class="space-y-3">
-          ${
-            sections.length === 0
-              ? `<div class="bg-gray-50 rounded-xl p-8 text-center border-2 border-dashed border-gray-300">
-                  <i class="fas fa-th-large text-gray-400 text-4xl mb-3"></i>
-                  <p class="text-gray-600 font-medium mb-1">No sections defined yet</p>
-                  <p class="text-gray-500 text-sm">Click "Add Section" to create your first seating section</p>
-                </div>`
-              : ""
-          }
+        <div id="layout-editor-container" class="space-y-6">
+          <div id="advanced-editor" class="bg-white p-4 rounded shadow border border-gray-200"></div>
+          <div>
+            <h5 class="text-sm font-semibold text-gray-700 mb-2">Quick Section Editor</h5>
+            <div id="quick-editor" class="bg-white p-4 rounded shadow border border-gray-200"></div>
+          </div>
         </div>
       </div>
     `;
@@ -671,6 +668,19 @@ export class VenueView {
     $("#venueImageUpload").html(createImageUpload("venueImage", venue?.image));
   }
 
+  initSeatEditors(layout) {
+    if (window.__quickSeatEditorInstance) {
+      window.__quickSeatEditorInstance = null;
+    }
+    $("#advanced-editor").html(
+      VenueLayoutEditor.create(layout || { sections: [] }, 0)
+    );
+    window.__quickSeatEditorInstance = SeatLayoutEditor.bind(
+      "#quick-editor",
+      layout || { sections: [] }
+    );
+  }
+
   getFormData() {
     const name = $("#venueName").val().trim();
     const address = $("#venueAddress").val().trim();
@@ -700,12 +710,19 @@ export class VenueView {
 
     const image = $("#venueImagePreview").attr("src") || "";
 
+    let quickLayout = null;
+    if (window.__quickSeatEditorInstance) {
+      quickLayout = window.__quickSeatEditorInstance.getValue();
+    }
+
+    const layout = quickLayout || { sections };
+
     return {
       name,
       address,
       contact,
       status,
-      layout: { sections },
+      layout,
       facilities,
       image,
     };

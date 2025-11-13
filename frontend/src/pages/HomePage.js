@@ -62,15 +62,15 @@ export default {
     this.loadFeaturedPerformances();
   },
 
-  loadFeaturedPerformances() {
+  async loadFeaturedPerformances() {
     $("#featuredPerformances").html(`
       <div class="col-span-3">
         ${createLoadingState({ message: "Loading performances..." })}
       </div>
     `);
 
-    setTimeout(() => {
-      const performances = statsService.getPerformances();
+    try {
+      const performances = await statsService.getPerformances();
       const featured = performances
         .filter((p) => p.ticketingInfo?.status !== "sold_out")
         .slice(0, 6);
@@ -99,6 +99,15 @@ export default {
             window.location.href = `/performances/${id}`;
           }
         });
-    }, 500);
+    } catch (error) {
+      console.error("Failed to load featured performances:", error);
+      $("#featuredPerformances").html(`
+        <div class="col-span-3 text-center py-12">
+          <i class="fas fa-exclamation-circle text-6xl text-red-300 mb-4"></i>
+          <p class="text-xl text-gray-600">Failed to load performances</p>
+          <p class="text-gray-500 mt-2">Please try again later</p>
+        </div>
+      `);
+    }
   },
 };

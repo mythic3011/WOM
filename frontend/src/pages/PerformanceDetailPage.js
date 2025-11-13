@@ -1,8 +1,9 @@
 import dayjs from "dayjs";
-import { performanceService } from "/src/services/dataService.js";
+import { performanceService } from "/src/services/performanceService.js";
 import { getStatusBadge } from "/src/utils/status.js";
 import { notify } from "/src/utils/ui/notification.js";
 import { ZonePricing } from "/src/utils/booking/zonePricing.js";
+import { getTierColors, getTierLabel } from "/src/config/tierConfig.js";
 
 export default {
   title: "Performance Details | WOM",
@@ -168,35 +169,9 @@ export default {
     `;
   },
 
-  getTierColors(tier) {
-    const colorMap = {
-      premium: {
-        border: "border-purple-200",
-        bg: "bg-purple-100",
-        text: "text-purple-700",
-      },
-      economy: {
-        border: "border-blue-200",
-        bg: "bg-blue-100",
-        text: "text-blue-700",
-      },
-      vip: {
-        border: "border-yellow-200",
-        bg: "bg-yellow-100",
-        text: "text-yellow-700",
-      },
-      standard: {
-        border: "border-green-200",
-        bg: "bg-green-100",
-        text: "text-green-700",
-      },
-    };
-
-    return colorMap[tier] || colorMap.standard;
-  },
-
   renderPricingZoneCard(zone) {
-    const colors = this.getTierColors(zone.tier);
+    const colors = getTierColors(zone.tier);
+    const tierLabel = zone.tierLabel || getTierLabel(zone.tier);
 
     return `
       <div class="bg-white rounded-lg p-4 border-2 ${colors.border}">
@@ -207,7 +182,7 @@ export default {
           <span class="px-2 py-1 rounded text-xs font-bold ${colors.bg} ${
       colors.text
     }">
-            ${zone.tierLabel.toUpperCase()}
+            ${tierLabel.toUpperCase()}
           </span>
         </div>
         <p class="text-xs text-gray-600 mb-2">

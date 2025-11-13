@@ -2,6 +2,8 @@ import dayjs from "dayjs";
 import { statsService } from "/src/services/statsService.js";
 import QRCode from "qrcode";
 import pdfMake from "pdfmake/build/pdfmake";
+import { COMPANY_INFO } from "/src/config/config.js";
+import { parseFullId, getDisplayLabel } from "/src/utils/seatIdHelper.js";
 
 const initPdfMake = async () => {
   try {
@@ -96,9 +98,15 @@ export const TicketGenerator = {
 
     const seatTableBody = booking.seatTicketTypes
       ? Object.entries(booking.seatTicketTypes).map(([seatId, ticket]) => {
-          const seatParts = seatId.split("-");
-          const seatNumber = seatParts[seatParts.length - 1] || seatId;
-          const section = seatParts.length >= 3 ? seatParts[2] : "N/A";
+          const parsed = parseFullId(seatId);
+          const seatNumber = parsed
+            ? parsed.displayLabel
+            : getDisplayLabel(seatId);
+          const section = parsed
+            ? parsed.sectionSlug
+                .replace(/-/g, " ")
+                .replace(/\b\w/g, (l) => l.toUpperCase())
+            : "N/A";
           const tier = ticket.tier || ticket.section || "Standard";
 
           return [
@@ -113,9 +121,19 @@ export const TicketGenerator = {
           ];
         })
       : booking.seats.map((seatId) => {
-          const seatParts = typeof seatId === "string" ? seatId.split("-") : [];
-          const seatNumber = seatParts[seatParts.length - 1] || seatId;
-          const section = seatParts.length >= 3 ? seatParts[2] : "N/A";
+          const seatIdStr =
+            typeof seatId === "string"
+              ? seatId
+              : seatId.fullId || seatId.seatId || "";
+          const parsed = parseFullId(seatIdStr);
+          const seatNumber = parsed
+            ? parsed.displayLabel
+            : getDisplayLabel(seatIdStr);
+          const section = parsed
+            ? parsed.sectionSlug
+                .replace(/-/g, " ")
+                .replace(/\b\w/g, (l) => l.toUpperCase())
+            : "N/A";
           const tier = booking.ticketType || "Standard";
 
           return [
@@ -498,7 +516,7 @@ export const TicketGenerator = {
         {
           text: [
             { text: "Need Assistance?\n", bold: true, fontSize: 11 },
-            "info@wom.hk  |  +852 2333 0600\n",
+            `${COMPANY_INFO.email} |  ${COMPANY_INFO.phone}\n`,
             {
               text: "Western Orchestral Music Performance System",
               fontSize: 8,

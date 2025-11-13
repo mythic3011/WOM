@@ -1,18 +1,24 @@
-import { performanceService } from "/src/services/dataService.js";
 import { getStatusBadge } from "/src/utils/status.js";
 import { createDebounceSearch } from "/src/utils/data/filters.js";
+import { performanceUtils } from "/src/utils/performanceUtils.js";
 import { createModal, openModal, closeModal } from "/src/components/Modal.js";
+import { ResponseExtractor } from "/src/services/responseExtractor.js";
+import { getTierBadge } from "/src/config/tierConfig.js";
 import {
   initImageUpload,
   getImageDataURL,
 } from "/src/components/ImageUpload.js";
 import { notify } from "/src/utils/ui/notification.js";
-import { storage } from "/src/services/storageService.js";
-import { MOCK_VENUES, SYSTEM_TICKET_TYPE_IDS } from "/src/data/mockData.js";
+import { SYSTEM_TICKET_TYPE_IDS } from "/src/data/mockData.js";
 import { ticketTypeService } from "/src/services/ticketTypeService.js";
 import { templateService } from "/src/services/templateService.js";
 import { venueService } from "/src/services/venueService.js";
 import { showtimeManager } from "/src/utils/booking/showtimeManager.js";
+import {
+  performanceAPI,
+  venueAPI,
+  handleApiError,
+} from "/src/services/apiClient.js";
 import {
   createTemplateSelector,
   initTemplateSelector,
@@ -32,6 +38,29 @@ import { PerformanceFormSections } from "/src/components/PerformanceFormSections
 import { FormComponents } from "/src/components/FormComponents.js";
 import dayjs from "dayjs";
 import Swal from "sweetalert2";
+import { storage } from "../../services/storageService.js";
+
+const DEFAULT_SEAT_LAYOUT = {
+  rows: 5,
+  seatsPerRow: 8,
+};
+
+const TIER_OPTIONS = ["vip", "premium", "standard", "economy"];
+
+const SEAT_STATUS_OPTIONS = {
+  available: "Available",
+  blocked: "Blocked",
+  reserved: "Reserved",
+};
+
+const ACCESSIBILITY_CATEGORIES = {
+  wheelchair: "Wheelchair Accessible",
+  "assisted-listening": "Assisted Listening",
+  "restricted-view": "Restricted View",
+  "extra-legroom": "Extra Legroom",
+};
+
+const DEFAULT_IMAGE_PATH = "/img/default-performance.jpg";
 
 export default {
   title: "Manage Performances | Admin",
@@ -40,6 +69,63 @@ export default {
   showtimes: [],
   groupDiscounts: [],
   ticketTypes: [],
+  venues: [],
+
+  getVenueDisplay(performance) {
+    return (
+      performance.venueName ||
+      performance.venue ||
+      performance.location ||
+      "N/A"
+    );
+  },
+
+  getShowtimeDateTime(showtime) {
+    return showtime.dateTime || showtime.datetime;
+  },
+
+  formatShowtimeDate(showtime, format = "MMM D, YYYY") {
+    return dayjs(this.getShowtimeDateTime(showtime)).format(format);
+  },
+
+  formatShowtimeTime(showtime, format = "h:mm A") {
+    return dayjs(this.getShowtimeDateTime(showtime)).format(format);
+  },
+
+  getSeatLayout(showtime) {
+    if (showtime.seatLayout) {
+      return showtime.seatLayout;
+    }
+    if (showtime.venueId && this.venues.length > 0) {
+      const venue = this.venues.find((v) => v.id === showtime.venueId);
+      if (venue?.layout?.sections?.[0]) {
+        return {
+          rows: venue.layout.sections[0].rows || DEFAULT_SEAT_LAYOUT.rows,
+          seatsPerRow:
+            venue.layout.sections[0].seatsPerRow ||
+            DEFAULT_SEAT_LAYOUT.seatsPerRow,
+        };
+      }
+    }
+    return DEFAULT_SEAT_LAYOUT;
+  },
+
+  getPerformanceById(id) {
+    return this.performances.find((p) => p.id === id);
+  },
+
+  async getVenueById(id) {
+    if (this.venues.length > 0) {
+      return this.venues.find((v) => v.id === id);
+    }
+    try {
+      const response = await venueAPI.getById(id);
+      return ResponseExtractor.extractSingle(response, "venue");
+    } catch (error) {
+      console.error("Failed to fetch venue:", error);
+      return null;
+    }
+  },
 
   async render() {
     return `
@@ -60,7 +146,7 @@ export default {
         </div>
 
         <div class="bg-white rounded-lg shadow-md p-6 mb-6">
-          <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-4">
             <input
               type="text"
               id="searchInput"
@@ -72,22 +158,45 @@ export default {
               class="text-gray-900 bg-white px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
             >
               <option class="text-gray-900 bg-white" value="">All Status</option>
-              <option class="text-gray-900 bg-white" value="upcoming">Upcoming</option>
               <option class="text-gray-900 bg-white" value="on_sale">On Sale</option>
+              <option class="text-gray-900 bg-white" value="upcoming">Upcoming</option>
               <option class="text-gray-900 bg-white" value="sold_out">Sold Out</option>
+              <option class="text-gray-900 bg-white" value="early_bird">Early Bird</option>
+              <option class="text-gray-900 bg-white" value="pre_order">Pre-Order</option>
+            </select>
+            <select
+              id="availabilityFilter"
+              class="text-gray-900 bg-white px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+            >
+              <option class="text-gray-900 bg-white" value="">All Availability</option>
+              <option class="text-gray-900 bg-white" value="high">High (>50%)</option>
+              <option class="text-gray-900 bg-white" value="medium">Limited (10-50%)</option>
+              <option class="text-gray-900 bg-white" value="low">Very Limited (<10%)</option>
+              <option class="text-gray-900 bg-white" value="sold_out">Sold Out</option>
+            </select>
+            <select
+              id="venueFilter"
+              class="text-gray-900 bg-white px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+            >
+              <option class="text-gray-900 bg-white" value="">All Venues</option>
             </select>
             <input
               type="date"
               id="dateFilter"
               class="text-gray-900 bg-white px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
             />
-<button
-  id="clearFilters"
-  class="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-gray-600 bg-transparent border border-gray-300 rounded-lg hover:bg-gray-100 hover:text-gray-900 hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 active:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
->
-  <i class="fas fa-filter-circle-xmark"></i>
-  Clear Filters
-</button>
+          </div>
+          <div class="flex items-center justify-between">
+            <button
+              id="clearFilters"
+              class="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-gray-600 bg-transparent border border-gray-300 rounded-lg hover:bg-gray-100 hover:text-gray-900 hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 active:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+            >
+              <i class="fas fa-filter-circle-xmark"></i>
+              Clear Filters
+            </button>
+            <div class="text-sm text-gray-600">
+              <span id="resultCount">0</span> performance(s) found
+            </div>
           </div>
         </div>
 
@@ -117,159 +226,211 @@ export default {
   async afterRender() {
     try {
       this.ticketTypes = await ticketTypeService.getAll();
-      this.performances = await performanceService.getAll();
+      const [performancesResponse, venuesResponse] = await Promise.all([
+        performanceAPI.getAll(),
+        venueAPI.getAll(),
+      ]);
+      this.performances = ResponseExtractor.extract(
+        performancesResponse,
+        "performances"
+      );
+      this.venues = ResponseExtractor.extract(venuesResponse, "venues");
+      this.populateVenueFilter();
       this.displayPerformances(this.performances);
       this.setupEventListeners();
       this.renderPerformanceModal();
     } catch (error) {
       console.error("Error loading performances:", error);
+      handleApiError(error, "Failed to load performances");
     }
+  },
+
+  populateVenueFilter() {
+    const venues = new Set();
+    this.performances.forEach((p) => {
+      const venue = p.venueName || p.venue;
+      if (venue) venues.add(venue);
+    });
+
+    const $venueFilter = $("#venueFilter");
+    Array.from(venues)
+      .sort()
+      .forEach((venue) => {
+        $venueFilter.append(
+          `<option class="text-gray-900 bg-white" value="${venue}">${venue}</option>`
+        );
+      });
   },
 
   displayPerformances(data) {
     const $tbody = $("#performancesTable");
     $tbody.empty();
 
+    $("#resultCount").text(data.length);
+
     if (!data || data.length === 0) {
-      $tbody.append(`
-        <tr>
-          <td colspan="8" class="px-6 py-8 text-center text-gray-500">
-            No performances found. Click "Add Performance" to create one.
-          </td>
-        </tr>
-      `);
+      $tbody.append(this.renderEmptyPerformancesRow());
       return;
     }
 
     data.forEach((perf) => {
-      const statusBadge = getStatusBadge(
-        perf.ticketingInfo?.status || "upcoming",
-        "performance"
-      );
-      const imageHtml = perf.imageUrl
-        ? `<img src="${perf.imageUrl}" class="h-16 w-16 object-cover rounded" />`
-        : `<div class="h-16 w-16 bg-gray-200 rounded flex items-center justify-center"><i class="fas fa-image text-gray-400"></i></div>`;
+      $tbody.append(this.renderPerformanceRow(perf));
+    });
 
-      const venue = perf.venueName || perf.venue || perf.location || "N/A";
-      const showtimes = perf.showtimes || [];
-      const showtimeCount = showtimes.length;
+    window.PerformancesPage = this;
+  },
 
-      let dateDisplay = "";
-      if (showtimeCount > 0) {
-        const firstShowtime = dayjs(
-          showtimes[0].dateTime || showtimes[0].datetime
-        );
-        const lastShowtime =
-          showtimeCount > 1
-            ? dayjs(
-                showtimes[showtimeCount - 1].dateTime ||
-                  showtimes[showtimeCount - 1].datetime
-              )
-            : null;
+  renderEmptyPerformancesRow() {
+    return `
+      <tr>
+        <td colspan="8" class="px-6 py-8 text-center text-gray-500">
+            No performances found. Click "Add Performance" to create one.
+          </td>
+        </tr>
+    `;
+  },
 
-        if (showtimeCount === 1) {
-          dateDisplay = `
-            <div class="text-sm font-medium text-gray-900">${firstShowtime.format(
-              "MMM D, YYYY"
-            )}</div>
-            <div class="text-xs text-gray-500">${firstShowtime.format(
-              "h:mm A"
-            )}</div>
-          `;
-        } else {
-          dateDisplay = `
-            <div class="flex items-center gap-2 mb-1">
-              <span class="text-sm font-medium text-gray-900">${firstShowtime.format(
-                "MMM D"
-              )}</span>
-              <i class="fas fa-arrow-right text-xs text-gray-400"></i>
-              <span class="text-sm font-medium text-gray-900">${lastShowtime.format(
-                "MMM D, YYYY"
-              )}</span>
-            </div>
-            <div class="inline-flex items-center gap-1.5 px-2 py-0.5 bg-indigo-100 text-indigo-700 rounded-full text-xs font-semibold">
-              <i class="fas fa-calendar-day"></i>
-              <span>${showtimeCount} Showtimes</span>
-            </div>
-          `;
-        }
-      } else if (perf.date) {
-        dateDisplay = `
-          <div class="text-sm text-gray-900">${dayjs(perf.date).format(
-            "MMM D, YYYY"
-          )}</div>
-          <div class="text-xs text-gray-500">No showtimes set</div>
-        `;
-      } else {
-        dateDisplay = `<div class="text-sm text-gray-500">N/A</div>`;
-      }
+  renderPerformanceRow(perf) {
+    const statusBadge = getStatusBadge(
+      perf.ticketingInfo?.status || "upcoming",
+      "performance"
+    );
+    const imageHtml = this.renderPerformanceImage(perf);
+    const venue = this.getVenueDisplay(perf);
+    const showtimes = perf.showtimes || [];
+    const showtimeCount = showtimes.length;
+    const dateDisplay = this.renderDateDisplay(perf, showtimes);
 
-      $tbody.append(`
-        <tr class="hover:bg-gray-50 transition-colors">
+    return `
+      <tr class="hover:bg-gray-50 transition-colors">
           <td class="px-6 py-4">${imageHtml}</td>
           <td class="px-6 py-4">
             <div class="text-sm font-medium text-gray-900">${perf.title}</div>
             <div class="text-xs text-gray-500">${perf.orchestra || "N/A"}</div>
           </td>
-          <td class="px-6 py-4">
-            <div class="text-sm text-gray-900">${venue}</div>
-          </td>
-          <td class="px-6 py-4">
-            ${dateDisplay}
-          </td>
+        <td class="px-6 py-4">
+          <div class="text-sm text-gray-900">${venue}</div>
+        </td>
+        <td class="px-6 py-4">${dateDisplay}</td>
           <td class="px-6 py-4 text-sm text-gray-600">${perf.composer}</td>
           <td class="px-6 py-4 text-sm text-gray-600">${perf.conductor}</td>
           <td class="px-6 py-4">${statusBadge}</td>
           <td class="px-6 py-4">
-            <div class="flex items-center gap-2">
-              ${FormComponents.actionButton({
-                icon: "fa-eye",
-                color: "blue",
-                size: "sm",
-                title: "View Details",
-                onClick: `window.PerformancesPage.viewPerformance(${perf.id})`,
-              })}
-              ${
-                showtimeCount > 0
-                  ? FormComponents.actionButton({
-                      icon: "fa-calendar-alt",
-                      color: "green",
-                      size: "sm",
-                      title: `Manage ${showtimeCount} Showtime${
-                        showtimeCount > 1 ? "s" : ""
-                      }`,
-                      onClick: `window.PerformancesPage.manageShowtimes(${perf.id})`,
-                    })
-                  : ""
-              }
-              ${FormComponents.actionButton({
-                icon: "fa-edit",
-                color: "yellow",
-                size: "sm",
-                title: "Edit Performance",
-                onClick: `window.PerformancesPage.editPerformance(${perf.id})`,
-              })}
-              ${FormComponents.actionButton({
-                icon: "fa-copy",
-                color: "indigo",
-                size: "sm",
-                title: "Duplicate Performance",
-                onClick: `window.PerformancesPage.duplicatePerformance(${perf.id})`,
-              })}
-              ${FormComponents.actionButton({
-                icon: "fa-trash",
-                color: "red",
-                size: "sm",
-                title: "Delete Performance",
-                onClick: `window.PerformancesPage.deletePerformance(${perf.id})`,
-              })}
+          <div class="flex items-center gap-2">
+            ${this.renderPerformanceActions(perf, showtimeCount)}
             </div>
           </td>
         </tr>
-      `);
-    });
+    `;
+  },
 
-    window.PerformancesPage = this;
+  renderPerformanceImage(perf) {
+    return perf.imageUrl
+      ? `<img src="${perf.imageUrl}" class="h-16 w-16 object-cover rounded" />`
+      : `<div class="h-16 w-16 bg-gray-200 rounded flex items-center justify-center"><i class="fas fa-image text-gray-400"></i></div>`;
+  },
+
+  renderDateDisplay(perf, showtimes) {
+    const showtimeCount = showtimes.length;
+
+    if (showtimeCount > 0) {
+      const firstShowtime = dayjs(this.getShowtimeDateTime(showtimes[0]));
+
+      if (showtimeCount === 1) {
+        return `
+          <div class="text-sm font-medium text-gray-900">${firstShowtime.format(
+            "MMM D, YYYY"
+          )}</div>
+          <div class="text-xs text-gray-500">${firstShowtime.format(
+            "h:mm A"
+          )}</div>
+        `;
+      }
+
+      const lastShowtime = dayjs(
+        this.getShowtimeDateTime(showtimes[showtimeCount - 1])
+      );
+      return `
+        <div class="flex items-center gap-2 mb-1">
+          <span class="text-sm font-medium text-gray-900">${firstShowtime.format(
+            "MMM D"
+          )}</span>
+          <i class="fas fa-arrow-right text-xs text-gray-400"></i>
+          <span class="text-sm font-medium text-gray-900">${lastShowtime.format(
+            "MMM D, YYYY"
+          )}</span>
+        </div>
+        <div class="inline-flex items-center gap-1.5 px-2 py-0.5 bg-indigo-100 text-indigo-700 rounded-full text-xs font-semibold">
+          <i class="fas fa-calendar-day"></i>
+          <span>${showtimeCount} Showtimes</span>
+        </div>
+      `;
+    }
+
+    if (perf.date) {
+      return `
+        <div class="text-sm text-gray-900">${dayjs(perf.date).format(
+          "MMM D, YYYY"
+        )}</div>
+        <div class="text-xs text-gray-500">No showtimes set</div>
+      `;
+    }
+
+    return `<div class="text-sm text-gray-500">N/A</div>`;
+  },
+
+  renderPerformanceActions(perf, showtimeCount) {
+    const actions = [];
+
+    actions.push(
+      FormComponents.actionButton({
+        icon: "fa-eye",
+        color: "blue",
+        size: "sm",
+        title: "View Details",
+        onClick: `window.PerformancesPage.viewPerformance(${perf.id})`,
+      })
+    );
+
+    if (showtimeCount > 0) {
+      actions.push(
+        FormComponents.actionButton({
+          icon: "fa-calendar-alt",
+          color: "green",
+          size: "sm",
+          title: `Manage ${showtimeCount} Showtime${
+            showtimeCount > 1 ? "s" : ""
+          }`,
+          onClick: `window.PerformancesPage.manageShowtimes(${perf.id})`,
+        })
+      );
+    }
+
+    actions.push(
+      FormComponents.actionButton({
+        icon: "fa-edit",
+        color: "yellow",
+        size: "sm",
+        title: "Edit Performance",
+        onClick: `window.PerformancesPage.editPerformance(${perf.id})`,
+      }),
+      FormComponents.actionButton({
+        icon: "fa-copy",
+        color: "indigo",
+        size: "sm",
+        title: "Duplicate Performance",
+        onClick: `window.PerformancesPage.duplicatePerformance(${perf.id})`,
+      }),
+      FormComponents.actionButton({
+        icon: "fa-trash",
+        color: "red",
+        size: "sm",
+        title: "Delete Performance",
+        onClick: `window.PerformancesPage.deletePerformance(${perf.id})`,
+      })
+    );
+
+    return actions.join("");
   },
 
   setupEventListeners() {
@@ -279,33 +440,64 @@ export default {
     );
 
     $("#searchInput").on("input", debouncedFilter);
-    $("#statusFilter, #dateFilter").on("change", () =>
-      this.filterPerformances()
+    $("#statusFilter, #dateFilter, #availabilityFilter, #venueFilter").on(
+      "change",
+      () => this.filterPerformances()
     );
     $("#clearFilters").on("click", () => this.clearFilters());
     $("#addPerformanceBtn").on("click", () => this.openPerformanceForm());
   },
 
   filterPerformances() {
-    const search = $("#searchInput").val().toLowerCase();
+    const search = $("#searchInput").val()?.toLowerCase() || "";
     const status = $("#statusFilter").val();
+    const availability = $("#availabilityFilter").val();
+    const venue = $("#venueFilter").val();
+    const dateFilter = $("#dateFilter").val();
 
     let filtered = this.performances.filter((p) => {
       const matchesSearch =
         !search ||
-        p.title.toLowerCase().includes(search) ||
-        p.composer.toLowerCase().includes(search);
+        (p.title && p.title.toLowerCase().includes(search)) ||
+        (p.composer && p.composer.toLowerCase().includes(search)) ||
+        (p.conductor && p.conductor.toLowerCase().includes(search)) ||
+        (p.orchestra && p.orchestra.toLowerCase().includes(search));
 
-      const matchesStatus = !status || p.ticketingInfo?.status === status;
+      const matchesStatus =
+        !status || performanceUtils.getPerformanceStatus(p) === status;
 
-      return matchesSearch && matchesStatus;
+      const matchesAvailability = performanceUtils.filterByAvailability(
+        p,
+        availability
+      );
+
+      const matchesVenue = !venue || performanceUtils.getVenueName(p) === venue;
+
+      let matchesDate = true;
+      if (dateFilter) {
+        const filterDate = new Date(dateFilter);
+        const perfDate = new Date(
+          p.showtimes?.[0]?.dateTime || p.date || new Date()
+        );
+        matchesDate = perfDate.toDateString() === filterDate.toDateString();
+      }
+
+      return (
+        matchesSearch &&
+        matchesStatus &&
+        matchesAvailability &&
+        matchesVenue &&
+        matchesDate
+      );
     });
 
     this.displayPerformances(filtered);
   },
 
   clearFilters() {
-    $("#searchInput, #dateFilter, #statusFilter").val("");
+    $(
+      "#searchInput, #dateFilter, #statusFilter, #availabilityFilter, #venueFilter"
+    ).val("");
     this.displayPerformances(this.performances);
   },
 
@@ -850,12 +1042,14 @@ export default {
               <label class="block text-xs text-gray-600 mb-1">Venue</label>
               <select class="showtime-venue w-full px-3 py-2 border border-gray-300 rounded-lg">
                 <option value="">Select venue</option>
-                ${MOCK_VENUES.map(
-                  (v) =>
-                    `<option value="${v.id}" ${
-                      showtime.venueId == v.id ? "selected" : ""
-                    }>${v.name}</option>`
-                ).join("")}
+                ${this.venues
+                  .map(
+                    (v) =>
+                      `<option value="${v.id}" ${
+                        showtime.venueId == v.id ? "selected" : ""
+                      }>${v.name}</option>`
+                  )
+                  .join("")}
               </select>
             </div>
           </div>
@@ -917,7 +1111,7 @@ export default {
         .closest("[data-showtime-index]")
         .data("showtime-index");
       const venueId = parseInt($(e.currentTarget).val());
-      const venue = MOCK_VENUES.find((v) => v.id === venueId);
+      const venue = this.venues.find((v) => v.id === venueId);
       this.showtimes[index].venueId = venueId;
       this.showtimes[index].venueName = venue?.name || "";
 
@@ -1032,7 +1226,7 @@ export default {
 
   async customizeSeatLayout(showtimeIndex) {
     const showtime = this.showtimes[showtimeIndex];
-    const currentLayout = showtime.seatLayout || { rows: 5, seatsPerRow: 8 };
+    const currentLayout = showtime.seatLayout || DEFAULT_SEAT_LAYOUT;
 
     const result = await Swal.fire({
       title:
@@ -1072,7 +1266,7 @@ export default {
 
   async editSeats(showtimeIndex) {
     const showtime = this.showtimes[showtimeIndex];
-    const layout = showtime.seatLayout || { rows: 5, seatsPerRow: 8 };
+    const layout = showtime.seatLayout || DEFAULT_SEAT_LAYOUT;
 
     if (!showtime.seatDetails) {
       showtime.seatDetails = this.initializeSeatDetails(
@@ -1334,26 +1528,38 @@ export default {
   },
 
   renderSeatPlanSVG(showtime, showtimeIndex) {
-    let rows = 5;
-    let seatsPerRow = 8;
-
-    if (showtime.seatLayout) {
-      rows = showtime.seatLayout.rows;
-      seatsPerRow = showtime.seatLayout.seatsPerRow;
-    } else if (showtime.venueId) {
-      const venue = MOCK_VENUES.find((v) => v.id === showtime.venueId);
-      if (venue?.layout?.sections?.[0]) {
-        rows = venue.layout.sections[0].rows || 5;
-        seatsPerRow = venue.layout.sections[0].seatsPerRow || 8;
-      }
-    }
-
+    const layout = this.getSeatLayout(showtime);
     const sections = showtime.pricing?.sections || [];
-    const seatDetails = showtime.seatDetails || {};
+    let seatDetails = { ...(showtime.seatDetails || {}) };
+
+    const bookings = storage.getItem("bookings", []);
+    const showtimeBookings = bookings.filter(
+      (b) => b.showtimeId === showtime.id && b.status !== "cancelled"
+    );
+
+    showtimeBookings.forEach((booking) => {
+      if (booking.seats && Array.isArray(booking.seats)) {
+        booking.seats.forEach((seat) => {
+          const seatId =
+            typeof seat === "string"
+              ? seat
+              : seat.fullId || seat.seatId || seat;
+          if (seatId) {
+            if (!seatDetails[seatId]) {
+              seatDetails[seatId] = {};
+            }
+            seatDetails[seatId].status = "reserved";
+            seatDetails[seatId].bookingId = booking.id;
+            seatDetails[seatId].customerName =
+              booking.customerInfo?.name || booking.userName;
+          }
+        });
+      }
+    });
 
     return SeatMap.createSeatPlanWithStats(
-      rows,
-      seatsPerRow,
+      layout.rows,
+      layout.seatsPerRow,
       seatDetails,
       sections
     );
@@ -1595,7 +1801,17 @@ export default {
         const ticketType = $(this).data("ticket-type");
         const price = parseFloat($(this).val()) || 0;
 
-        if (this.showtimes[showtimeIndex]?.pricing?.sections[sectionIndex]) {
+        if (
+          ticketType &&
+          this.showtimes[showtimeIndex]?.pricing?.sections[sectionIndex]
+        ) {
+          if (
+            !this.showtimes[showtimeIndex].pricing.sections[sectionIndex].prices
+          ) {
+            this.showtimes[showtimeIndex].pricing.sections[
+              sectionIndex
+            ].prices = {};
+          }
           this.showtimes[showtimeIndex].pricing.sections[sectionIndex].prices[
             ticketType
           ] = price;
@@ -1628,9 +1844,7 @@ export default {
       orchestra: $("#orchestra").val(),
       description: $("#description").val(),
       imageUrl:
-        imageUrl ||
-        this.currentPerformance?.imageUrl ||
-        "/img/default-performance.jpg",
+        imageUrl || this.currentPerformance?.imageUrl || DEFAULT_IMAGE_PATH,
       performanceInfo: {
         presenter: $("#presenter").val(),
         eventCategory: eventCategories,
@@ -1659,314 +1873,201 @@ export default {
         .filter((s) => s),
     };
 
-    const storedPerformances = storage.getItem("performances", []);
-
-    if (this.currentPerformance) {
-      const index = storedPerformances.findIndex(
-        (p) => p.id === this.currentPerformance.id
-      );
-      if (index !== -1) {
-        storedPerformances[index] = performanceData;
+    try {
+      if (this.currentPerformance) {
+        await performanceAPI.update(
+          this.currentPerformance.id,
+          performanceData
+        );
         notify.success("Performance updated successfully!");
+      } else {
+        await performanceAPI.create(performanceData);
+        notify.success("Performance created successfully!");
       }
-    } else {
-      storedPerformances.push(performanceData);
-      notify.success("Performance created successfully!");
+
+      closeModal("performanceModal");
+
+      const response = await performanceAPI.getAll();
+      this.performances = ResponseExtractor.extract(response, "performances");
+      this.displayPerformances(this.performances);
+    } catch (error) {
+      console.error("Error saving performance:", error);
+      handleApiError(
+        error,
+        `Failed to ${this.currentPerformance ? "update" : "create"} performance`
+      );
     }
-
-    storage.setItem("performances", storedPerformances);
-
-    closeModal("performanceModal");
-
-    this.performances = await performanceService.getAll();
-    this.displayPerformances(this.performances);
   },
 
   editPerformance(id) {
-    const performance = this.performances.find((p) => p.id === id);
+    const performance = this.getPerformanceById(id);
     if (performance) {
       this.openPerformanceForm(performance);
     }
   },
 
   async viewPerformance(id) {
-    const performance = this.performances.find((p) => p.id === id);
+    const performance = this.getPerformanceById(id);
     if (!performance) return;
 
-    const venue =
-      performance.venueName ||
-      performance.venue ||
-      performance.location ||
-      "N/A";
+    const venue = this.getVenueDisplay(performance);
     const ticketTypes = performance.pricingSections || [];
     const showtimes = performance.showtimes || [];
 
-    const showtimesHtml =
-      showtimes.length > 0
-        ? showtimes
-            .map(
-              (st) => `
-          <div class="py-2 px-3 bg-gray-50 rounded-lg">
-            <div class="font-semibold text-gray-900">${dayjs(
-              st.dateTime || st.datetime
-            ).format("MMM D, YYYY h:mm A")}</div>
-            ${
-              st.available !== undefined
-                ? `<div class="text-sm text-gray-600">${st.available} seats available</div>`
-                : ""
-            }
-          </div>
-        `
-            )
-            .join("")
-        : "<p class='text-gray-500'>No showtimes scheduled</p>";
-
-    const ticketTypesHtml =
-      ticketTypes.length > 0
-        ? ticketTypes
-            .map(
-              (tt) => `
-          <div class="flex justify-between items-center py-2 px-3 bg-gray-50 rounded-lg">
-            <div>
-              <span class="font-medium text-gray-900">${
-                tt.sectionName || tt.name || tt.section || "Unnamed Section"
-              }</span>
-              ${
-                tt.tier
-                  ? `<span class="ml-2 text-xs px-2 py-0.5 rounded-full ${
-                      tt.tier === "premium"
-                        ? "bg-purple-100 text-purple-700"
-                        : tt.tier === "standard"
-                        ? "bg-blue-100 text-blue-700"
-                        : "bg-gray-100 text-gray-700"
-                    }">${
-                      tt.tier.charAt(0).toUpperCase() + tt.tier.slice(1)
-                    }</span>`
-                  : ""
-              }
-            </div>
-            <span class="text-indigo-600 font-semibold">HKD ${
-              tt.basePrice || tt.price || "N/A"
-            }</span>
-          </div>
-        `
-            )
-            .join("")
-        : "<p class='text-gray-500'>No pricing information</p>";
-
     await Swal.fire({
       title: `<i class="fas fa-music text-indigo-600 mr-2"></i>${performance.title}`,
-      html: `
-        <div class="text-left space-y-4">
-          ${
-            performance.imageUrl
-              ? `
-            <div class="mb-4">
-              <img src="${performance.imageUrl}" class="w-full h-48 object-cover rounded-lg" />
-            </div>
-          `
-              : ""
-          }
-
-          <div class="grid grid-cols-2 gap-4">
-            <div>
-              <p class="text-xs text-gray-500 uppercase font-semibold">Composer</p>
-              <p class="text-sm text-gray-900">${
-                performance.composer || "N/A"
-              }</p>
-            </div>
-            <div>
-              <p class="text-xs text-gray-500 uppercase font-semibold">Conductor</p>
-              <p class="text-sm text-gray-900">${
-                performance.conductor || "N/A"
-              }</p>
-            </div>
-            <div>
-              <p class="text-xs text-gray-500 uppercase font-semibold">Orchestra</p>
-              <p class="text-sm text-gray-900">${
-                performance.orchestra || "N/A"
-              }</p>
-            </div>
-            <div>
-              <p class="text-xs text-gray-500 uppercase font-semibold">Venue</p>
-              <p class="text-sm text-gray-900">${venue}</p>
-            </div>
-          </div>
-
-          ${
-            performance.description
-              ? `
-            <div>
-              <p class="text-xs text-gray-500 uppercase font-semibold mb-1">Description</p>
-              <p class="text-sm text-gray-700">${performance.description}</p>
-            </div>
-          `
-              : ""
-          }
-
-          <div>
-            <p class="text-xs text-gray-500 uppercase font-semibold mb-2">Showtimes</p>
-            <div class="space-y-2">${showtimesHtml}</div>
-          </div>
-
-          <div>
-            <p class="text-xs text-gray-500 uppercase font-semibold mb-2">Ticket Pricing</p>
-            <div class="space-y-2">${ticketTypesHtml}</div>
-          </div>
-
-          <div>
-            <p class="text-xs text-gray-500 uppercase font-semibold">Status</p>
-            ${getStatusBadge(
-              performance.ticketingInfo?.status || "upcoming",
-              "performance"
-            )}
-          </div>
-        </div>
-      `,
+      html: this.generatePerformanceDetailsHTML(
+        performance,
+        venue,
+        showtimes,
+        ticketTypes
+      ),
       width: "700px",
       confirmButtonText: "Close",
       confirmButtonColor: SwalColors.primary,
     });
   },
 
+  generatePerformanceDetailsHTML(performance, venue, showtimes, ticketTypes) {
+    const showtimesHtml = this.renderShowtimesSection(showtimes);
+    const ticketTypesHtml = this.renderTicketTypesSection(ticketTypes);
+
+    return `
+      <div class="text-left space-y-4">
+        ${this.renderPerformanceImageSection(performance)}
+        ${this.renderPerformanceInfoGrid(performance, venue)}
+        ${this.renderPerformanceDescription(performance)}
+
+        <div>
+          <p class="text-xs text-gray-500 uppercase font-semibold mb-2">Showtimes</p>
+          <div class="space-y-2">${showtimesHtml}</div>
+        </div>
+
+        <div>
+          <p class="text-xs text-gray-500 uppercase font-semibold mb-2">Ticket Pricing</p>
+          <div class="space-y-2">${ticketTypesHtml}</div>
+        </div>
+
+        <div>
+          <p class="text-xs text-gray-500 uppercase font-semibold">Status</p>
+          ${getStatusBadge(
+            performance.ticketingInfo?.status || "upcoming",
+            "performance"
+          )}
+        </div>
+      </div>
+    `;
+  },
+
+  renderPerformanceImageSection(performance) {
+    return performance.imageUrl
+      ? `<div class="mb-4">
+           <img src="${performance.imageUrl}" class="w-full h-48 object-cover rounded-lg" />
+         </div>`
+      : "";
+  },
+
+  renderPerformanceInfoGrid(performance, venue) {
+    return `
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <p class="text-xs text-gray-500 uppercase font-semibold">Composer</p>
+          <p class="text-sm text-gray-900">${performance.composer || "N/A"}</p>
+        </div>
+        <div>
+          <p class="text-xs text-gray-500 uppercase font-semibold">Conductor</p>
+          <p class="text-sm text-gray-900">${performance.conductor || "N/A"}</p>
+        </div>
+        <div>
+          <p class="text-xs text-gray-500 uppercase font-semibold">Orchestra</p>
+          <p class="text-sm text-gray-900">${performance.orchestra || "N/A"}</p>
+        </div>
+        <div>
+          <p class="text-xs text-gray-500 uppercase font-semibold">Venue</p>
+          <p class="text-sm text-gray-900">${venue}</p>
+        </div>
+      </div>
+    `;
+  },
+
+  renderPerformanceDescription(performance) {
+    return performance.description
+      ? `<div>
+           <p class="text-xs text-gray-500 uppercase font-semibold mb-1">Description</p>
+           <p class="text-sm text-gray-700">${performance.description}</p>
+         </div>`
+      : "";
+  },
+
+  renderShowtimesSection(showtimes) {
+    if (showtimes.length === 0) {
+      return "<p class='text-gray-500'>No showtimes scheduled</p>";
+    }
+
+    return showtimes
+      .map(
+        (st) => `
+        <div class="py-2 px-3 bg-gray-50 rounded-lg">
+          <div class="font-semibold text-gray-900">${this.formatShowtimeDate(
+            st,
+            "MMM D, YYYY"
+          )} ${this.formatShowtimeTime(st)}</div>
+          ${
+            st.available !== undefined
+              ? `<div class="text-sm text-gray-600">${st.available} seats available</div>`
+              : ""
+          }
+        </div>
+      `
+      )
+      .join("");
+  },
+
+  renderTicketTypesSection(ticketTypes) {
+    if (ticketTypes.length === 0) {
+      return "<p class='text-gray-500'>No pricing information</p>";
+    }
+
+    return ticketTypes.map((tt) => this.renderTicketTypeCard(tt)).join("");
+  },
+
+  renderTicketTypeCard(tt) {
+    const tierBadge = tt.tier
+      ? `<span class="ml-2 text-xs px-2 py-0.5 rounded-full ${getTierBadge(
+          tt.tier
+        )}">${tt.tier.charAt(0).toUpperCase() + tt.tier.slice(1)}</span>`
+      : "";
+
+    return `
+      <div class="flex justify-between items-center py-2 px-3 bg-gray-50 rounded-lg">
+        <div>
+          <span class="font-medium text-gray-900">${
+            tt.sectionName || tt.name || tt.section || "Unnamed Section"
+          }</span>
+          ${tierBadge}
+        </div>
+        <span class="text-indigo-600 font-semibold">HKD ${
+          tt.basePrice || tt.price || "N/A"
+        }</span>
+      </div>
+    `;
+  },
+
   async manageShowtimes(id) {
-    const performance = this.performances.find((p) => p.id === id);
+    const performance = this.getPerformanceById(id);
     if (!performance) return;
 
     const showtimes = performance.showtimes || [];
     const bookings = storage.getItem("bookings", []);
 
-    const showtimesHtml = showtimes
-      .map((st, index) => {
-        const showtimeBookings = bookings.filter(
-          (b) => b.showtimeId === st.id && b.status !== "cancelled"
-        );
-        const bookedSeats = showtimeBookings.reduce(
-          (sum, b) => sum + (b.seats?.length || 0),
-          0
-        );
-        const totalSeats =
-          st.capacity ||
-          performance.pricingSections?.reduce(
-            (sum, ps) => sum + (ps.capacity || 100),
-            0
-          ) ||
-          500;
-        const availableSeats = totalSeats - bookedSeats;
-        const occupancyPercent = Math.round((bookedSeats / totalSeats) * 100);
-
-        const occupancyColor =
-          occupancyPercent >= 90
-            ? "bg-red-500"
-            : occupancyPercent >= 70
-            ? "bg-yellow-500"
-            : occupancyPercent >= 40
-            ? "bg-blue-500"
-            : "bg-green-500";
-
-        return `
-          <div class="border border-gray-200 rounded-lg p-4 hover:border-indigo-300 hover:shadow-md transition-all">
-            <div class="flex items-start justify-between mb-3">
-              <div class="flex-1">
-                <div class="flex items-center gap-2 mb-1">
-                  <h4 class="text-base font-semibold text-gray-900">
-                    ${dayjs(st.dateTime || st.datetime).format(
-                      "ddd, MMM D, YYYY"
-                    )}
-                  </h4>
-                  ${
-                    st.status === "cancelled"
-                      ? '<span class="px-2 py-0.5 bg-red-100 text-red-700 rounded-full text-xs font-semibold">Cancelled</span>'
-                      : ""
-                  }
-                </div>
-                <div class="flex items-center gap-3 text-sm text-gray-600">
-                  <span class="flex items-center gap-1">
-                    <i class="fas fa-clock text-indigo-600"></i>
-                    ${dayjs(st.dateTime || st.datetime).format("h:mm A")}
-                  </span>
-                  <span class="flex items-center gap-1">
-                    <i class="fas fa-users text-indigo-600"></i>
-                    ${showtimeBookings.length} bookings
-                  </span>
-                </div>
-              </div>
-              <div class="text-right">
-                <div class="text-2xl font-bold text-indigo-600">${occupancyPercent}%</div>
-                <div class="text-xs text-gray-500">Occupied</div>
-              </div>
-            </div>
-
-            <div class="mb-3">
-              <div class="flex items-center justify-between text-xs text-gray-600 mb-1">
-                <span>${bookedSeats} / ${totalSeats} seats</span>
-                <span>${availableSeats} available</span>
-              </div>
-              <div class="w-full bg-gray-200 rounded-full h-2">
-                <div class="${occupancyColor} h-2 rounded-full transition-all" style="width: ${occupancyPercent}%"></div>
-              </div>
-            </div>
-
-            <div class="grid grid-cols-2 gap-2 pt-3 border-t border-gray-100">
-              <button
-                onclick="window.PerformancesPage.viewShowtimeDetails(${id}, ${index})"
-                class="px-3 py-1.5 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors text-sm font-medium flex items-center justify-center gap-1"
-              >
-                <i class="fas fa-eye text-xs"></i>
-                Details
-              </button>
-              <button
-                onclick="window.PerformancesPage.viewShowtimeBookings(${id}, '${
-          st.id
-        }')"
-                class="px-3 py-1.5 bg-green-50 text-green-700 rounded-lg hover:bg-green-100 transition-colors text-sm font-medium flex items-center justify-center gap-1"
-              >
-                <i class="fas fa-ticket-alt text-xs"></i>
-                Bookings
-              </button>
-            </div>
-          </div>
-        `;
-      })
-      .join("");
-
     await Swal.fire({
       title: `<i class="fas fa-calendar-day text-indigo-600 mr-2"></i>Manage Showtimes`,
-      html: `
-        <div class="text-left">
-          <div class="bg-gray-50 rounded-lg p-4 mb-4">
-            <h3 class="font-semibold text-gray-900 mb-1">${
-              performance.title
-            }</h3>
-            <p class="text-sm text-gray-600">${performance.composer} • ${
-        performance.conductor
-      }</p>
-          </div>
-
-          <div class="mb-3 flex items-center justify-between">
-            <h4 class="font-semibold text-gray-700">
-              ${showtimes.length} Showtime${showtimes.length !== 1 ? "s" : ""}
-            </h4>
-            <div class="text-xs text-gray-500">
-              ${dayjs(showtimes[0].dateTime || showtimes[0].datetime).format(
-                "MMM YYYY"
-              )}
-              ${
-                showtimes.length > 1
-                  ? ` - ${dayjs(
-                      showtimes[showtimes.length - 1].dateTime ||
-                        showtimes[showtimes.length - 1].datetime
-                    ).format("MMM YYYY")}`
-                  : ""
-              }
-            </div>
-          </div>
-
-          <div class="space-y-3 max-h-96 overflow-y-auto pr-2">
-            ${showtimesHtml}
-          </div>
-        </div>
-      `,
+      html: this.generateManageShowtimesHTML(
+        performance,
+        showtimes,
+        bookings,
+        id
+      ),
       width: "700px",
       showConfirmButton: true,
       confirmButtonText: "Close",
@@ -1974,8 +2075,161 @@ export default {
     });
   },
 
+  generateManageShowtimesHTML(performance, showtimes, bookings, performanceId) {
+    const showtimesHtml = showtimes
+      .map((st, index) =>
+        this.renderShowtimeCard(st, index, performanceId, bookings)
+      )
+      .join("");
+
+    return `
+      <div class="text-left">
+        <div class="bg-gray-50 rounded-lg p-4 mb-4">
+          <h3 class="font-semibold text-gray-900 mb-1">${performance.title}</h3>
+          <p class="text-sm text-gray-600">${performance.composer} • ${
+      performance.conductor
+    }</p>
+        </div>
+
+        <div class="mb-3 flex items-center justify-between">
+          <h4 class="font-semibold text-gray-700">
+            ${showtimes.length} Showtime${showtimes.length !== 1 ? "s" : ""}
+          </h4>
+          <div class="text-xs text-gray-500">
+            ${this.formatShowtimeDate(showtimes[0], "MMM YYYY")}
+            ${
+              showtimes.length > 1
+                ? ` - ${this.formatShowtimeDate(
+                    showtimes[showtimes.length - 1],
+                    "MMM YYYY"
+                  )}`
+                : ""
+            }
+          </div>
+        </div>
+
+        <div class="space-y-3 max-h-96 overflow-y-auto pr-2">
+          ${showtimesHtml}
+        </div>
+      </div>
+    `;
+  },
+
+  renderShowtimeCard(st, index, performanceId, bookings) {
+    const showtimeBookings = bookings.filter(
+      (b) => b.showtimeId === st.id && b.status !== "cancelled"
+    );
+    const stats = this.calculateShowtimeStats(st, showtimeBookings);
+
+    return `
+      <div class="border border-gray-200 rounded-lg p-4 hover:border-indigo-300 hover:shadow-md transition-all">
+        ${this.renderShowtimeHeader(st, stats)}
+        ${this.renderShowtimeProgress(stats)}
+        ${this.renderShowtimeActions(performanceId, index, st.id)}
+      </div>
+    `;
+  },
+
+  calculateShowtimeStats(st, showtimeBookings) {
+    const bookedSeats = showtimeBookings.reduce(
+      (sum, b) => sum + (b.seats?.length || 0),
+      0
+    );
+    const totalSeats = st.capacity || 500;
+    const availableSeats = totalSeats - bookedSeats;
+    const occupancyPercent = Math.round((bookedSeats / totalSeats) * 100);
+    const occupancyColor = this.getOccupancyColor(occupancyPercent);
+
+    return {
+      bookedSeats,
+      totalSeats,
+      availableSeats,
+      occupancyPercent,
+      occupancyColor,
+      bookingCount: showtimeBookings.length,
+    };
+  },
+
+  getOccupancyColor(occupancyPercent) {
+    if (occupancyPercent >= 90) return "bg-red-500";
+    if (occupancyPercent >= 70) return "bg-yellow-500";
+    if (occupancyPercent >= 40) return "bg-blue-500";
+    return "bg-green-500";
+  },
+
+  renderShowtimeHeader(st, stats) {
+    const cancelledBadge =
+      st.status === "cancelled"
+        ? '<span class="px-2 py-0.5 bg-red-100 text-red-700 rounded-full text-xs font-semibold">Cancelled</span>'
+        : "";
+
+    return `
+      <div class="flex items-start justify-between mb-3">
+        <div class="flex-1">
+          <div class="flex items-center gap-2 mb-1">
+            <h4 class="text-base font-semibold text-gray-900">
+              ${this.formatShowtimeDate(st, "ddd, MMM D, YYYY")}
+            </h4>
+            ${cancelledBadge}
+          </div>
+          <div class="flex items-center gap-3 text-sm text-gray-600">
+            <span class="flex items-center gap-1">
+              <i class="fas fa-clock text-indigo-600"></i>
+              ${this.formatShowtimeTime(st)}
+            </span>
+            <span class="flex items-center gap-1">
+              <i class="fas fa-users text-indigo-600"></i>
+              ${stats.bookingCount} bookings
+            </span>
+          </div>
+        </div>
+        <div class="text-right">
+          <div class="text-2xl font-bold text-indigo-600">${
+            stats.occupancyPercent
+          }%</div>
+          <div class="text-xs text-gray-500">Occupied</div>
+        </div>
+      </div>
+    `;
+  },
+
+  renderShowtimeProgress(stats) {
+    return `
+      <div class="mb-3">
+        <div class="flex items-center justify-between text-xs text-gray-600 mb-1">
+          <span>${stats.bookedSeats} / ${stats.totalSeats} seats</span>
+          <span>${stats.availableSeats} available</span>
+        </div>
+        <div class="w-full bg-gray-200 rounded-full h-2">
+          <div class="${stats.occupancyColor} h-2 rounded-full transition-all" style="width: ${stats.occupancyPercent}%"></div>
+        </div>
+      </div>
+    `;
+  },
+
+  renderShowtimeActions(performanceId, index, showtimeId) {
+    return `
+      <div class="grid grid-cols-2 gap-2 pt-3 border-t border-gray-100">
+        <button
+          onclick="window.PerformancesPage.viewShowtimeDetails(${performanceId}, ${index})"
+          class="px-3 py-1.5 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors text-sm font-medium flex items-center justify-center gap-1"
+        >
+          <i class="fas fa-eye text-xs"></i>
+          Details
+        </button>
+        <button
+          onclick="window.PerformancesPage.viewShowtimeBookings(${performanceId}, '${showtimeId}')"
+          class="px-3 py-1.5 bg-green-50 text-green-700 rounded-lg hover:bg-green-100 transition-colors text-sm font-medium flex items-center justify-center gap-1"
+        >
+          <i class="fas fa-ticket-alt text-xs"></i>
+          Bookings
+        </button>
+      </div>
+    `;
+  },
+
   async duplicatePerformance(id) {
-    const performance = this.performances.find((p) => p.id === id);
+    const performance = this.getPerformanceById(id);
     if (!performance) return;
 
     const result = await Swal.fire({
@@ -1990,40 +2244,108 @@ export default {
     });
 
     if (result.isConfirmed) {
-      const newPerformance = {
-        ...performance,
-        id: Date.now(),
-        title: `${performance.title} (Copy)`,
-        showtimes: performance.showtimes
-          ? performance.showtimes.map((st) => ({
-              ...st,
-              id: `showtime_${Date.now()}_${Math.random()
-                .toString(36)
-                .substr(2, 9)}`,
-            }))
-          : [],
-      };
+      try {
+        const newPerformanceData = {
+          ...performance,
+          title: `${performance.title} (Copy)`,
+          showtimes: performance.showtimes
+            ? performance.showtimes.map((st) => {
+                const { id, ...stData } = st;
+                return stData;
+              })
+            : [],
+        };
 
-      const storedPerformances = storage.getItem("performances", []);
-      storage.setItem("performances", [...storedPerformances, newPerformance]);
+        delete newPerformanceData.id;
+        delete newPerformanceData.createdAt;
+        delete newPerformanceData.updatedAt;
 
-      notify.success("Performance duplicated successfully!");
+        await performanceAPI.create(newPerformanceData);
+        notify.success("Performance duplicated successfully!");
 
-      this.performances = await performanceService.getAll();
-      this.displayPerformances(this.performances);
+        const response = await performanceAPI.getAll();
+        this.performances = ResponseExtractor.extract(response, "performances");
+        this.displayPerformances(this.performances);
+      } catch (error) {
+        console.error("Error duplicating performance:", error);
+        handleApiError(error, "Failed to duplicate performance");
+      }
     }
   },
 
   async viewShowtimeDetails(performanceId, showtimeIndex) {
-    const performance = this.performances.find((p) => p.id === performanceId);
+    const performance = this.getPerformanceById(performanceId);
     if (!performance || !performance.showtimes) return;
 
     const showtime = performance.showtimes[showtimeIndex];
     if (!showtime) return;
 
+    await Swal.fire({
+      title: `<i class="fas fa-info-circle text-blue-600 mr-2"></i>Showtime Details`,
+      html: this.generateShowtimeDetailsHTML(performance, showtime),
+      width: "600px",
+      confirmButtonText: "Close",
+      confirmButtonColor: SwalColors.primary,
+    });
+  },
+
+  generateShowtimeDetailsHTML(performance, showtime) {
     const sections =
       showtime.pricingSections || performance.pricingSections || [];
-    const sectionsHtml = sections
+    const venue = this.getVenueDisplay(performance);
+    const sectionsHtml = this.renderPricingSectionsDetails(sections);
+
+    return `
+      <div class="text-left space-y-4">
+        <div class="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-lg p-4">
+          <h3 class="font-bold text-lg text-gray-900 mb-1">${
+            performance.title
+          }</h3>
+          <div class="text-sm text-gray-700">${performance.composer}</div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <p class="text-xs text-gray-500 uppercase font-semibold mb-1">Date & Time</p>
+            <p class="text-sm font-medium text-gray-900">${this.formatShowtimeDate(
+              showtime,
+              "ddd, MMM D, YYYY"
+            )}</p>
+            <p class="text-sm text-gray-600">${this.formatShowtimeTime(
+              showtime
+            )}</p>
+          </div>
+          <div>
+            <p class="text-xs text-gray-500 uppercase font-semibold mb-1">Venue</p>
+            <p class="text-sm text-gray-900">${venue}</p>
+          </div>
+        </div>
+
+        ${
+          sections.length > 0
+            ? `
+          <div>
+            <p class="text-xs text-gray-500 uppercase font-semibold mb-2">Pricing Sections</p>
+            <div class="space-y-2">${sectionsHtml}</div>
+          </div>
+        `
+            : ""
+        }
+
+        <div class="bg-blue-50 border border-blue-200 rounded-lg p-3">
+          <p class="text-sm text-blue-800">
+            <i class="fas fa-id-badge mr-1"></i>
+            Showtime ID: <code class="bg-blue-100 px-2 py-0.5 rounded text-xs font-mono">${
+              showtime.id
+            }</code>
+          </p>
+        </div>
+      </div>
+    `;
+  },
+
+  renderPricingSectionsDetails(sections) {
+    return sections
       .map(
         (section) => `
         <div class="flex items-center justify-between py-2 px-3 bg-gray-50 rounded-lg">
@@ -2033,13 +2355,9 @@ export default {
             }</span>
             ${
               section.tier
-                ? `<span class="text-xs px-2 py-0.5 rounded-full ${
-                    section.tier === "premium"
-                      ? "bg-purple-100 text-purple-700"
-                      : section.tier === "standard"
-                      ? "bg-blue-100 text-blue-700"
-                      : "bg-gray-100 text-gray-700"
-                  }">${section.tier}</span>`
+                ? `<span class="text-xs px-2 py-0.5 rounded-full ${getTierBadge(
+                    section.tier
+                  )}">${section.tier}</span>`
                 : ""
             }
           </div>
@@ -2050,64 +2368,6 @@ export default {
       `
       )
       .join("");
-
-    await Swal.fire({
-      title: `<i class="fas fa-info-circle text-blue-600 mr-2"></i>Showtime Details`,
-      html: `
-        <div class="text-left space-y-4">
-          <div class="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-lg p-4">
-            <h3 class="font-bold text-lg text-gray-900 mb-1">${
-              performance.title
-            }</h3>
-            <div class="text-sm text-gray-700">${performance.composer}</div>
-          </div>
-
-          <div class="grid grid-cols-2 gap-4">
-            <div>
-              <p class="text-xs text-gray-500 uppercase font-semibold mb-1">Date & Time</p>
-              <p class="text-sm font-medium text-gray-900">${dayjs(
-                showtime.dateTime || showtime.datetime
-              ).format("ddd, MMM D, YYYY")}</p>
-              <p class="text-sm text-gray-600">${dayjs(
-                showtime.dateTime || showtime.datetime
-              ).format("h:mm A")}</p>
-            </div>
-            <div>
-              <p class="text-xs text-gray-500 uppercase font-semibold mb-1">Venue</p>
-              <p class="text-sm text-gray-900">${
-                performance.venueName ||
-                performance.venue ||
-                performance.location ||
-                "N/A"
-              }</p>
-            </div>
-          </div>
-
-          ${
-            sections.length > 0
-              ? `
-            <div>
-              <p class="text-xs text-gray-500 uppercase font-semibold mb-2">Pricing Sections</p>
-              <div class="space-y-2">${sectionsHtml}</div>
-            </div>
-          `
-              : ""
-          }
-
-          <div class="bg-blue-50 border border-blue-200 rounded-lg p-3">
-            <p class="text-sm text-blue-800">
-              <i class="fas fa-id-badge mr-1"></i>
-              Showtime ID: <code class="bg-blue-100 px-2 py-0.5 rounded text-xs font-mono">${
-                showtime.id
-              }</code>
-            </p>
-          </div>
-        </div>
-      `,
-      width: "600px",
-      confirmButtonText: "Close",
-      confirmButtonColor: SwalColors.primary,
-    });
   },
 
   async viewShowtimeBookings(performanceId, showtimeId) {
@@ -2233,14 +2493,17 @@ export default {
     });
 
     if (result.isConfirmed) {
-      const storedPerformances = storage.getItem("performances", []);
-      const filtered = storedPerformances.filter((p) => p.id !== id);
-      storage.setItem("performances", filtered);
+      try {
+        await performanceAPI.delete(id);
+        notify.success("Performance deleted successfully!");
 
-      notify.success("Performance deleted successfully!");
-
-      this.performances = await performanceService.getAll();
-      this.displayPerformances(this.performances);
+        const response = await performanceAPI.getAll();
+        this.performances = ResponseExtractor.extract(response, "performances");
+        this.displayPerformances(this.performances);
+      } catch (error) {
+        console.error("Error deleting performance:", error);
+        handleApiError(error, "Failed to delete performance");
+      }
     }
   },
 
@@ -2279,7 +2542,7 @@ export default {
 
   async saveSeatTemplate(showtimeIndex) {
     const showtime = this.showtimes[showtimeIndex];
-    const layout = showtime.seatLayout || { rows: 5, seatsPerRow: 8 };
+    const layout = showtime.seatLayout || DEFAULT_SEAT_LAYOUT;
     const seatDetails =
       showtime.seatDetails ||
       this.initializeSeatDetails(layout.rows, layout.seatsPerRow);

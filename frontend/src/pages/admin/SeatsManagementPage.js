@@ -1,9 +1,8 @@
-import { performanceService } from "/src/services/dataService.js";
+import { performanceService } from "/src/services/performanceService.js";
 import { storage } from "/src/services/storageService.js";
 import { notify } from "/src/utils/ui/notification.js";
 import { createModal, openModal, closeModal } from "/src/components/Modal.js";
 import { createDebounceSearch } from "/src/utils/data/filters.js";
-import { MOCK_VENUES, MOCK_PERFORMANCES } from "/src/data/mockData.js";
 import { seatUtils } from "/src/utils/booking/seatUtils.js";
 import { reportingUtils } from "/src/utils/reports/reporting.js";
 import { keyboard, registerGlobalShortcuts } from "/src/utils/ui/keyboard.js";
@@ -858,19 +857,15 @@ export default {
   },
 
   async saveChanges() {
-    const performances = await performanceService.getAll();
-    const perfIndex = performances.findIndex(
-      (p) => p.id === this.selectedPerformance.id
-    );
-
-    if (perfIndex !== -1) {
-      performances[perfIndex] = this.selectedPerformance;
-      storage.setItem(
-        "performances",
-        performances.filter(
-          (p) => !MOCK_PERFORMANCES.find((mp) => mp.id === p.id)
-        )
+    try {
+      await performanceService.update(
+        this.selectedPerformance.id,
+        this.selectedPerformance
       );
+      notify.success("Seat layout saved successfully");
+    } catch (error) {
+      console.error("Error saving seat layout:", error);
+      notify.error("Failed to save seat layout");
     }
   },
 

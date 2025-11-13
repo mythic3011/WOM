@@ -93,3 +93,16 @@ svg g.interactive-seat * {
 .os-theme-indigo > .os-scrollbar-horizontal {
   height: 8px;
 }
+
+svg g.interactive-seat:focus rect {
+  stroke: #4f46e5;
+  stroke-width: 3px;
+}
+
+svg g.interactive-seat:focus {
+  outline: none;
+}
+
+.seats-transform-ease {
+  transition: transform 150ms ease-out;
+}
