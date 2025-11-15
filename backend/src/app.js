@@ -16,6 +16,8 @@ import { apiLimiter, bookingLimiter } from "./middleware/rateLimiter.js";
 import { openApiSpec } from "./config/openapi.js";
 import logger, { requestLogger } from "./config/logger.js";
 import { sanitizeAll } from "./middleware/sanitize.js";
+import { requestId } from "./middleware/requestId.js";
+import { performanceMonitor } from "./middleware/performance.js";
 
 import authRoutes from "./routes/auth.js";
 import userRoutes from "./routes/users.js";
@@ -24,6 +26,7 @@ import bookingRoutes from "./routes/bookings.js";
 import venueRoutes from "./routes/venues.js";
 import ticketTypeRoutes from "./routes/ticketTypes.js";
 import statsRoutes from "./routes/stats.js";
+import devToolsRoutes from "./routes/devTools.js";
 
 dotenv.config();
 
@@ -63,8 +66,11 @@ app.use((req, res, next) => {
 
 app.use(cors(corsConfig));
 
+app.use(requestId);
+
 if (process.env.NODE_ENV === "development") {
   app.use(morgan("dev"));
+  app.use(performanceMonitor);
 }
 app.use(requestLogger);
 
@@ -153,6 +159,10 @@ app.use("/api/bookings", bookingRoutes);
 app.use("/api/venues", venueRoutes);
 app.use("/api/ticket-types", ticketTypeRoutes);
 app.use("/api/stats", statsRoutes);
+
+if (process.env.NODE_ENV === "development") {
+  app.use("/api/dev-tools", devToolsRoutes);
+}
 
 app.use(notFound);
 app.use(errorHandler);

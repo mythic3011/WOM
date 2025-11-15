@@ -191,8 +191,8 @@ export const dialogUtils = {
             <div class="bg-indigo-600 h-2.5 rounded-full" style="width: ${percentage}%"></div>
           </div>
           <p class="text-sm text-gray-500">Step ${currentStep} of ${
-        steps.length
-      }</p>
+            steps.length
+          }</p>
         </div>
       `,
       allowOutsideClick: false,
@@ -237,8 +237,8 @@ export const dialogUtils = {
           case "select":
             inputHTML = `
               <select id="${id}" class="swal2-select w-full" ${
-              required ? "required" : ""
-            }>
+                required ? "required" : ""
+              }>
                 <option value="">-- Select --</option>
                 ${selectOptions
                   .map(

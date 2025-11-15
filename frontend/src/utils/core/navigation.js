@@ -25,4 +25,3 @@ export function goBack() {
 export function redirect(path) {
   page.redirect(path);
 }
-

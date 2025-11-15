@@ -82,8 +82,8 @@ export default {
             <div class="flex items-start justify-between p-4 bg-white rounded-lg border border-gray-200 hover:border-indigo-300 transition-colors">
               <div class="flex-1">
                 <label for="notif-${categoryKey}-${
-                notif.key
-              }" class="flex items-start cursor-pointer">
+                  notif.key
+                }" class="flex items-start cursor-pointer">
                   <div class="flex-1">
                     <p class="font-medium text-gray-900">${notif.label}</p>
                     <p class="text-sm text-gray-600 mt-1">${
@@ -123,17 +123,32 @@ export default {
       ? '<span class="bg-green-100 text-green-800 text-[10px] font-semibold px-2 py-0.5 rounded-full">Default</span>'
       : '<span class="bg-yellow-100 text-yellow-800 text-[10px] font-semibold px-2 py-0.5 rounded-full flex items-center gap-1"><i class="fas fa-star text-[8px]"></i>Custom</span>';
 
-    const pricingInfo = type.pricing
-      ? `<span class="flex items-center gap-1 text-blue-600">
-          <i class="fas fa-tag"></i>
-          ${
-            type.pricing.type === "percentage"
-              ? `${type.pricing.value}%`
-              : `$${type.pricing.value}`
-          }
-          ${type.pricing.modifier === "discount" ? "off" : "markup"}
-        </span>`
-      : "";
+    const discount = parseFloat(type.discount || 1.0);
+    let pricingInfo = "";
+
+    if (discount === 1.0) {
+      pricingInfo = `<span class="flex items-center gap-1 text-gray-600">
+        <i class="fas fa-tag"></i>
+        Full Price
+      </span>`;
+    } else if (discount < 1.0) {
+      const discountPercent = Math.round((1.0 - discount) * 100);
+      pricingInfo = `<span class="flex items-center gap-1 text-green-600">
+        <i class="fas fa-tag"></i>
+        ${discountPercent}% off
+      </span>`;
+    } else {
+      const markup = Math.round((discount - 1.0) * 100);
+      pricingInfo = `<span class="flex items-center gap-1 text-blue-600">
+        <i class="fas fa-tag"></i>
+        +${markup}% markup
+      </span>`;
+    }
+
+    const statusBadge =
+      type.isActive !== false
+        ? '<span class="text-green-600 text-xs"><i class="fas fa-check-circle"></i> Active</span>'
+        : '<span class="text-gray-400 text-xs"><i class="fas fa-pause-circle"></i> Inactive</span>';
 
     return `
       <div class="ticket-type-item group bg-white border-2 border-gray-200 rounded-lg p-4 hover:border-indigo-400 hover:shadow-md transition-all" data-type-id="${
@@ -148,13 +163,16 @@ export default {
               <div class="flex items-center gap-2 mb-1">
                 <h3 class="font-bold text-gray-900 text-base">${type.name}</h3>
                 ${badge}
+                ${statusBadge}
               </div>
+              ${type.description ? `<p class="text-xs text-gray-600 mb-1.5">${type.description}</p>` : ""}
               <div class="flex items-center gap-3 text-xs text-gray-500">
                 <span class="flex items-center gap-1">
                   <i class="fas fa-fingerprint"></i>
                   <span class="font-mono">${type.id}</span>
                 </span>
                 ${pricingInfo}
+                ${type.eligibility ? `<span class="flex items-center gap-1"><i class="fas fa-user-check"></i>${type.eligibility.substring(0, 30)}${type.eligibility.length > 30 ? "..." : ""}</span>` : ""}
               </div>
             </div>
           </div>
@@ -531,12 +549,6 @@ export default {
         return;
       }
       const typeId = $btn.attr("data-id");
-      console.log(
-        "Delete button clicked, typeId:",
-        typeId,
-        "Type:",
-        typeof typeId
-      );
       this.deleteTicketType(typeId);
     });
 
@@ -614,28 +626,156 @@ export default {
           : '<i class="fas fa-plus text-indigo-600 mr-2"></i>Add Ticket Type',
         html: `
           <div class="text-left space-y-4">
+            ${
+              !isEdit
+                ? `
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-2">Type Name</label>
+              <label class="block text-sm font-medium text-gray-700 mb-2">Type ID</label>
+              <input type="text" id="typeId" class="swal2-input w-full" placeholder="e.g., STUDENT, SENIOR" value="${
+                type?.id || ""
+              }">
+              <p class="text-xs text-gray-500 mt-1">Unique identifier (uppercase, no spaces)</p>
+            </div>
+            `
+                : ""
+            }
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2">Type Name <span class="text-red-500">*</span></label>
               <input type="text" id="typeName" class="swal2-input w-full" placeholder="e.g., Student, Senior" value="${
                 type?.name || ""
               }">
             </div>
-            <div class="text-xs text-gray-500 bg-gray-50 p-3 rounded">
-              <i class="fas fa-lightbulb mr-1"></i>
-              This name will appear in pricing sections when creating performances.
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2">Description</label>
+              <textarea id="typeDescription" class="swal2-input w-full" placeholder="Brief description of this ticket type" rows="2">${
+                type?.description || ""
+              }</textarea>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2">Pricing Type</label>
+              <select id="pricingType" class="swal2-input w-full">
+                <option value="multiplier" ${!type || type.discount <= 1.0 ? "selected" : ""}>Multiplier (discount from base price)</option>
+                <option value="percentage" ${type && type.discount > 1.0 ? "selected" : ""}>Percentage (% of base price)</option>
+              </select>
+            </div>
+            <div id="discountContainer">
+              <label class="block text-sm font-medium text-gray-700 mb-2">
+                <span id="discountLabel">Discount Multiplier</span> <span class="text-red-500">*</span>
+              </label>
+              <input type="number" id="typeDiscount" class="swal2-input w-full" 
+                placeholder="1.0" step="0.01" min="0" max="2" 
+                value="${type?.discount || "1.0"}">
+              <p class="text-xs text-gray-500 mt-1" id="discountHelp">
+                1.0 = full price, 0.5 = 50% off, 1.5 = 150% of base
+              </p>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2">Eligibility Requirements</label>
+              <textarea id="typeEligibility" class="swal2-input w-full" placeholder="e.g., Valid student ID required" rows="2">${
+                type?.eligibility || ""
+              }</textarea>
+            </div>
+            <div class="flex items-center gap-2 bg-gray-50 p-3 rounded">
+              <input type="checkbox" id="typeIsActive" class="w-4 h-4" ${
+                type?.isActive !== false ? "checked" : ""
+              }>
+              <label for="typeIsActive" class="text-sm font-medium text-gray-700">Active (available for new performances)</label>
+            </div>
+            <div class="text-xs text-gray-500 bg-blue-50 p-3 rounded border border-blue-200">
+              <i class="fas fa-info-circle mr-1 text-blue-600"></i>
+              This ticket type will be available when creating new performances.
             </div>
           </div>
         `,
-        width: "500px",
+        width: "600px",
         showCancelButton: true,
         confirmButtonText: isEdit ? "Save Changes" : "Add Type",
+        didOpen: () => {
+          const pricingTypeSelect = document.getElementById("pricingType");
+          const discountInput = document.getElementById("typeDiscount");
+          const discountLabel = document.getElementById("discountLabel");
+          const discountHelp = document.getElementById("discountHelp");
+
+          const updateDiscountUI = () => {
+            const isPercentage = pricingTypeSelect.value === "percentage";
+            if (isPercentage) {
+              discountLabel.textContent = "Percentage of Base Price";
+              discountHelp.textContent =
+                "Enter percentage (e.g., 50 for 50% of base, 100 for full price, 150 for 150%)";
+              discountInput.setAttribute("max", "200");
+              discountInput.setAttribute("step", "1");
+              discountInput.setAttribute("placeholder", "100");
+              if (!type || type.discount <= 1.0) {
+                discountInput.value = (
+                  parseFloat(type?.discount || 1.0) * 100
+                ).toFixed(0);
+              }
+            } else {
+              discountLabel.textContent = "Discount Multiplier";
+              discountHelp.textContent =
+                "1.0 = full price, 0.5 = 50% off, 1.5 = 150% of base";
+              discountInput.setAttribute("max", "2");
+              discountInput.setAttribute("step", "0.01");
+              discountInput.setAttribute("placeholder", "1.0");
+              if (type && type.discount > 1.0) {
+                discountInput.value = (parseFloat(type.discount) / 100).toFixed(
+                  2
+                );
+              }
+            }
+          };
+
+          pricingTypeSelect.addEventListener("change", updateDiscountUI);
+          updateDiscountUI();
+        },
         preConfirm: () => {
+          const id = isEdit
+            ? type.id
+            : document.getElementById("typeId")?.value.trim().toUpperCase();
           const name = document.getElementById("typeName").value.trim();
+          const description = document
+            .getElementById("typeDescription")
+            .value.trim();
+          const pricingType = document.getElementById("pricingType").value;
+          let discount = parseFloat(
+            document.getElementById("typeDiscount").value
+          );
+          const eligibility = document
+            .getElementById("typeEligibility")
+            .value.trim();
+          const isActive = document.getElementById("typeIsActive").checked;
+
+          if (!isEdit && !id) {
+            Swal.showValidationMessage("Please enter a type ID");
+            return false;
+          }
           if (!name) {
             Swal.showValidationMessage("Please enter a type name");
             return false;
           }
-          return { name };
+          if (isNaN(discount) || discount < 0) {
+            Swal.showValidationMessage("Please enter a valid discount value");
+            return false;
+          }
+
+          // Convert percentage to multiplier if needed
+          if (pricingType === "percentage") {
+            discount = discount / 100;
+          }
+
+          const data = {
+            name,
+            description,
+            discount: discount,
+            eligibility,
+            isActive,
+          };
+
+          if (!isEdit) {
+            data.id = id;
+          }
+
+          return data;
         },
       });
 

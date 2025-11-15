@@ -18,10 +18,18 @@ const startServer = async () => {
       process.exit(1);
     }
 
-    console.log("Synchronizing database...");
-    await syncDatabase(NODE_ENV === "development");
+    const FORCE_SYNC = process.env.DB_SYNC_FORCE === "true";
+    if (FORCE_SYNC) {
+      console.log("Force synchronizing database...");
+      await syncDatabase(true);
+    } else {
+      console.log("Skipping sync (using migrations)...");
+    }
 
-    if (NODE_ENV === "development") {
+    const ENABLE_AUTOSETUP =
+      (process.env.DB_AUTOSETUP || "true") === "true" &&
+      NODE_ENV === "development";
+    if (ENABLE_AUTOSETUP) {
       console.log("Checking database setup...");
       await autoSetupDatabase();
     }

@@ -192,7 +192,7 @@ export const animations = {
   typewriter(element, text, speed = 50) {
     const $el = $(element);
     $el.text("");
-    
+
     return new Promise((resolve) => {
       let i = 0;
       const type = () => {
@@ -225,20 +225,21 @@ export const animations = {
   },
 
   highlightElement(element, duration = 2000) {
-    anime.timeline({
-      targets: element,
-    })
-    .add({
-      backgroundColor: "#fef3c7",
-      duration: 300,
-      easing: "easeOutQuad",
-    })
-    .add({
-      backgroundColor: "rgba(255, 255, 255, 0)",
-      duration: 300,
-      delay: duration - 600,
-      easing: "easeOutQuad",
-    });
+    anime
+      .timeline({
+        targets: element,
+      })
+      .add({
+        backgroundColor: "#fef3c7",
+        duration: 300,
+        easing: "easeOutQuad",
+      })
+      .add({
+        backgroundColor: "rgba(255, 255, 255, 0)",
+        duration: 300,
+        delay: duration - 600,
+        easing: "easeOutQuad",
+      });
   },
 
   spin(element, duration = 1000) {

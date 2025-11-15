@@ -1,3 +1,6 @@
+import "core-js/stable";
+import "regenerator-runtime/runtime";
+import $ from "jquery";
 import page from "page";
 import { setupRouter, updateNavigation } from "/src/router/index.js";
 import { initSPALinks } from "/src/utils/core/navigation.js";
@@ -8,6 +11,8 @@ import "/src/assets/fa-fontawesome-fixed.css";
 import "/src/assets/fa-solid-fixed.css";
 import "/src/assets/fa-brands-fixed.css";
 import "/src/assets/style.css";
+
+window.$ = window.jQuery = $;
 import "dayjs/locale/zh-hk";
 
 $(document).ready(async function () {

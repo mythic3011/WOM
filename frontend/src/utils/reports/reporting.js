@@ -183,8 +183,8 @@ export const reportingUtils = {
       parseFloat(report.utilizationPercentage) > 75
         ? "green"
         : parseFloat(report.utilizationPercentage) > 50
-        ? "yellow"
-        : "red";
+          ? "yellow"
+          : "red";
 
     return `
       <div style="font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px;">
@@ -206,16 +206,16 @@ export const reportingUtils = {
           utilizationColor === "green"
             ? "d1fae5"
             : utilizationColor === "yellow"
-            ? "fef3c7"
-            : "fee2e2"
+              ? "fef3c7"
+              : "fee2e2"
         }; padding: 15px; border-radius: 8px; margin: 20px 0;">
           <h2 style="margin-top: 0; color: #374151;">Utilization Rate</h2>
           <p style="font-size: 32px; font-weight: bold; margin: 10px 0; color: #${
             utilizationColor === "green"
               ? "059669"
               : utilizationColor === "yellow"
-              ? "d97706"
-              : "dc2626"
+                ? "d97706"
+                : "dc2626"
           };">
             ${report.utilizationPercentage}%
           </p>
@@ -224,8 +224,8 @@ export const reportingUtils = {
               utilizationColor === "green"
                 ? "10b981"
                 : utilizationColor === "yellow"
-                ? "f59e0b"
-                : "ef4444"
+                  ? "f59e0b"
+                  : "ef4444"
             }; height: 100%; width: ${report.utilizationPercentage}%;"></div>
           </div>
         </div>

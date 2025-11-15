@@ -1,5 +1,7 @@
-import { Booking, Performance, User } from "../models/index.js";
+import { Booking, Performance, User, Venue } from "../models/index.js";
 import { Op } from "sequelize";
+import dayjs from "dayjs";
+import { NotFoundError, BadRequestError } from "../utils/errors.js";
 import sequelize from "../config/database.js";
 import {
   getPerformanceAvailability,
@@ -19,16 +21,16 @@ export const createBooking = async (bookingData, userId) => {
 
   const performance = await Performance.findByPk(performanceId);
   if (!performance) {
-    throw new Error("Performance not found");
+    throw new NotFoundError("Performance not found");
   }
 
   if (!performance.seatMap?.indexMap) {
-    throw new Error("Performance seat map not initialized");
+    throw new BadRequestError("Performance seat map not initialized");
   }
 
   const user = await User.findByPk(userId);
   if (!user) {
-    throw new Error("User not found");
+    throw new NotFoundError("User not found");
   }
 
   const resolvedSeats = [];
@@ -37,7 +39,7 @@ export const createBooking = async (bookingData, userId) => {
       typeof seatInput === "string" ? seatInput : seatInput.seatId || seatInput.fullId;
     const resolved = resolveSeatId(performance.seatMap, seatId);
     if (!resolved) {
-      throw new Error(`Seat ${seatId} not found in performance seat map`);
+      throw new BadRequestError(`Seat ${seatId} not found in performance seat map`);
     }
     resolvedSeats.push(resolved);
   }
@@ -45,7 +47,7 @@ export const createBooking = async (bookingData, userId) => {
   const availability = await getPerformanceAvailability(performanceId, showtimeId);
 
   if (availability.availableSeats < resolvedSeats.length) {
-    throw new Error("Not enough seats available");
+    throw new BadRequestError("Not enough seats available");
   }
 
   const existingBookings = await Booking.findAll({
@@ -70,7 +72,7 @@ export const createBooking = async (bookingData, userId) => {
 
   for (const resolved of resolvedSeats) {
     if (bookedSeatIds.has(resolved.fullId.toLowerCase())) {
-      throw new Error(`Seat ${resolved.fullId} is already booked`);
+      throw new BadRequestError(`Seat ${resolved.fullId} is already booked`);
     }
   }
 
@@ -175,7 +177,7 @@ export const getBookingById = async (id, userId = null, isAdmin = false) => {
   });
 
   if (!booking) {
-    throw new Error("Booking not found");
+    throw new NotFoundError("Booking not found");
   }
 
   return booking;
@@ -191,15 +193,15 @@ export const updateBooking = async (id, updates, userId = null, isAdmin = false)
   const booking = await Booking.findOne({ where });
 
   if (!booking) {
-    throw new Error("Booking not found");
+    throw new NotFoundError("Booking not found");
   }
 
   if (booking.status === "cancelled") {
-    throw new Error("Cannot update cancelled booking");
+    throw new BadRequestError("Cannot update cancelled booking");
   }
 
   if (updates.status === "confirmed" && !isAdmin) {
-    throw new Error("Only admin can confirm bookings");
+    throw new BadRequestError("Only admin can confirm bookings");
   }
 
   await booking.update(updates);

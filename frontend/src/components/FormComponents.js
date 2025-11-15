@@ -64,8 +64,8 @@ export const FormComponents = {
         class="w-full px-4 py-2.5 text-sm font-medium text-gray-900 bg-white border border-gray-300 rounded-lg shadow-sm hover:bg-gray-50 hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 focus:-translate-y-0.5 focus:shadow-md transition-all duration-200 ${
           readonly ? "bg-gray-50 cursor-not-allowed" : ""
         } ${
-      disabled ? "bg-gray-100 text-gray-500 cursor-not-allowed" : ""
-    } ${className}"
+          disabled ? "bg-gray-100 text-gray-500 cursor-not-allowed" : ""
+        } ${className}"
         ${required ? "required" : ""}
         ${readonly ? "readonly" : ""}
         ${disabled ? "disabled" : ""}
@@ -131,8 +131,8 @@ export const FormComponents = {
         ${id ? `id="${id}"` : ""}
         type="${type}"
         class="inline-flex items-center gap-2 ${sizeClasses[size]} ${
-      colorClasses[color] || colorClasses.indigo
-    } text-white rounded-lg focus:outline-none focus:ring-2 transition-colors shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed ${className}"
+          colorClasses[color] || colorClasses.indigo
+        } text-white rounded-lg focus:outline-none focus:ring-2 transition-colors shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed ${className}"
         ${disabled ? "disabled" : ""}
       >
         ${icon ? `<i class="fas ${icon} text-white"></i>` : ""}
@@ -285,8 +285,8 @@ export const FormComponents = {
         type="button"
         ${id ? `id="${id}"` : ""}
         class="inline-flex items-center ${sizeClass} ${colors.bg} ${
-      colors.text
-    } ${colors.hover} rounded-lg transition-colors font-medium"
+          colors.text
+        } ${colors.hover} rounded-lg transition-colors font-medium"
         ${dataAttrs}
         ${title || tooltip ? `title="${title || tooltip}"` : ""}
         ${onClick ? `onclick="${onClick}"` : ""}
@@ -531,8 +531,8 @@ export const FormComponents = {
                       .map(
                         (col) => `
                       <td class="px-4 py-4 ${col.cellClassName || ""} ${
-                          col.nowrap ? "whitespace-nowrap" : ""
-                        }">
+                        col.nowrap ? "whitespace-nowrap" : ""
+                      }">
                         ${
                           typeof col.render === "function"
                             ? col.render(row, index)

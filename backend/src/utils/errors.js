@@ -26,9 +26,30 @@ export class ConflictError extends AppError {
   }
 }
 
+export class UnauthorizedError extends AppError {
+  constructor(message = "Unauthorized", code = "UNAUTHORIZED") {
+    super(message, 401, { code, name: "UnauthorizedError" });
+  }
+}
+
+export class ForbiddenError extends AppError {
+  constructor(message = "Forbidden", code = "FORBIDDEN") {
+    super(message, 403, { code, name: "ForbiddenError" });
+  }
+}
+
+export class BadRequestError extends AppError {
+  constructor(message = "Bad request", code = "BAD_REQUEST") {
+    super(message, 400, { code, name: "BadRequestError" });
+  }
+}
+
 export default {
   AppError,
   ValidationError,
   NotFoundError,
   ConflictError,
+  UnauthorizedError,
+  ForbiddenError,
+  BadRequestError,
 };

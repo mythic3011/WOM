@@ -252,6 +252,15 @@ Server runs on http://localhost:3000
 
 API Documentation: http://localhost:3000/docs
 
+### Auto-Setup and Sync Controls
+
+Environment flags to control database behavior during development:
+
+- `DB_SYNC_FORCE=false` to avoid dropping and recreating tables on start
+- `DB_AUTOSETUP=true` to seed only when the database is empty
+
+To preserve your local data between restarts, ensure `DB_SYNC_FORCE` remains `false`.
+
 ### Production Mode
 
 ```bash

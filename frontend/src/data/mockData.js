@@ -423,7 +423,6 @@ export const MockDataHelpers = {
   },
 
   refreshData() {
-    console.log("Refreshing mock data...");
     return {
       venues: MOCK_VENUES.length,
       performances: MOCK_PERFORMANCES.length,

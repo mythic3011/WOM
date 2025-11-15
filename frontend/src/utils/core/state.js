@@ -6,29 +6,29 @@ export function createState(initialState = {}) {
     get(target, property) {
       return target[property];
     },
-    
+
     set(target, property, value) {
       const oldValue = target[property];
       target[property] = value;
-      
+
       if (listeners[property]) {
-        listeners[property].forEach(callback => {
+        listeners[property].forEach((callback) => {
           callback(value, oldValue);
         });
       }
-      
+
       return true;
-    }
+    },
   };
 
   const proxy = new Proxy(state, handler);
 
-  proxy.subscribe = function(property, callback) {
+  proxy.subscribe = function (property, callback) {
     if (!listeners[property]) {
       listeners[property] = [];
     }
     listeners[property].push(callback);
-    
+
     return function unsubscribe() {
       const index = listeners[property].indexOf(callback);
       if (index > -1) {
@@ -37,12 +37,12 @@ export function createState(initialState = {}) {
     };
   };
 
-  proxy.getState = function() {
+  proxy.getState = function () {
     return { ...state };
   };
 
-  proxy.setState = function(updates) {
-    Object.keys(updates).forEach(key => {
+  proxy.setState = function (updates) {
+    Object.keys(updates).forEach((key) => {
       proxy[key] = updates[key];
     });
   };
@@ -54,11 +54,11 @@ export function useState(key, initialValue) {
   if (!window.__appState) {
     window.__appState = {};
   }
-  
+
   if (window.__appState[key] === undefined) {
     window.__appState[key] = initialValue;
   }
-  
+
   return {
     get value() {
       return window.__appState[key];
@@ -71,8 +71,6 @@ export function useState(key, initialValue) {
     },
     setValue(newValue) {
       window.__appState[key] = newValue;
-    }
+    },
   };
 }
-
-

@@ -2,11 +2,7 @@ import { notify } from "/src/utils/ui/notification.js";
 import { getCurrentUser, logout } from "/src/utils/core/auth.js";
 import { phoneUtils } from "/src/utils/forms/phoneFormat.js";
 import { ResponseExtractor } from "/src/services/responseExtractor.js";
-import {
-  createImageUpload,
-  initImageUpload,
-  getImageDataURL,
-} from "/src/components/ImageUpload.js";
+import { Avatar } from "/src/components/Avatar.js";
 import { FormComponents } from "/src/components/FormComponents.js";
 import { SwalColors } from "/src/utils/colors.js";
 import { userAPI, handleApiError } from "/src/services/apiClient.js";
@@ -44,7 +40,15 @@ export default {
             <div class="lg:col-span-1">
               <div class="bg-white rounded-lg shadow-md border border-gray-200 p-6 sticky top-6">
                 <div class="text-center">
-                  <div id="profileImageUpload"></div>
+                  <div class="flex justify-center mb-4">
+                    ${Avatar.render({
+                      src: fullUserData?.profileImage || user?.profileImage,
+                      name: user?.name || "User",
+                      size: "2xl",
+                      editable: true,
+                      userId: user?.id,
+                    })}
+                  </div>
                   <h3 class="mt-4 text-lg font-bold text-gray-900">${
                     user?.name || "User"
                   }</h3>
@@ -397,25 +401,45 @@ export default {
   },
 
   async afterRender() {
+    this.setupEventListeners();
+    this.setupAvatarUpload();
+  },
+
+  setupAvatarUpload() {
     const user = getCurrentUser();
-
-    $("#profileImageUpload").html(
-      createImageUpload({
-        id: "profileImage",
-        label: "Change Profile Image",
-        preview: true,
-        previewSize: "24",
-        defaultImage: user?.profileImage,
-        required: false,
-      })
-    );
-
-    initImageUpload("profileImageInput", "profileImagePreview", {
-      maxSize: 5,
-      shape: "rounded-full",
-      previewSize: "24",
+    Avatar.initializeUpload(document.body, {
+      onUpload: async (file, dataUrl) => {
+        try {
+          notify.info("Uploading profile picture...");
+          await this.updateProfileImage(dataUrl);
+          notify.success("Profile picture updated successfully!");
+        } catch (error) {
+          console.error("Error uploading profile picture:", error);
+          notify.error("Failed to update profile picture");
+        }
+      },
+      onRemove: async () => {
+        try {
+          await this.updateProfileImage(null);
+          notify.success("Profile picture removed");
+        } catch (error) {
+          console.error("Error removing profile picture:", error);
+          notify.error("Failed to remove profile picture");
+        }
+      },
     });
+  },
 
+  async updateProfileImage(imageData) {
+    const user = getCurrentUser();
+    if (!user) return;
+
+    await userAPI.update(user.id, {
+      profileImage: imageData,
+    });
+  },
+
+  setupEventListeners() {
     $("#phone").on("input", function () {
       const value = $(this).val();
       const cleaned = phoneUtils.cleanPhone(value);

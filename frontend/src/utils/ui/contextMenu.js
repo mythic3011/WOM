@@ -39,10 +39,11 @@ export class ContextMenuManager {
   attachToElement(element, menuItemsOrCallback) {
     element.addEventListener("contextmenu", (e) => {
       e.preventDefault();
-      
-      const items = typeof menuItemsOrCallback === "function" 
-        ? menuItemsOrCallback(element, e) 
-        : menuItemsOrCallback;
+
+      const items =
+        typeof menuItemsOrCallback === "function"
+          ? menuItemsOrCallback(element, e)
+          : menuItemsOrCallback;
 
       this.show(e.pageX, e.pageY, items, element);
     });

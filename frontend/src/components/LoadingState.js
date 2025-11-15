@@ -31,10 +31,7 @@ export function createLoadingState({
   `;
 }
 
-export function createInlineLoader({
-  size = "sm",
-  color = "indigo",
-}) {
+export function createInlineLoader({ size = "sm", color = "indigo" }) {
   const sizes = {
     xs: "h-4 w-4",
     sm: "h-6 w-6",
@@ -55,10 +52,7 @@ export function createInlineLoader({
   return `<div class="inline-block animate-spin rounded-full ${sizeClass} border-b-2 ${colorClass}"></div>`;
 }
 
-export function createSkeletonLoader({
-  type = "card",
-  count = 1,
-}) {
+export function createSkeletonLoader({ type = "card", count = 1 }) {
   const templates = {
     card: `
       <div class="bg-white rounded-lg shadow-md p-6 animate-pulse">
@@ -93,4 +87,3 @@ export function createSkeletonLoader({
   const template = templates[type] || templates.card;
   return Array(count).fill(template).join("");
 }
-

@@ -1,10 +1,12 @@
+import { validationService } from "../../services/validationService.js";
+
 export function validateEmail(email) {
-  const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  return re.test(email);
+  return validationService.validateEmail(email);
 }
 
 export function validatePassword(password) {
-  return password && password.length >= 6;
+  const result = validationService.validatePassword(password);
+  return result.valid;
 }
 
 export function validateUsername(username) {
@@ -12,8 +14,7 @@ export function validateUsername(username) {
 }
 
 export function validatePhone(phone) {
-  const re = /^[+]?[\d\s-()]+$/;
-  return phone && re.test(phone) && phone.replace(/\D/g, "").length >= 8;
+  return validationService.validatePhone(phone);
 }
 
 export function validateRequired(value) {
@@ -74,40 +75,33 @@ export function clearValidationError(fieldId) {
 }
 
 export function validateForm(formData, rules) {
-  const errors = {};
+  const convertedRules = {};
 
   Object.entries(rules).forEach(([field, validators]) => {
-    const value = formData[field];
+    convertedRules[field] = {
+      label: field,
+      required: validators.some((v) => v.required),
+      pattern: validators.find((v) => v.pattern)?.pattern,
+      minLength: validators.find((v) => v.minLength)?.minLength,
+      maxLength: validators.find((v) => v.maxLength)?.maxLength,
+      custom: validators.find((v) => v.custom)?.custom,
+      message: validators[0]?.message,
+    };
+  });
 
-    validators.forEach((validator) => {
-      if (validator.required && !validateRequired(value)) {
-        errors[field] = validator.message || `${field} is required`;
-      } else if (validator.email && value && !validateEmail(value)) {
-        errors[field] = validator.message || "Invalid email format";
-      } else if (
-        validator.minLength &&
-        !validateMinLength(value, validator.minLength)
-      ) {
-        errors[field] =
-          validator.message ||
-          `${field} must be at least ${validator.minLength} characters`;
-      } else if (
-        validator.maxLength &&
-        !validateMaxLength(value, validator.maxLength)
-      ) {
-        errors[field] =
-          validator.message ||
-          `${field} must be no more than ${validator.maxLength} characters`;
-      } else if (validator.pattern && !validator.pattern.test(value)) {
-        errors[field] = validator.message || `Invalid ${field} format`;
-      } else if (validator.custom && !validator.custom(value, formData)) {
-        errors[field] = validator.message || `Invalid ${field}`;
-      }
-    });
+  const result = validationService.getValidationErrors(
+    formData,
+    convertedRules
+  );
+
+  const errors = {};
+  result.errors.forEach((error) => {
+    const field = Object.keys(convertedRules).find((f) => error.includes(f));
+    if (field) errors[field] = error;
   });
 
   return {
-    isValid: Object.keys(errors).length === 0,
+    isValid: result.valid,
     errors,
   };
 }

@@ -7,22 +7,22 @@ export function createDebounceSearch(callback, delay = 300) {
 export function applyFilters(data, filters) {
   let filtered = [...data];
 
-  Object.keys(filters).forEach(key => {
+  Object.keys(filters).forEach((key) => {
     const filterValue = filters[key];
-    
+
     if (!filterValue || filterValue === "") return;
 
-    filtered = filtered.filter(item => {
+    filtered = filtered.filter((item) => {
       const itemValue = _.get(item, key);
-      
+
       if (typeof itemValue === "string") {
         return itemValue.toLowerCase().includes(filterValue.toLowerCase());
       }
-      
+
       if (typeof itemValue === "number") {
         return itemValue === parseFloat(filterValue);
       }
-      
+
       return itemValue === filterValue;
     });
   });
@@ -33,17 +33,17 @@ export function applyFilters(data, filters) {
 export function createFilterConfig(fields) {
   const config = {
     fields: {},
-    searchFields: []
+    searchFields: [],
   };
 
-  fields.forEach(field => {
+  fields.forEach((field) => {
     if (typeof field === "string") {
       config.fields[field] = { type: "text" };
     } else {
       config.fields[field.name] = {
         type: field.type || "text",
         options: field.options || null,
-        label: field.label || field.name
+        label: field.label || field.name,
       };
     }
   });
@@ -58,8 +58,8 @@ export function applySearchFilter(data, searchTerm, searchFields) {
 
   const search = searchTerm.toLowerCase();
 
-  return data.filter(item => {
-    return searchFields.some(field => {
+  return data.filter((item) => {
+    return searchFields.some((field) => {
       const value = _.get(item, field);
       return value && value.toString().toLowerCase().includes(search);
     });
@@ -69,7 +69,7 @@ export function applySearchFilter(data, searchTerm, searchFields) {
 export function applySingleFilter(data, field, value) {
   if (!value || value === "") return data;
 
-  return data.filter(item => {
+  return data.filter((item) => {
     const itemValue = _.get(item, field);
     if (typeof itemValue === "string") {
       return itemValue.toLowerCase() === value.toLowerCase();
@@ -80,12 +80,10 @@ export function applySingleFilter(data, field, value) {
 
 export function combineFilters(data, filterFunctions) {
   let result = data;
-  
-  filterFunctions.forEach(fn => {
+
+  filterFunctions.forEach((fn) => {
     result = fn(result);
   });
-  
+
   return result;
 }
-
-

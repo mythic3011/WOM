@@ -15,6 +15,15 @@ export default defineConfig({
     },
   },
   build: {
+    target: "es2015",
+    minify: "terser",
+    terserOptions: {
+      compress: {
+        drop_console: true,
+        drop_debugger: true,
+      },
+    },
+    cssCodeSplit: true,
     rollupOptions: {
       input: {
         main: "./index.html",
@@ -23,7 +32,6 @@ export default defineConfig({
         manualChunks: {
           vendor: ["dayjs", "notyf", "sweetalert2", "page", "jquery", "lodash"],
           pdf: ["pdfmake", "jspdf"],
-          faker: ["@faker-js/faker"],
           crypto: ["crypto-js", "lz-string", "bcryptjs"],
           utils: [
             "animejs",
@@ -37,6 +45,7 @@ export default defineConfig({
         },
       },
     },
-    chunkSizeWarningLimit: 3000,
+    chunkSizeWarningLimit: 2000,
+    sourcemap: false,
   },
 });

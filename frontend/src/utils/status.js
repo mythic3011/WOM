@@ -1,4 +1,6 @@
 import { createBadge } from "/src/components/Badge.js";
+import { bookingHelpers } from "../services/bookingHelpers.js";
+import { performanceHelpers } from "../services/performanceHelpers.js";
 
 export const STATUS_CONFIGS = {
   performance: {
@@ -108,6 +110,36 @@ export const STATUS_CONFIGS = {
 };
 
 export function getStatusConfig(status, type = "performance") {
+  if (type === "booking") {
+    const info = bookingHelpers.getStatusInfo(status);
+    return {
+      variant:
+        info.color === "green"
+          ? "success"
+          : info.color === "red"
+            ? "danger"
+            : "warning",
+      text: info.label,
+      icon: info.icon,
+      badgeClass: info.badgeClass,
+    };
+  }
+
+  if (type === "performance") {
+    const info = performanceHelpers.getStatusInfo(status);
+    return {
+      variant:
+        info.color === "green"
+          ? "success"
+          : info.color === "red"
+            ? "danger"
+            : "info",
+      text: info.label,
+      icon: info.icon,
+      badgeClass: info.badgeClass,
+    };
+  }
+
   return (
     STATUS_CONFIGS[type]?.[status] || {
       variant: "default",

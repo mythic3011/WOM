@@ -57,10 +57,6 @@ export class VirtualizationManager {
       }
       this.placeholders.get(key).push(placeholder);
     });
-
-    console.log(
-      `Virtualization initialized: ${this.metrics.totalSeats} total seats, ${this.metrics.placeholders} placeholders`
-    );
   }
 
   attachScrollListener() {

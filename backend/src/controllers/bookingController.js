@@ -1,60 +1,28 @@
 import * as bookingService from "../services/bookingService.js";
+import { asyncHandler } from "../middleware/asyncHandler.js";
+import { successResponse } from "../utils/response.js";
+import { NotFoundError, BadRequestError } from "../utils/errors.js";
 
-export const createBooking = async (req, res, next) => {
-  try {
-    const booking = await bookingService.createBooking(req.body, req.session.userId);
+export const createBooking = asyncHandler(async (req, res) => {
+  const booking = await bookingService.createBooking(req.body, req.session.userId);
+  return successResponse(res, { booking }, "Booking created successfully", 201);
+});
 
-    res.status(201).json({
-      success: true,
-      message: "Booking created successfully",
-      data: { booking },
-    });
-  } catch (error) {
-    if (
-      error.message === "Performance not found" ||
-      error.message === "User not found"
-    ) {
-      return res.status(404).json({
-        success: false,
-        message: error.message,
-      });
-    }
-    if (
-      error.message.includes("Not enough seats") ||
-      error.message.includes("already booked")
-    ) {
-      return res.status(400).json({
-        success: false,
-        message: error.message,
-      });
-    }
-    next(error);
-  }
-};
+export const getAllBookings = asyncHandler(async (req, res) => {
+  const filters = {
+    status: req.query.status,
+    performanceId: req.query.performanceId,
+    dateFrom: req.query.dateFrom,
+    dateTo: req.query.dateTo,
+  };
 
-export const getAllBookings = async (req, res, next) => {
-  try {
-    const filters = {
-      status: req.query.status,
-      performanceId: req.query.performanceId,
-      dateFrom: req.query.dateFrom,
-      dateTo: req.query.dateTo,
-    };
+  const isAdmin = req.session.userRole === "admin";
+  const userId = isAdmin ? null : req.session.userId;
 
-    const isAdmin = req.session.userRole === "admin";
-    const userId = isAdmin ? null : req.session.userId;
+  const bookings = await bookingService.getAllBookings(filters, userId, isAdmin);
 
-    const bookings = await bookingService.getAllBookings(filters, userId, isAdmin);
-
-    res.json({
-      success: true,
-      data: { bookings },
-      count: bookings.length,
-    });
-  } catch (error) {
-    next(error);
-  }
-};
+  return successResponse(res, { bookings, count: bookings.length });
+});
 
 export const getBookingById = async (req, res, next) => {
   try {

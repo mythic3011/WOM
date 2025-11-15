@@ -34,4 +34,3 @@ export function createCardGrid(cards, cols = 3) {
     </div>
   `;
 }
-

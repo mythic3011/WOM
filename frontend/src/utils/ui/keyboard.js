@@ -71,6 +71,5 @@ export const registerGlobalShortcuts = () => {
 
   keyboard.bind("ctrl+k, command+k", (e) => {
     e.preventDefault();
-    console.log("Quick command palette (not implemented yet)");
   });
 };

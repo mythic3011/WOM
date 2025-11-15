@@ -3,6 +3,10 @@ import { ticketTypeService } from "/src/services/ticketTypeService.js";
 import { bookingAPI, handleApiError } from "/src/services/apiClient.js";
 import { ResponseExtractor } from "/src/services/responseExtractor.js";
 import { FormComponents } from "/src/components/FormComponents.js";
+import {
+  BookingProgress,
+  BookingSummaryCard,
+} from "/src/components/booking/index.js";
 import { createLoadingState } from "/src/components/LoadingState.js";
 import { notify } from "/src/utils/ui/notification.js";
 import { SwalColors } from "/src/utils/colors.js";
@@ -17,6 +21,8 @@ import { generateFullId, getDisplayLabel } from "/src/utils/seatIdHelper.js";
 import { SeatMap } from "/src/components/SeatMap.js";
 import { initSeatMapPanzoom } from "/src/utils/panzoomSeatMap.js";
 import { attachSeatTooltipListeners } from "/src/utils/booking/seatTooltip.js";
+import { bookingHelpers } from "/src/services/bookingHelpers.js";
+import { calculationService } from "/src/services/calculationService.js";
 import { ROUTES } from "/src/config/routes.js";
 import Swal from "sweetalert2";
 import dayjs from "dayjs";
@@ -276,55 +282,7 @@ export default {
   },
 
   renderProgressSteps() {
-    const steps = [
-      { number: 1, label: "Select Seats", icon: "fa-chair" },
-      { number: 2, label: "Choose Ticket", icon: "fa-ticket-alt" },
-      { number: 3, label: "Review", icon: "fa-check-circle" },
-      { number: 4, label: "Payment", icon: "fa-credit-card" },
-    ];
-
-    return `
-      <div class="flex items-center justify-center w-full">
-        ${steps
-          .map((step, index) => {
-            const isActive = step.number === this.bookingStep;
-            const isCompleted = step.number < this.bookingStep;
-            return `
-              <div class="flex items-center">
-                <div class="flex flex-col items-center">
-                  <div class="w-12 h-12 rounded-full flex items-center justify-center ${
-                    isCompleted
-                      ? "bg-green-500 shadow-lg"
-                      : isActive
-                      ? "bg-indigo-600 shadow-lg ring-4 ring-indigo-200"
-                      : "bg-gray-300"
-                  } text-white text-lg font-bold transition-all">
-                    ${
-                      isCompleted ? '<i class="fas fa-check"></i>' : step.number
-                    }
-                  </div>
-                  <p class="text-xs mt-2 font-medium ${
-                    isActive ? "text-indigo-600" : "text-gray-600"
-                  }">
-                    <i class="fas ${step.icon} mr-1"></i>
-                    ${step.label}
-                  </p>
-                </div>
-                ${
-                  index < steps.length - 1
-                    ? `<div class="w-24 h-1 mx-2 ${
-                        isCompleted || (isActive && index === 0)
-                          ? "bg-green-500"
-                          : "bg-gray-300"
-                      } transition-all"></div>`
-                    : ""
-                }
-              </div>
-            `;
-          })
-          .join("")}
-      </div>
-    `;
+    return BookingProgress.render(this.bookingStep);
   },
 
   async renderBookingForm() {
@@ -585,10 +543,7 @@ export default {
     const allAssigned = this.selectedSeats.every(
       (seat) => this.seatTicketTypes[seat]
     );
-    const totalPrice = this.selectedSeats.reduce((sum, seat) => {
-      const assigned = this.seatTicketTypes[seat];
-      return sum + (assigned ? assigned.price : 0);
-    }, 0);
+    const totalPrice = this.calculateTotalPrice();
 
     return `
       <div class="bg-white rounded-lg shadow-md border border-gray-200 p-6">
@@ -631,8 +586,8 @@ export default {
                           zone?.tier === "premium"
                             ? "text-purple-600"
                             : zone?.tier === "economy"
-                            ? "text-blue-600"
-                            : "text-green-600";
+                              ? "text-blue-600"
+                              : "text-green-600";
                         return `<p class="text-xs ${zoneColor} font-semibold">${
                           zone?.sectionName || "Unknown"
                         } - ${zoneName}</p>`;
@@ -726,8 +681,8 @@ export default {
               <p class="text-2xl font-bold">HKD ${totalPrice.toLocaleString()}</p>
               <p class="text-xs opacity-75 mt-1">
                 ${Object.keys(this.seatTicketTypes).length} of ${
-      this.selectedSeats.length
-    } seats assigned
+                  this.selectedSeats.length
+                } seats assigned
               </p>
             </div>
             <i class="fas fa-receipt text-4xl opacity-20"></i>
@@ -758,10 +713,7 @@ export default {
 
   renderReviewBooking() {
     const user = storage.getUser();
-    const totalPrice = this.selectedSeats.reduce((sum, seat) => {
-      const assigned = this.seatTicketTypes[seat];
-      return sum + (assigned ? assigned.price : 0);
-    }, 0);
+    const totalPrice = this.calculateTotalPrice();
 
     return `
       <div class="bg-white rounded-lg shadow-md border border-gray-200 p-6">
@@ -897,8 +849,8 @@ export default {
                 <p class="text-4xl font-bold">$${totalPrice}</p>
                 <p class="text-indigo-100 text-xs mt-1">
                   ${this.selectedSeats.length} seat${
-      this.selectedSeats.length > 1 ? "s" : ""
-    } with individual pricing
+                    this.selectedSeats.length > 1 ? "s" : ""
+                  } with individual pricing
                 </p>
               </div>
               <i class="fas fa-dollar-sign text-6xl text-white opacity-20"></i>
@@ -929,10 +881,7 @@ export default {
 
   renderPayment() {
     const user = storage.getUser();
-    const totalPrice = this.selectedSeats.reduce((sum, seat) => {
-      const assigned = this.seatTicketTypes[seat];
-      return sum + (assigned ? assigned.price : 0);
-    }, 0);
+    const totalPrice = this.calculateTotalPrice();
 
     return `
       <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
@@ -944,8 +893,8 @@ export default {
               <p class="text-sm opacity-75 mt-1">${
                 this.selectedSeats.length
               } seat${this.selectedSeats.length > 1 ? "s" : ""} • ${
-      this.performanceData.title
-    }</p>
+                this.performanceData.title
+              }</p>
             </div>
             <div class="text-right opacity-75">
               <i class="fas fa-shield-alt text-5xl"></i>
@@ -1183,92 +1132,13 @@ export default {
   },
 
   renderBookingSummary() {
-    const totalPrice = this.selectedSeats.reduce((sum, seat) => {
-      const assigned = this.seatTicketTypes[seat];
-      return sum + (assigned ? assigned.price : 0);
-    }, 0);
-
-    return `
-      <div class="bg-white rounded-lg shadow-md border border-gray-200 p-6 sticky top-6">
-        <h3 class="text-lg font-bold text-gray-900 mb-4">
-          <i class="fas fa-shopping-cart text-indigo-600 mr-2"></i>
-          Booking Summary
-        </h3>
-
-        <div class="space-y-4">
-          <div>
-            <p class="text-sm text-gray-600 mb-1">Performance</p>
-            <p class="font-semibold text-gray-900">${
-              this.performanceData?.title || "N/A"
-            }</p>
-            <p class="text-xs text-gray-500">${
-              this.performanceData
-                ? dayjs(this.performanceData.date).format("MMM D, YYYY")
-                : "N/A"
-            }</p>
-          </div>
-
-          <div class="border-t border-gray-200 pt-4">
-            <p class="text-sm text-gray-600 mb-2">Selected Seats & Tickets</p>
-            ${
-              this.selectedSeats.length > 0
-                ? `
-              <div class="space-y-1.5">
-                ${this.selectedSeats
-                  .map((seat) => {
-                    const ticket = this.seatTicketTypes[seat];
-                    const displayLabel = getDisplayLabel(seat);
-                    if (ticket) {
-                      return `
-                        <div class="flex items-center justify-between text-xs bg-gray-50 p-2 rounded">
-                          <div class="flex items-center gap-2">
-                            <span class="px-2 py-1 bg-indigo-600 text-white rounded font-medium">${displayLabel}</span>
-                            <span class="text-gray-700">${ticket.name}</span>
-                          </div>
-                          <span class="font-semibold text-gray-900">$${ticket.price}</span>
-                        </div>
-                      `;
-                    }
-                    return `
-                      <div class="flex items-center justify-between text-xs bg-gray-50 p-2 rounded">
-                        <span class="px-2 py-1 bg-indigo-600 text-white rounded font-medium">${displayLabel}</span>
-                        <span class="text-gray-400 italic">Not assigned</span>
-                      </div>
-                    `;
-                  })
-                  .join("")}
-              </div>
-              <p class="text-xs text-gray-500 mt-2">${
-                this.selectedSeats.length
-              } seat${this.selectedSeats.length > 1 ? "s" : ""}</p>
-            `
-                : `<p class="text-sm text-gray-400 italic">No seats selected</p>`
-            }
-          </div>
-
-          <div class="border-t border-gray-200 pt-4">
-            <div class="flex justify-between items-center mb-2">
-              <span class="text-sm text-gray-600">Subtotal</span>
-              <span class="font-semibold text-gray-900">$${totalPrice}</span>
-            </div>
-            <div class="flex justify-between items-center mb-2">
-              <span class="text-sm text-gray-600">Service Fee</span>
-              <span class="font-semibold text-gray-900">$0</span>
-            </div>
-            <div class="flex justify-between items-center pt-2 border-t border-gray-200">
-              <span class="text-base font-bold text-gray-900">Total</span>
-              <span class="text-2xl font-bold text-indigo-600">$${totalPrice}</span>
-            </div>
-          </div>
-        </div>
-
-        ${FormComponents.infoBox({
-          title: "Secure Booking",
-          message: "Your payment information is encrypted and secure",
-          type: "info",
-        })}
-      </div>
-    `;
+    const totalPrice = this.calculateTotalPrice();
+    return BookingSummaryCard.render(
+      this.performanceData,
+      this.selectedSeats,
+      this.seatTicketTypes,
+      totalPrice
+    );
   },
 
   attachEventListeners() {
@@ -1546,6 +1416,13 @@ export default {
     return String.fromCharCode(65 + first) + String.fromCharCode(65 + second);
   },
 
+  calculateTotalPrice() {
+    return this.selectedSeats.reduce((sum, seat) => {
+      const assigned = this.seatTicketTypes[seat];
+      return sum + (assigned ? assigned.price : 0);
+    }, 0);
+  },
+
   async toggleSeat(seatId) {
     const index = this.selectedSeats.indexOf(seatId);
     if (index > -1) {
@@ -1616,10 +1493,7 @@ export default {
   },
 
   updateBookingSummary() {
-    const totalPrice = this.selectedSeats.reduce((sum, seat) => {
-      const assigned = this.seatTicketTypes[seat];
-      return sum + (assigned ? assigned.price : 0);
-    }, 0);
+    const totalPrice = this.calculateTotalPrice();
 
     const summaryHTML = this.renderBookingSummary();
     $("#bookingContent").parent().find(".lg\\:col-span-4").html(summaryHTML);
@@ -1653,10 +1527,7 @@ export default {
       paymentDetails.cardholderName = $("#cardholderName").val();
     }
 
-    const totalPrice = this.selectedSeats.reduce((sum, seat) => {
-      const assigned = this.seatTicketTypes[seat];
-      return sum + (assigned ? assigned.price : 0);
-    }, 0);
+    const totalPrice = this.calculateTotalPrice();
 
     const seatBreakdown = this.selectedSeats
       .map((seat) => {

@@ -1,12 +1,8 @@
-version: "3.8"
-
 services:
   postgres:
     image: postgres:15-alpine
     container_name: orchestral_db
     restart: unless-stopped
-    env_file:
-      - .env
     environment:
       POSTGRES_DB: ${DB_NAME:-wom_booking}
       POSTGRES_USER: ${DB_USER:-postgres}
@@ -25,12 +21,10 @@ services:
 
   backend:
     build:
-      context: ./backend
+      context: ../backend
       dockerfile: Dockerfile.dev
     container_name: orchestral_backend
     restart: unless-stopped
-    env_file:
-      - .env
     ports:
       - "${PORT:-3000}:3000"
     environment:
@@ -47,7 +41,7 @@ services:
       postgres:
         condition: service_healthy
     volumes:
-      - ./backend:/app
+      - ../backend:/app
       - /app/node_modules
     command: npm run dev
     healthcheck:
@@ -69,19 +63,17 @@ services:
 
   frontend:
     build:
-      context: ./frontend
+      context: ../frontend
       dockerfile: Dockerfile
     container_name: orchestral_frontend
     restart: unless-stopped
-    env_file:
-      - .env
     ports:
       - "${FRONTEND_PORT:-5173}:5173"
     environment:
       VITE_API_URL: ${VITE_API_URL:-http://backend:3000/api}
       VITE_BACKEND_URL: http://backend:3000
     volumes:
-      - ./frontend:/app
+      - ../frontend:/app
     command: sh -c "rm -rf node_modules package-lock.json && npm install && npm run dev -- --host 0.0.0.0"
     depends_on:
       backend:
@@ -89,36 +81,20 @@ services:
     networks:
       - orchestral_network
 
-  phppgadmin:
-    image: dockage/phppgadmin:latest
-    container_name: orchestral_phppgadmin
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: orchestral_pgadmin
     restart: unless-stopped
-    env_file:
-      - .env
-    environment:
-      - PHP_PG_ADMIN_SERVER_DESC=${PHP_PG_ADMIN_SERVER_DESC:-PostgreSQL}
-      - PHP_PG_ADMIN_SERVER_HOST=${PHP_PG_ADMIN_SERVER_HOST:-postgres}
-      - PHP_PG_ADMIN_SERVER_PORT=${PHP_PG_ADMIN_SERVER_PORT:-5432}
-      - PHP_PG_ADMIN_SERVER_SSL_MODE=${PHP_PG_ADMIN_SERVER_SSL_MODE:-allow}
-      - PHP_PG_ADMIN_SERVER_DEFAULT_DB=${PHP_PG_ADMIN_SERVER_DEFAULT_DB:-template1}
-      - PHP_PG_ADMIN_DEFAULT_LANG=${PHP_PG_ADMIN_DEFAULT_LANG:-auto}
-      - PHP_PG_ADMIN_AUTO_COMPLETE=${PHP_PG_ADMIN_AUTO_COMPLETE:-default on}
-      - PHP_PG_ADMIN_EXTRA_LOGIN_SECURITY=${PHP_PG_ADMIN_EXTRA_LOGIN_SECURITY:-false}
-      - PHP_PG_ADMIN_OWNED_ONLY=${PHP_PG_ADMIN_OWNED_ONLY:-false}
-      - PHP_PG_ADMIN_SHOW_COMMENTS=${PHP_PG_ADMIN_SHOW_COMMENTS:-true}
-      - PHP_PG_ADMIN_SHOW_ADVANCED=${PHP_PG_ADMIN_SHOW_ADVANCED:-false}
-      - PHP_PG_ADMIN_SHOW_SYSTEM=${PHP_PG_ADMIN_SHOW_SYSTEM:-false}
-      - PHP_PG_ADMIN_MIN_PASSWORD_LENGTH=${PHP_PG_ADMIN_MIN_PASSWORD_LENGTH:-1}
-      - PHP_PG_ADMIN_LEFT_WIDTH=${PHP_PG_ADMIN_LEFT_WIDTH:-200}
-      - PHP_PG_ADMIN_THEME=${PHP_PG_ADMIN_THEME:-default}
-      - PHP_PG_ADMIN_SHOW_OIDS=${PHP_PG_ADMIN_SHOW_OIDS:-false}
-      - PHP_PG_ADMIN_MAX_ROWS=${PHP_PG_ADMIN_MAX_ROWS:-30}
-      - PHP_PG_ADMIN_MAX_CHARS=${PHP_PG_ADMIN_MAX_CHARS:-50}
-      - PHP_PG_ADMIN_USE_XHTML_STRICT=${PHP_PG_ADMIN_USE_XHTML_STRICT:-false}
-      - PHP_PG_ADMIN_HELP_BASE=${PHP_PG_ADMIN_HELP_BASE:-http://www.postgresql.org/docs/%s/}
-      - PHP_PG_ADMIN_AJAX_REFRESH=${PHP_PG_ADMIN_AJAX_REFRESH:-3}
     ports:
       - "${PHPPGADMIN_PORT:-5050}:80"
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:-admin@wom.hk}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:-admin}
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+      PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED: 'False'
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+      - ./pgadmin-servers.json:/var/lib/pgadmin/servers.json:ro
     depends_on:
       postgres:
         condition: service_healthy
@@ -131,3 +107,4 @@ networks:
 
 volumes:
   postgres_data:
+  pgadmin_data:

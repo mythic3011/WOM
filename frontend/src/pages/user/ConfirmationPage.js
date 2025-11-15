@@ -118,8 +118,8 @@ export default {
                 <div>
                   <p class="text-xs text-gray-500">Seats</p>
                   <p class="font-semibold text-gray-900">${seatCount} seat${
-      seatCount !== 1 ? "s" : ""
-    }</p>
+                    seatCount !== 1 ? "s" : ""
+                  }</p>
                 </div>
               </div>
             </div>

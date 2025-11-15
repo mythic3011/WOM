@@ -78,8 +78,8 @@ export const BookingCard = {
     const eventDate = showtime
       ? new Date(showtime.dateTime || showtime.datetime)
       : performance
-      ? new Date(performance.date)
-      : null;
+        ? new Date(performance.date)
+        : null;
     const performanceDate = eventDate;
     const isUpcoming = performanceDate && performanceDate > new Date();
     const isPast = performanceDate && performanceDate < new Date();
@@ -130,18 +130,18 @@ export const BookingCard = {
       <div class="group relative bg-white rounded-2xl shadow-lg border-2 ${
         status.borderColor
       } hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 overflow-hidden ${
-      isPast ? "opacity-60" : ""
-    }">
+        isPast ? "opacity-60" : ""
+      }">
         ${
           isPast
             ? `<div class="absolute top-4 right-4 z-10 px-3 py-1 bg-gray-800/90 text-white text-xs font-bold rounded-full uppercase tracking-wider">
               <i class="fas fa-history mr-1"></i>Past Event
             </div>`
             : isUpcoming
-            ? `<div class="absolute top-4 right-4 z-10 px-3 py-1 bg-indigo-600/90 text-white text-xs font-bold rounded-full uppercase tracking-wider animate-pulse">
+              ? `<div class="absolute top-4 right-4 z-10 px-3 py-1 bg-indigo-600/90 text-white text-xs font-bold rounded-full uppercase tracking-wider animate-pulse">
               <i class="fas fa-calendar-star mr-1"></i>Upcoming
             </div>`
-            : ""
+              : ""
         }
 
         <div class="relative bg-${
@@ -248,8 +248,8 @@ export const BookingCard = {
           </div>
 
           <div class="${status.bgColor} rounded-xl p-4 mb-4 border ${
-      status.borderColor
-    }">
+            status.borderColor
+          }">
             <div class="flex items-center justify-between">
               <div>
                 <p class="text-xs font-semibold ${
@@ -395,10 +395,10 @@ export const BookingCard = {
         config.color === "green"
           ? "success"
           : config.color === "yellow"
-          ? "warning"
-          : config.color === "red"
-          ? "danger"
-          : "info",
+            ? "warning"
+            : config.color === "red"
+              ? "danger"
+              : "info",
       icon: config.icon,
     });
   },

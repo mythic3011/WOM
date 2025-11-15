@@ -279,8 +279,8 @@ export default {
         <p>Showing <span class="font-semibold">${
           this.filteredBookings.length
         }</span> of <span class="font-semibold">${
-      this.bookings.length
-    }</span> bookings</p>
+          this.bookings.length
+        }</span> bookings</p>
       </div>
     `;
 
@@ -307,8 +307,8 @@ export default {
     const performanceDate = showtime
       ? new Date(showtime.dateTime || showtime.datetime)
       : performance
-      ? new Date(performance.date)
-      : null;
+        ? new Date(performance.date)
+        : null;
 
     const statusConfig = getStatusConfig(
       booking.status || "pending",
@@ -403,8 +403,8 @@ export default {
               <h3 class="font-semibold text-gray-900 text-sm">Seats & Tickets</h3>
               <span class="ml-auto text-xs font-bold text-purple-700 bg-purple-100 px-2 py-0.5 rounded-full">
                 ${booking.seats.length} seat${
-        booking.seats.length > 1 ? "s" : ""
-      }
+                  booking.seats.length > 1 ? "s" : ""
+                }
               </span>
             </div>
             <div class="space-y-1.5 max-h-44 overflow-y-auto">

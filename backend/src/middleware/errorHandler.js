@@ -1,4 +1,5 @@
 import logger from "../config/logger.js";
+import { AppError } from "../utils/errors.js";
 
 export const errorHandler = (err, req, res, _next) => {
   logger.error("Error:", {
@@ -6,7 +7,17 @@ export const errorHandler = (err, req, res, _next) => {
     stack: err.stack,
     url: req.originalUrl,
     method: req.method,
+    name: err.name,
   });
+
+  if (err instanceof AppError) {
+    return res.status(err.statusCode).json({
+      success: false,
+      message: err.message,
+      ...(err.code ? { code: err.code } : {}),
+      ...(err.errors ? { errors: err.errors } : {}),
+    });
+  }
 
   if (err.name === "SequelizeValidationError") {
     const errors = err.errors.map((e) => ({

@@ -1,6 +1,7 @@
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
 import customParseFormat from "dayjs/plugin/customParseFormat";
+import { calculationService } from "../services/calculationService.js";
 
 dayjs.extend(relativeTime);
 dayjs.extend(customParseFormat);
@@ -42,11 +43,7 @@ export function addDays(dateString, days) {
 }
 
 export function formatCurrency(amount, currency = "HKD") {
-  return new Intl.NumberFormat("en-HK", {
-    style: "currency",
-    currency: currency,
-    minimumFractionDigits: 0,
-  }).format(amount);
+  return calculationService.formatCurrency(amount, currency);
 }
 
 export function formatNumber(number) {

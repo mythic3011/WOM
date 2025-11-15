@@ -19,7 +19,7 @@ export default {
               <i class="fas fa-guitar"></i>
             </div>
           </div>
-          <div class="container mx-auto px-4 text-center relative z-10">
+          <div class="container mx-auto px-4 text-center relative">
             <h1 class="text-6xl font-bold mb-4 animate-fade-in">
               <i class="fas fa-music text-white mr-4"></i>
               Welcome to WOM

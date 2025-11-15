@@ -202,7 +202,15 @@ export default {
       }, 500);
     } catch (error) {
       $btn.prop("disabled", false).html(originalHTML);
-      handleApiError(error, "Login failed. Please check your credentials.");
+      const errorMessage =
+        error.data?.message ||
+        (error.status >= 500
+          ? "Server error. Please try again later."
+          : error.status === 401
+            ? "Invalid username/email or password"
+            : "Login failed. Please try again.");
+      notify.error(errorMessage);
+      console.error("Login error:", error);
     }
   },
 };

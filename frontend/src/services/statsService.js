@@ -222,8 +222,8 @@ export const statsService = {
         booking.status === "confirmed"
           ? "green"
           : booking.status === "pending"
-          ? "yellow"
-          : "red",
+            ? "yellow"
+            : "red",
     }));
   },
 

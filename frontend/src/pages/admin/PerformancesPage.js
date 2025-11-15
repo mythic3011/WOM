@@ -3,6 +3,13 @@ import { createDebounceSearch } from "/src/utils/data/filters.js";
 import { performanceUtils } from "/src/utils/performanceUtils.js";
 import { createModal, openModal, closeModal } from "/src/components/Modal.js";
 import { ResponseExtractor } from "/src/services/responseExtractor.js";
+import {
+  PerformanceDetails,
+  ShowtimeManager,
+  PerformanceWizardHandler,
+  openQuickEdit,
+  ShowtimeAvailabilityBadge,
+} from "/src/components/admin/index.js";
 import { getTierBadge } from "/src/config/tierConfig.js";
 import { getDisplayLabel } from "/src/utils/seatIdHelper.js";
 import {
@@ -15,6 +22,7 @@ import { ticketTypeService } from "/src/services/ticketTypeService.js";
 import { templateService } from "/src/services/templateService.js";
 import { venueService } from "/src/services/venueService.js";
 import { showtimeManager } from "/src/utils/booking/showtimeManager.js";
+import { seatHelpers } from "/src/services/seatHelpers.js";
 import {
   performanceAPI,
   venueAPI,
@@ -139,12 +147,20 @@ export default {
             </h1>
             <p class="text-gray-600 mt-2">Create and manage orchestral performances</p>
           </div>
-          <button
-            id="addPerformanceBtn"
-            class="px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 shadow-md transition-colors"
-          >
-            <i class="fas fa-plus mr-2"></i>Add Performance
-          </button>
+          <div class="flex gap-2">
+            <button
+              id="quickCreateBtn"
+              class="px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 shadow-md transition-colors"
+            >
+              <i class="fas fa-magic mr-2"></i>Quick Create
+            </button>
+            <button
+              id="addPerformanceBtn"
+              class="px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 shadow-md transition-colors"
+            >
+              <i class="fas fa-plus mr-2"></i>Add Performance
+            </button>
+          </div>
         </div>
 
         <div class="bg-white rounded-lg shadow-md p-6 mb-6">
@@ -210,8 +226,7 @@ export default {
                 <th class="px-6 py-3 text-left text-xs font-bold text-gray-700 uppercase">Title</th>
                 <th class="px-6 py-3 text-left text-xs font-bold text-gray-700 uppercase">Venue</th>
                 <th class="px-6 py-3 text-left text-xs font-bold text-gray-700 uppercase">Date</th>
-                <th class="px-6 py-3 text-left text-xs font-bold text-gray-700 uppercase">Composer</th>
-                <th class="px-6 py-3 text-left text-xs font-bold text-gray-700 uppercase">Conductor</th>
+                <th class="px-6 py-3 text-left text-xs font-bold text-gray-700 uppercase">Availability</th>
                 <th class="px-6 py-3 text-left text-xs font-bold text-gray-700 uppercase">Status</th>
                 <th class="px-6 py-3 text-left text-xs font-bold text-gray-700 uppercase">Actions</th>
               </tr>
@@ -303,6 +318,9 @@ export default {
     const showtimeCount = showtimes.length;
     const dateDisplay = this.renderDateDisplay(perf, showtimes);
 
+    const availabilityDisplay =
+      ShowtimeAvailabilityBadge.renderCompact(showtimes);
+
     return `
       <tr class="hover:bg-gray-50 transition-colors">
           <td class="px-6 py-4">${imageHtml}</td>
@@ -314,8 +332,7 @@ export default {
           <div class="text-sm text-gray-900">${venue}</div>
         </td>
         <td class="px-6 py-4">${dateDisplay}</td>
-          <td class="px-6 py-4 text-sm text-gray-600">${perf.composer}</td>
-          <td class="px-6 py-4 text-sm text-gray-600">${perf.conductor}</td>
+        <td class="px-6 py-4">${availabilityDisplay}</td>
           <td class="px-6 py-4">${statusBadge}</td>
           <td class="px-6 py-4">
           <div class="flex items-center gap-2">
@@ -382,57 +399,103 @@ export default {
   },
 
   renderPerformanceActions(perf, showtimeCount) {
-    const actions = [];
-
-    actions.push(
-      FormComponents.actionButton({
-        icon: "fa-eye",
-        color: "blue",
-        size: "sm",
-        title: "View Details",
-        onClick: `window.PerformancesPage.viewPerformance(${perf.id})`,
-      })
-    );
-
-    if (showtimeCount > 0) {
-      actions.push(
-        FormComponents.actionButton({
-          icon: "fa-calendar-alt",
-          color: "green",
-          size: "sm",
-          title: `Manage ${showtimeCount} Showtime${
-            showtimeCount > 1 ? "s" : ""
-          }`,
-          onClick: `window.PerformancesPage.manageShowtimes(${perf.id})`,
-        })
-      );
-    }
-
-    actions.push(
-      FormComponents.actionButton({
-        icon: "fa-edit",
-        color: "yellow",
-        size: "sm",
-        title: "Edit Performance",
-        onClick: `window.PerformancesPage.editPerformance(${perf.id})`,
-      }),
-      FormComponents.actionButton({
-        icon: "fa-copy",
-        color: "indigo",
-        size: "sm",
-        title: "Duplicate Performance",
-        onClick: `window.PerformancesPage.duplicatePerformance(${perf.id})`,
-      }),
-      FormComponents.actionButton({
-        icon: "fa-trash",
-        color: "red",
-        size: "sm",
-        title: "Delete Performance",
-        onClick: `window.PerformancesPage.deletePerformance(${perf.id})`,
-      })
-    );
-
-    return actions.join("");
+    return `
+      <div class="relative inline-block group">
+        <button
+          class="inline-flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-lg transition-all text-sm font-medium shadow-sm hover:shadow group-hover:border-indigo-300"
+          onclick="event.stopPropagation(); this.nextElementSibling.classList.toggle('hidden')"
+        >
+          <span>Actions</span>
+          <i class="fas fa-chevron-down text-xs transition-transform group-hover:rotate-180"></i>
+        </button>
+        <div class="hidden absolute right-0 mt-1 w-64 bg-white rounded-xl shadow-2xl border border-gray-200 overflow-hidden z-30">
+          <div class="py-1">
+            <div class="px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide border-b border-gray-100 bg-gray-50">
+              Quick Actions
+            </div>
+            <button
+              class="w-full text-left px-4 py-2.5 text-sm hover:bg-indigo-50 flex items-center gap-3 transition-colors group/item"
+              onclick="event.stopPropagation(); window.PerformancesPage.viewPerformance(${perf.id})"
+            >
+              <div class="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center group-hover/item:bg-blue-200 transition-colors">
+                <i class="fas fa-eye text-blue-600 text-sm"></i>
+              </div>
+              <div class="flex-1">
+                <div class="font-medium text-gray-900">View Details</div>
+                <div class="text-xs text-gray-500">Quick overview</div>
+              </div>
+            </button>
+            <button
+              class="w-full text-left px-4 py-2.5 text-sm hover:bg-indigo-50 flex items-center gap-3 transition-colors group/item"
+              onclick="event.stopPropagation(); window.PerformancesPage.editPerformance(${perf.id})"
+            >
+              <div class="w-8 h-8 rounded-lg bg-indigo-100 flex items-center justify-center group-hover/item:bg-indigo-200 transition-colors">
+                <i class="fas fa-edit text-indigo-600 text-sm"></i>
+              </div>
+              <div class="flex-1">
+                <div class="font-medium text-gray-900">Quick Edit</div>
+                <div class="text-xs text-gray-500">Fast wizard</div>
+              </div>
+            </button>
+            
+            <div class="px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide border-t border-b border-gray-100 bg-gray-50 mt-1">
+              More Options
+            </div>
+            ${showtimeCount > 0 ? `
+            <button
+              class="w-full text-left px-4 py-2.5 text-sm hover:bg-green-50 flex items-center gap-3 transition-colors group/item"
+              onclick="event.stopPropagation(); window.PerformancesPage.manageShowtimes(${perf.id})"
+            >
+              <div class="w-8 h-8 rounded-lg bg-green-100 flex items-center justify-center group-hover/item:bg-green-200 transition-colors">
+                <i class="fas fa-calendar-alt text-green-600 text-sm"></i>
+              </div>
+              <div class="flex-1">
+                <div class="font-medium text-gray-900">Manage Showtimes</div>
+                <div class="text-xs text-gray-500">${showtimeCount} showtime${showtimeCount > 1 ? 's' : ''}</div>
+              </div>
+            </button>` : ''}
+            <button
+              class="w-full text-left px-4 py-2.5 text-sm hover:bg-gray-50 flex items-center gap-3 transition-colors group/item"
+              onclick="event.stopPropagation(); window.PerformancesPage.openPerformanceForm(window.PerformancesPage.getPerformanceById(${perf.id}))"
+            >
+              <div class="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center group-hover/item:bg-gray-200 transition-colors">
+                <i class="fas fa-cog text-gray-600 text-sm"></i>
+              </div>
+              <div class="flex-1">
+                <div class="font-medium text-gray-900">Advanced Edit</div>
+                <div class="text-xs text-gray-500">Full form</div>
+              </div>
+            </button>
+            <button
+              class="w-full text-left px-4 py-2.5 text-sm hover:bg-purple-50 flex items-center gap-3 transition-colors group/item"
+              onclick="event.stopPropagation(); window.PerformancesPage.duplicatePerformance(${perf.id})"
+            >
+              <div class="w-8 h-8 rounded-lg bg-purple-100 flex items-center justify-center group-hover/item:bg-purple-200 transition-colors">
+                <i class="fas fa-copy text-purple-600 text-sm"></i>
+              </div>
+              <div class="flex-1">
+                <div class="font-medium text-gray-900">Duplicate</div>
+                <div class="text-xs text-gray-500">Clone performance</div>
+              </div>
+            </button>
+            
+            <div class="border-t border-gray-200 mt-1"></div>
+            <button
+              class="w-full text-left px-4 py-2.5 text-sm hover:bg-red-50 flex items-center gap-3 transition-colors group/item"
+              onclick="event.stopPropagation(); window.PerformancesPage.deletePerformance(${perf.id})"
+            >
+              <div class="w-8 h-8 rounded-lg bg-red-100 flex items-center justify-center group-hover/item:bg-red-200 transition-colors">
+                <i class="fas fa-trash text-red-600 text-sm"></i>
+              </div>
+              <div class="flex-1">
+                <div class="font-medium text-red-600">Delete</div>
+                <div class="text-xs text-red-500">Permanent action</div>
+              </div>
+            </button>
+          </div>
+        </div>
+      </div>
+    `;
   },
 
   setupEventListeners() {
@@ -447,7 +510,14 @@ export default {
       () => this.filterPerformances()
     );
     $("#clearFilters").on("click", () => this.clearFilters());
+    $("#quickCreateBtn").on("click", () => this.openQuickCreate());
     $("#addPerformanceBtn").on("click", () => this.openPerformanceForm());
+
+    $(document).on("click", function (e) {
+      if (!$(e.target).closest(".relative.inline-block").length) {
+        $(".relative.inline-block > div").addClass("hidden");
+      }
+    });
   },
 
   filterPerformances() {
@@ -528,50 +598,11 @@ export default {
 
   getPerformanceFormHTML() {
     return `
-      <form id="performanceForm" class="space-y-8">
+      <form id="performanceForm" class="space-y-6">
         ${PerformanceFormSections.basicInformation()}
         ${PerformanceFormSections.performanceInformation()}
+        ${PerformanceFormSections.venueInformation(this.venues)}
         ${PerformanceFormSections.ticketingInformation()}
-
-        <div class="bg-gray-50 p-6 rounded-lg">
-          <h3 class="text-lg font-semibold text-gray-900 mb-4">
-            <i class="fas fa-users text-indigo-600 mr-2"></i>Group Booking Discounts
-          </h3>
-          <div class="space-y-4" id="groupDiscountsContainer">
-            <div class="p-4 bg-white rounded-lg border border-gray-200">
-              <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <div>
-                  <label class="block text-xs text-gray-600 mb-1">Minimum Tickets</label>
-                  <input type="number" id="groupMinTickets" min="1"
-                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 text-black"
-                    placeholder="10" />
-                </div>
-                <div>
-                  <label class="block text-xs text-gray-600 mb-1">Discount Type</label>
-                  <select id="groupDiscountType"
-                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 text-black">
-                    <option value="percentage">Percentage (%)</option>
-                    <option value="amount">Fixed Amount ($)</option>
-                  </select>
-                </div>
-                <div>
-                  <label class="block text-xs text-gray-600 mb-1">
-                    <span id="groupDiscountLabel">Discount (%)</span>
-                  </label>
-                  <input type="number" id="groupDiscount" min="0"
-                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 text-black"
-                    placeholder="10" />
-                </div>
-                <div>
-                  <label class="block text-xs text-gray-600 mb-1">Note</label>
-                  <input type="text" id="groupNote"
-                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 text-black"
-                    placeholder="10% off for groups" />
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
 
         ${PerformanceFormSections.showtimesSection()}
 
@@ -621,8 +652,6 @@ export default {
 
     this.renderShowtimes();
 
-    $("#groupDiscountType").on("change", (e) => this.updateDiscountLabel(e));
-
     $("#addShowtimeBtn")
       .off("click")
       .on("click", () => this.addShowtime());
@@ -633,84 +662,44 @@ export default {
     openModal("performanceModal");
   },
 
-  updateDiscountLabel(e) {
-    const type = $(e.target).val();
-    const label = $("#groupDiscountLabel");
-    const input = $("#groupDiscount");
-
-    if (type === "percentage") {
-      label.text("Discount (%)");
-      input.attr("max", "100");
-      input.attr("placeholder", "10");
-    } else {
-      label.text("Discount Amount ($)");
-      input.removeAttr("max");
-      input.attr("placeholder", "50");
-    }
-  },
-
   populateForm(perf) {
-    $("#title").val(perf.title);
-    $("#composer").val(perf.composer);
-    $("#conductor").val(perf.conductor);
-    $("#orchestra").val(perf.orchestra);
-    $("#description").val(perf.description);
-    $("#presenter").val(perf.performanceInfo?.presenter || "");
-    $("#ageLimit").val(perf.performanceInfo?.ageLimit || "");
-    $("#duration").val(perf.ticketingInfo?.duration || "");
-    $("#website").val(perf.performanceInfo?.website || "");
-    $("#status").val(perf.ticketingInfo?.status || "upcoming");
+    $("#title").val(perf.title || "");
+    $("#composer").val(perf.composer || "");
+    $("#conductor").val(perf.conductor || "");
+    $("#orchestra").val(perf.orchestra || "");
+    $("#description").val(perf.description || "");
+    $("#presenter").val(perf.performanceInfo?.presenter || perf.presenter || "");
+    $("#ageLimit").val(perf.performanceInfo?.ageLimit || perf.ageLimit || "");
+    $("#duration").val(perf.duration || perf.ticketingInfo?.duration || "");
+    $("#website").val(perf.performanceInfo?.website || perf.website || "");
+    $("#status").val(perf.status || perf.ticketingInfo?.status || "upcoming");
 
-    if (perf.ticketingInfo?.ticketSaleStart) {
-      const saleStart = dayjs(perf.ticketingInfo.ticketSaleStart).format(
-        "YYYY-MM-DDTHH:mm"
-      );
+    const ticketSaleStart = perf.ticketingInfo?.ticketSaleStart || perf.ticketSaleStart;
+    if (ticketSaleStart) {
+      const saleStart = dayjs(ticketSaleStart).format("YYYY-MM-DDTHH:mm");
       $("#ticketSaleStart").val(saleStart);
     }
 
-    if (perf.ticketingInfo?.preOrderStartDate) {
-      $("#preOrderStartDate").val(perf.ticketingInfo.preOrderStartDate);
+    const preOrderStart = perf.ticketingInfo?.preOrderStartDate || perf.preOrderStartDate;
+    if (preOrderStart) {
+      $("#preOrderStartDate").val(preOrderStart);
     }
 
-    if (perf.ticketingInfo?.earlyBirdEndDate) {
-      $("#earlyBirdEndDate").val(perf.ticketingInfo.earlyBirdEndDate);
+    const earlyBirdEnd = perf.ticketingInfo?.earlyBirdEndDate || perf.earlyBirdEndDate;
+    if (earlyBirdEnd) {
+      $("#earlyBirdEndDate").val(earlyBirdEnd);
     }
 
-    $("#interval").val(perf.ticketingInfo?.interval || "");
-    $("#eTicketAvailable").prop(
-      "checked",
-      perf.ticketingInfo?.eTicketArrangement?.available || false
-    );
-    $("#additionalInfo").val(perf.ticketingInfo?.additionalInfo || "");
+    $("#additionalInfo").val(perf.additionalInfo || perf.ticketingInfo?.additionalInfo || "");
+
+    if (perf.venueId) {
+      $("#venueSelect").val(perf.venueId);
+    }
 
     if (perf.performanceInfo?.eventCategory) {
       perf.performanceInfo.eventCategory.forEach((cat) => {
         $(`.event-category[value="${cat}"]`).prop("checked", true);
       });
-    }
-
-    if (perf.performanceInfo?.modeOfTickets) {
-      perf.performanceInfo.modeOfTickets.forEach((mode) => {
-        $(`.ticket-mode[value="${mode}"]`).prop("checked", true);
-      });
-    }
-
-    if (perf.ticketingInfo?.groupBookingDiscount) {
-      const discount = perf.ticketingInfo.groupBookingDiscount;
-      $("#groupMinTickets").val(discount.minimumTickets || "");
-      $("#groupDiscountType").val(discount.discountType || "percentage");
-
-      if (discount.discountType === "amount") {
-        $("#groupDiscount").val(discount.discountAmount || "");
-        $("#groupDiscountLabel").text("Discount Amount ($)");
-        $("#groupDiscount").removeAttr("max").attr("placeholder", "50");
-      } else {
-        $("#groupDiscount").val(discount.discountPercentage || "");
-        $("#groupDiscountLabel").text("Discount (%)");
-        $("#groupDiscount").attr("max", "100").attr("placeholder", "10");
-      }
-
-      $("#groupNote").val(discount.note || "");
     }
 
     this.showtimes = perf.showtimes || [];
@@ -1023,73 +1012,41 @@ export default {
 
     this.showtimes.forEach((showtime, index) => {
       const showtimeHTML = `
-        <div class="bg-white p-4 rounded-lg border-2 border-indigo-200" data-showtime-index="${index}">
+        <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm" data-showtime-index="${index}">
           <div class="flex justify-between items-center mb-4">
-            <h4 class="font-semibold text-gray-900">Showtime ${index + 1}</h4>
-            <button type="button" class="remove-showtime text-red-600 hover:text-red-800" data-index="${index}">
-              <i class="fas fa-trash"></i> Remove
+            <div class="flex items-center gap-2">
+              <div class="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center">
+                <span class="font-bold text-indigo-600">${index + 1}</span>
+              </div>
+              <div>
+                <h4 class="font-semibold text-gray-900">Showtime ${index + 1}</h4>
+                <p class="text-xs text-gray-500">Configure date, time and pricing</p>
+              </div>
+            </div>
+            <button type="button" class="remove-showtime px-3 py-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors" data-index="${index}">
+              <i class="fas fa-trash mr-1"></i> Remove
             </button>
           </div>
 
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
             <div>
-              <label class="block text-xs text-gray-600 mb-1">Date & Time</label>
-              <input type="datetime-local" class="showtime-datetime w-full px-3 py-2 border border-gray-300 rounded-lg text-black focus:ring-2 focus:ring-indigo-500"
-                value="${
-                  showtime.dateTime
-                    ? dayjs(showtime.dateTime).format("YYYY-MM-DDTHH:mm")
-                    : ""
-                }" />
+              <label class="block text-sm font-medium text-gray-700 mb-2">Date & Time <span class="text-red-500">*</span></label>
+              <input type="datetime-local" class="showtime-datetime w-full px-4 py-2 border border-gray-300 rounded-lg text-black focus:ring-2 focus:ring-indigo-500"
+                value="${showtime.dateTime ? dayjs(showtime.dateTime).format("YYYY-MM-DDTHH:mm") : ""}" required />
             </div>
             <div>
-              <label class="block text-xs text-gray-600 mb-1">Venue</label>
-              <select class="showtime-venue w-full px-3 py-2 border border-gray-300 rounded-lg">
-                <option value="">Select venue</option>
-                ${this.venues
-                  .map(
-                    (v) =>
-                      `<option value="${v.id}" ${
-                        showtime.venueId == v.id ? "selected" : ""
-                      }>${v.name}</option>`
-                  )
-                  .join("")}
-              </select>
+              <label class="block text-sm font-medium text-gray-700 mb-2">Total Seats <span class="text-red-500">*</span></label>
+              <input type="number" class="showtime-total-seats w-full px-4 py-2 border border-gray-300 rounded-lg text-black focus:ring-2 focus:ring-indigo-500"
+                value="${showtime.totalSeats || 200}" min="1" required placeholder="200" />
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2">Available Seats</label>
+              <input type="number" class="showtime-available-seats w-full px-4 py-2 border border-gray-300 rounded-lg text-black focus:ring-2 focus:ring-indigo-500"
+                value="${showtime.availableSeats || showtime.totalSeats || 200}" min="0" placeholder="200" />
             </div>
           </div>
 
-          <div class="mb-4 p-4 bg-indigo-50 rounded-lg border border-indigo-200">
-            <div class="flex justify-between items-start mb-3">
-              <div>
-                <h5 class="text-sm font-semibold text-gray-900 mb-1">Seat Layout Preview</h5>
-                <p class="text-xs text-gray-600">Visual representation of the seating arrangement</p>
-              </div>
-              <div class="flex gap-2 flex-wrap">
-                <button type="button" class="auto-populate-btn text-xs px-3 py-1 bg-purple-600 text-white rounded hover:bg-purple-700" data-showtime="${index}" title="Auto-populate from venue">
-                  <i class="fas fa-magic mr-1"></i>Auto-fill
-                </button>
-                <button type="button" class="load-template-btn text-xs px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700" data-showtime="${index}" title="Load from template">
-                  <i class="fas fa-folder-open mr-1"></i>Load
-                </button>
-                <button type="button" class="save-template-btn text-xs px-3 py-1 bg-teal-600 text-white rounded hover:bg-teal-700" data-showtime="${index}" title="Save as template">
-                  <i class="fas fa-save mr-1"></i>Save
-                </button>
-                <button type="button" class="manage-zones-btn text-xs px-3 py-1 bg-orange-600 text-white rounded hover:bg-orange-700" data-showtime="${index}" title="Manage pricing zones">
-                  <i class="fas fa-layer-group mr-1"></i>Zones
-                </button>
-                <button type="button" class="edit-seats-btn text-xs px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700" data-showtime="${index}">
-                  <i class="fas fa-edit mr-1"></i>Edit Seats
-                </button>
-                <button type="button" class="customize-layout-btn text-xs px-3 py-1 bg-indigo-600 text-white rounded hover:bg-indigo-700" data-showtime="${index}">
-                  <i class="fas fa-cog mr-1"></i>Layout
-                </button>
-              </div>
-            </div>
-            <div id="seatPlan_${index}" class="flex justify-center">
-              ${this.renderSeatPlanSVG(showtime, index)}
-            </div>
-          </div>
-
-          <div class="border-t pt-4">
+          <div class="border-t pt-4 mt-4">
             ${this.renderPricingSections(showtime, index)}
           </div>
         </div>
@@ -1109,24 +1066,18 @@ export default {
       this.showtimes[index].dateTime = $(e.currentTarget).val();
     });
 
-    $(".showtime-venue").on("change", (e) => {
+    $(".showtime-total-seats").on("input", (e) => {
       const index = $(e.currentTarget)
         .closest("[data-showtime-index]")
         .data("showtime-index");
-      const venueId = parseInt($(e.currentTarget).val());
-      const venue = this.venues.find((v) => v.id === venueId);
-      this.showtimes[index].venueId = venueId;
-      this.showtimes[index].venueName = venue?.name || "";
-
-      delete this.showtimes[index].seatLayout;
-      $(`#seatPlan_${index}`).html(
-        this.renderSeatPlanSVG(this.showtimes[index], index)
-      );
+      this.showtimes[index].totalSeats = parseInt($(e.currentTarget).val()) || 0;
     });
 
-    $(".add-custom-ticket-type-btn").on("click", (e) => {
-      const showtimeIndex = $(e.currentTarget).data("showtime");
-      this.addCustomTicketType(showtimeIndex);
+    $(".showtime-available-seats").on("input", (e) => {
+      const index = $(e.currentTarget)
+        .closest("[data-showtime-index]")
+        .data("showtime-index");
+      this.showtimes[index].availableSeats = parseInt($(e.currentTarget).val()) || 0;
     });
 
     $(".add-section-btn").on("click", (e) => {
@@ -1149,16 +1100,6 @@ export default {
       }
     });
 
-    $(".section-code").on("input", (e) => {
-      const showtimeIndex = $(e.currentTarget).data("showtime");
-      const sectionIndex = $(e.currentTarget).data("section");
-      if (this.showtimes[showtimeIndex]?.pricing?.sections[sectionIndex]) {
-        this.showtimes[showtimeIndex].pricing.sections[
-          sectionIndex
-        ].sectionCode = $(e.currentTarget).val().toUpperCase();
-      }
-    });
-
     $(".section-tier").on("change", (e) => {
       const showtimeIndex = $(e.currentTarget).data("showtime");
       const sectionIndex = $(e.currentTarget).data("section");
@@ -1169,24 +1110,6 @@ export default {
       }
     });
 
-    $(".add-custom-tier-btn").on("click", async (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      const showtimeIndex = $(e.currentTarget).data("showtime");
-      const sectionIndex = $(e.currentTarget).data("section");
-      await this.addCustomTier(showtimeIndex, sectionIndex);
-    });
-
-    $(".section-rows").on("input", (e) => {
-      const showtimeIndex = $(e.currentTarget).data("showtime");
-      const sectionIndex = $(e.currentTarget).data("section");
-      if (this.showtimes[showtimeIndex]?.pricing?.sections[sectionIndex]) {
-        const rowsInput = $(e.currentTarget).val();
-        this.showtimes[showtimeIndex].pricing.sections[sectionIndex].rows =
-          this.parseRowsInput(rowsInput);
-      }
-    });
-
     $(".section-base-price").on("input", (e) => {
       const showtimeIndex = $(e.currentTarget).data("showtime");
       const sectionIndex = $(e.currentTarget).data("section");
@@ -1194,36 +1117,6 @@ export default {
         this.showtimes[showtimeIndex].pricing.sections[sectionIndex].basePrice =
           parseFloat($(e.currentTarget).val()) || 0;
       }
-    });
-
-    $(".customize-layout-btn").on("click", (e) => {
-      const showtimeIndex = $(e.currentTarget).data("showtime");
-      this.customizeSeatLayout(showtimeIndex);
-    });
-
-    $(".edit-seats-btn").on("click", (e) => {
-      const showtimeIndex = $(e.currentTarget).data("showtime");
-      this.editSeats(showtimeIndex);
-    });
-
-    $(".auto-populate-btn").on("click", (e) => {
-      const showtimeIndex = $(e.currentTarget).data("showtime");
-      this.autoPopulateFromVenue(showtimeIndex);
-    });
-
-    $(".load-template-btn").on("click", (e) => {
-      const showtimeIndex = $(e.currentTarget).data("showtime");
-      this.loadSeatTemplate(showtimeIndex);
-    });
-
-    $(".save-template-btn").on("click", (e) => {
-      const showtimeIndex = $(e.currentTarget).data("showtime");
-      this.saveSeatTemplate(showtimeIndex);
-    });
-
-    $(".manage-zones-btn").on("click", (e) => {
-      const showtimeIndex = $(e.currentTarget).data("showtime");
-      this.manageZones(showtimeIndex);
     });
   },
 
@@ -1509,7 +1402,7 @@ export default {
   },
 
   initializeSeatDetails(rows, seatsPerRow) {
-    return SeatMap.initializeSeatDetails(rows, seatsPerRow);
+    return seatHelpers.initializeSeatDetails(rows, seatsPerRow);
   },
 
   getSeatColorForShowtime(seatDetail, showtime) {
@@ -1610,116 +1503,63 @@ export default {
       return html;
     }
 
-    html += sections
-      .map((section, sectionIndex) => {
-        const sectionColor = getSectionColor(sectionIndex);
-        return `
-      <div class="mb-4 p-4 bg-white rounded-lg border-2 border-gray-200 shadow-sm hover:shadow-md transition-shadow">
-        <div class="flex justify-between items-center mb-4">
-          <div class="flex gap-3 flex-1 items-center">
-            <div class="w-10 h-10 rounded-lg flex items-center justify-center text-white font-bold text-sm" style="background-color: ${sectionColor};">
-              ${section.sectionCode || sectionIndex + 1}
-            </div>
-            <div class="flex gap-2 flex-1">
+    sections.forEach((section, sectionIndex) => {
+      html += `
+        <div class="bg-white p-4 rounded-lg border border-gray-200 hover:border-indigo-300 transition-all" data-section-index="${sectionIndex}">
+          <div class="flex justify-between items-start mb-3">
+            <div class="flex items-center gap-3 flex-1">
+              <div class="w-10 h-10 rounded-lg ${getTierBadge(
+                section.tier
+              )} flex items-center justify-center font-bold">
+                ${String.fromCharCode(65 + sectionIndex)}
+              </div>
               <div class="flex-1">
-                <label class="block text-xs text-gray-500 mb-1">Section Name</label>
-                <input type="text"
-                  class="section-name w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                  data-showtime="${showtimeIndex}"
-                  data-section="${sectionIndex}"
-                  value="${section.section}"
-                  placeholder="e.g., Orchestra, Balcony, VIP" />
-              </div>
-              <div class="w-24">
-                <label class="block text-xs text-gray-500 mb-1">Code</label>
-                <input type="text"
-                  class="section-code w-full px-3 py-2 text-sm border border-gray-300 rounded-lg text-center font-mono uppercase focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                  data-showtime="${showtimeIndex}"
-                  data-section="${sectionIndex}"
-                  value="${section.sectionCode}"
-                  placeholder="A"
-                  maxlength="2" />
+                <input type="text" class="section-name text-base font-semibold text-gray-900 border border-gray-300 rounded-lg px-3 py-2 w-full focus:ring-2 focus:ring-indigo-500" 
+                  value="${section.section}" 
+                  placeholder="Section Name (e.g., Orchestra, Balcony)" 
+                  data-showtime="${showtimeIndex}" 
+                  data-section="${sectionIndex}">
               </div>
             </div>
+            <button type="button" class="remove-section-btn text-red-600 hover:bg-red-50 rounded-lg p-2 transition-colors" 
+              data-showtime="${showtimeIndex}" 
+              data-section="${sectionIndex}"
+              title="Remove Section">
+              <i class="fas fa-trash-alt"></i>
+            </button>
           </div>
-          <button type="button" class="remove-section-btn ml-3 p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors" data-showtime="${showtimeIndex}" data-section="${sectionIndex}" title="Remove section">
-            <i class="fas fa-trash"></i>
-          </button>
-        </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
-          <div>
-            <label class="block text-xs font-semibold text-gray-700 mb-1 flex items-center justify-between">
-              <span>
-                <i class="fas fa-layer-group mr-1"></i>Zone Tier
-              </span>
-              <button type="button" class="add-custom-tier-btn text-xs px-2 py-0.5 bg-purple-50 text-purple-700 border border-purple-200 rounded hover:bg-purple-100 transition-colors"
-                data-showtime="${showtimeIndex}"
-                data-section="${sectionIndex}"
-                title="Add custom tier">
-                <i class="fas fa-plus mr-1"></i>Custom
-              </button>
-            </label>
-            <div class="relative">
-              <select class="section-tier w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 text-black"
-                data-showtime="${showtimeIndex}"
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2">Tier</label>
+              <select class="section-tier w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500" 
+                data-showtime="${showtimeIndex}" 
                 data-section="${sectionIndex}">
-                <option value="vip" ${
-                  section.tier === "vip" ? "selected" : ""
-                }>VIP</option>
-                <option value="premium" ${
-                  section.tier === "premium" ? "selected" : ""
-                }>Premium</option>
-                <option value="standard" ${
-                  section.tier === "standard" ? "selected" : ""
-                }>Standard</option>
-                <option value="economy" ${
-                  section.tier === "economy" ? "selected" : ""
-                }>Economy</option>
-                ${
-                  section.tier &&
-                  !["vip", "premium", "standard", "economy"].includes(
-                    section.tier.toLowerCase()
-                  )
-                    ? `<option value="${section.tier}" selected>${section.tier}</option>`
-                    : ""
-                }
+                ${TIER_OPTIONS.map(
+                  (tier) =>
+                    `<option value="${tier}" ${
+                      section.tier === tier ? "selected" : ""
+                    }>${tier.charAt(0).toUpperCase() + tier.slice(1)}</option>`
+                ).join("")}
               </select>
             </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2">Base Price (HKD) <span class="text-red-500">*</span></label>
+              <div class="relative">
+                <span class="absolute left-3 top-3 text-gray-500">$</span>
+                <input type="number" class="section-base-price w-full pl-8 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500" 
+                  value="${section.basePrice || ""}" 
+                  placeholder="500" 
+                  min="0" 
+                  step="10"
+                  required
+                  data-showtime="${showtimeIndex}" 
+                  data-section="${sectionIndex}">
+              </div>
+            </div>
           </div>
-          <div>
-            <label class="block text-xs font-semibold text-gray-700 mb-1">
-              <i class="fas fa-chair mr-1"></i>Seat Rows
-            </label>
-            <input type="text"
-              class="section-rows w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 text-black"
-              data-showtime="${showtimeIndex}"
-              data-section="${sectionIndex}"
-              value="${
-                Array.isArray(section.rows)
-                  ? section.rows.join(",")
-                  : section.rows || ""
-              }"
-              placeholder="e.g., A,B,C,D or A-D" />
-            <p class="text-xs text-gray-500 mt-1">Comma-separated: A,B,C or range: A-D</p>
-          </div>
-          <div>
-            <label class="block text-xs font-semibold text-gray-700 mb-1">
-              <i class="fas fa-dollar-sign mr-1"></i>Base Price (HKD)
-            </label>
-            <input type="number"
-              class="section-base-price w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 text-black"
-              data-showtime="${showtimeIndex}"
-              data-section="${sectionIndex}"
-              value="${section.basePrice || ""}"
-              placeholder="e.g., 600"
-              min="0"
-              step="10" />
-            <p class="text-xs text-gray-500 mt-1">Standard ticket price before discounts</p>
-          </div>
-        </div>
-        <div class="bg-gray-50 rounded-lg p-3">
-          ${
+
+        <div class="bg-gray-50 rounded-lg p-3 mt-3">${
             sectionIndex === 0 &&
             this.ticketTypes.some(
               (t) => t.id && SYSTEM_TICKET_TYPE_IDS.includes(t.id)
@@ -1728,9 +1568,8 @@ export default {
             <div class="bg-blue-50 border border-blue-200 rounded-lg p-2.5 mb-3 flex items-start gap-2">
               <i class="fas fa-info-circle text-blue-600 mt-0.5 text-sm"></i>
               <div class="flex-1">
-                <p class="text-[11px] leading-relaxed text-blue-900">
-                  <strong>Default ticket types are active.</strong> Customize in <a href="/admin/settings" data-link class="underline font-semibold hover:text-blue-700">Settings</a>
-                  or click <strong>"New Ticket Type"</strong> to add custom types like Military, Group, or Family Pass.
+                <p class="text-xs leading-relaxed text-blue-900">
+                  <strong>Default ticket types</strong> - Customize in <a href="/admin/settings" data-link class="underline hover:text-blue-700">Settings</a>
                 </p>
               </div>
             </div>
@@ -1796,11 +1635,6 @@ export default {
       eventCategories.push($(this).val());
     });
 
-    const ticketModes = [];
-    $(".ticket-mode:checked").each(function () {
-      ticketModes.push($(this).val());
-    });
-
     $(".section-price").each(
       function () {
         const showtimeIndex = $(this).data("showtime");
@@ -1828,21 +1662,6 @@ export default {
 
     const imageUrl = await getImageDataURL("performanceImageInput");
 
-    const discountType = $("#groupDiscountType").val();
-    const discountValue = parseInt($("#groupDiscount").val()) || 0;
-    const groupDiscount = {
-      enabled: !!$("#groupMinTickets").val(),
-      minimumTickets: parseInt($("#groupMinTickets").val()) || 0,
-      discountType: discountType,
-      note: $("#groupNote").val(),
-    };
-
-    if (discountType === "percentage") {
-      groupDiscount.discountPercentage = discountValue;
-    } else {
-      groupDiscount.discountAmount = discountValue;
-    }
-
     const performanceData = {
       id: this.currentPerformance?.id || Date.now(),
       title: $("#title").val(),
@@ -1855,7 +1674,6 @@ export default {
       performanceInfo: {
         presenter: $("#presenter").val(),
         eventCategory: eventCategories,
-        modeOfTickets: ticketModes,
         ageLimit: parseInt($("#ageLimit").val()) || 0,
         website: $("#website").val(),
       },
@@ -1864,14 +1682,10 @@ export default {
         ticketSaleStart: $("#ticketSaleStart").val(),
         preOrderStartDate: $("#preOrderStartDate").val(),
         earlyBirdEndDate: $("#earlyBirdEndDate").val(),
-        duration: $("#duration").val(),
-        interval: $("#interval").val(),
-        groupBookingDiscount: groupDiscount,
-        eTicketArrangement: {
-          available: $("#eTicketAvailable").is(":checked"),
-        },
         additionalInfo: $("#additionalInfo").val(),
       },
+      duration: parseInt($("#duration").val()) || 0,
+      venueId: $("#venueSelect").val(),
       showtimes: this.showtimes,
       sponsors: $("#sponsors")
         .val()
@@ -1906,10 +1720,109 @@ export default {
     }
   },
 
-  editPerformance(id) {
+  async openQuickCreate() {
+    const wizard = new PerformanceWizardHandler(
+      this.venues,
+      async (formData) => {
+        await this.createPerformanceFromWizard(formData);
+      }
+    );
+
+    await wizard.show();
+  },
+
+  async createPerformanceFromWizard(formData) {
+    try {
+      const performanceData = {
+        title: formData.title,
+        composer: formData.composer,
+        conductor: formData.conductor,
+        description: formData.description,
+        duration: parseInt(formData.duration) || 120,
+        genre: formData.genre || "symphony",
+        venueId: formData.venueId,
+        status: "upcoming",
+        showtimes: formData.showtimes.map((st) => ({
+          dateTime: `${st.date}T${st.time}`,
+          totalSeats: 200,
+          availableSeats: 200,
+        })),
+        pricingSections: [
+          {
+            section: "Standard",
+            basePrice: formData.basePrice,
+            tier: "standard",
+          },
+        ],
+      };
+
+      if (formData.vipPrice) {
+        performanceData.pricingSections.push({
+          section: "VIP",
+          basePrice: formData.vipPrice,
+          tier: "vip",
+        });
+      }
+
+      if (formData.premiumPrice) {
+        performanceData.pricingSections.push({
+          section: "Premium",
+          basePrice: formData.premiumPrice,
+          tier: "premium",
+        });
+      }
+
+      if (formData.economyPrice) {
+        performanceData.pricingSections.push({
+          section: "Economy",
+          basePrice: formData.economyPrice,
+          tier: "economy",
+        });
+      }
+
+      await performanceAPI.create(performanceData);
+
+      const response = await performanceAPI.getAll();
+      this.performances = ResponseExtractor.extract(response, "performances");
+      this.displayPerformances(this.performances);
+
+      notify.success("Performance created successfully!");
+    } catch (error) {
+      console.error("Error creating performance:", error);
+      handleApiError(error, "Failed to create performance");
+      throw error;
+    }
+  },
+
+  async quickEdit(id) {
+    const performance = this.getPerformanceById(id);
+    if (!performance) return;
+
+    await openQuickEdit(performance, this.venues, async (updatedData) => {
+      await this.updatePerformanceFromWizard(id, updatedData);
+    });
+  },
+
+  async updatePerformanceFromWizard(id, formData) {
+    try {
+      await performanceAPI.update(id, formData);
+
+      const response = await performanceAPI.getAll();
+      this.performances = ResponseExtractor.extract(response, "performances");
+      this.displayPerformances(this.performances);
+
+      notify.success("Performance updated successfully!");
+    } catch (error) {
+      console.error("Error updating performance:", error);
+      handleApiError(error, "Failed to update performance");
+      throw error;
+    }
+  },
+
+  async editPerformance(id) {
     const performance = this.getPerformanceById(id);
     if (performance) {
-      this.openPerformanceForm(performance);
+      await this.quickEdit(id);
     }
   },
 
@@ -1923,7 +1836,7 @@ export default {
 
     await Swal.fire({
       title: `<i class="fas fa-music text-indigo-600 mr-2"></i>${performance.title}`,
-      html: this.generatePerformanceDetailsHTML(
+      html: PerformanceDetails.render(
         performance,
         venue,
         showtimes,
@@ -1936,6 +1849,15 @@ export default {
   },
 
   generatePerformanceDetailsHTML(performance, venue, showtimes, ticketTypes) {
+    return PerformanceDetails.render(
+      performance,
+      venue,
+      showtimes,
+      ticketTypes
+    );
+  },
+
+  _legacyRenderShowtimesSection(showtimes) {
     const showtimesHtml = this.renderShowtimesSection(showtimes);
     const ticketTypesHtml = this.renderTicketTypesSection(ticketTypes);
 
@@ -2065,24 +1987,38 @@ export default {
     if (!performance) return;
 
     const showtimes = performance.showtimes || [];
-    const bookings = storage.getItem("bookings", []);
+    const performanceId = performance.id;
+    const bookings = [];
 
     await Swal.fire({
       title: `<i class="fas fa-calendar-day text-indigo-600 mr-2"></i>Manage Showtimes`,
-      html: this.generateManageShowtimesHTML(
+      html: ShowtimeManager.render(
         performance,
         showtimes,
         bookings,
-        id
+        performanceId
       ),
-      width: "700px",
-      showConfirmButton: true,
+      width: "900px",
       confirmButtonText: "Close",
       confirmButtonColor: SwalColors.primary,
     });
   },
 
   generateManageShowtimesHTML(performance, showtimes, bookings, performanceId) {
+    return ShowtimeManager.render(
+      performance,
+      showtimes,
+      bookings,
+      performanceId
+    );
+  },
+
+  _legacyGenerateManageShowtimesHTML(
+    performance,
+    showtimes,
+    bookings,
+    performanceId
+  ) {
     const showtimesHtml = showtimes
       .map((st, index) =>
         this.renderShowtimeCard(st, index, performanceId, bookings)
@@ -2094,8 +2030,8 @@ export default {
         <div class="bg-gray-50 rounded-lg p-4 mb-4">
           <h3 class="font-semibold text-gray-900 mb-1">${performance.title}</h3>
           <p class="text-sm text-gray-600">${performance.composer} • ${
-      performance.conductor
-    }</p>
+            performance.conductor
+          }</p>
         </div>
 
         <div class="mb-3 flex items-center justify-between">
@@ -2409,8 +2345,8 @@ export default {
               <span class="flex items-center gap-1">
                 <i class="fas fa-ticket-alt text-indigo-600"></i>
                 ${booking.seats?.length || 0} seat${
-                booking.seats?.length !== 1 ? "s" : ""
-              }
+                  booking.seats?.length !== 1 ? "s" : ""
+                }
               </span>
               <span class="flex items-center gap-1">
                 <i class="fas fa-dollar-sign text-green-600"></i>
@@ -2685,8 +2621,8 @@ export default {
                 <div class="font-semibold text-gray-900">${section.name}</div>
                 <div class="text-gray-600">
                   ${section.rows} rows × ${section.seatsPerRow} seats = ${
-                  section.rows * section.seatsPerRow
-                } total
+                    section.rows * section.seatsPerRow
+                  } total
                   <span class="ml-2 px-2 py-1 bg-indigo-100 text-indigo-800 rounded-full text-xs">${
                     section.tier
                   }</span>
@@ -2802,45 +2738,30 @@ export default {
                 showtime.pricingZones.length === 0
                   ? '<p class="text-gray-500 text-sm">No zones defined. Click "Add Zone" to create your first pricing zone.</p>'
                   : showtime.pricingZones
-                      .map(
-                        (zone, index) => `
+                      .map((zone, index) => {
+                        const colorClass = zone.color.replace("#", "");
+                        return `
                   <div class="zone-item border border-gray-300 rounded-lg p-4" data-zone-index="${index}">
                     <div class="flex items-center justify-between mb-2">
                       <div class="flex items-center gap-3">
-                        <div class="w-8 h-8 rounded" style="background-color: ${
-                          zone.color
-                        }"></div>
+                        <div class="w-8 h-8 rounded" style="background-color: ${zone.color}"></div>
                         <div>
-                          <h4 class="font-semibold text-gray-900">${
-                            zone.name
-                          }</h4>
-                          <p class="text-xs text-gray-600">${
-                            zone.seats.length
-                          } seats</p>
+                          <h4 class="font-semibold text-gray-900">${zone.name}</h4>
+                          <p class="text-xs text-gray-600">${zone.seats.length} seats</p>
                         </div>
                       </div>
-                      <div class="flex gap-2">
-                        <button class="assign-zone-seats-btn px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors text-sm" data-zone-index="${index}">
-                          <i class="fas fa-mouse-pointer mr-1"></i>Assign Seats
-                        </button>
-                        <button class="delete-zone-btn px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600 transition-colors text-sm" data-zone-index="${index}">
-                          <i class="fas fa-trash"></i>
-                        </button>
-                      </div>
+                      <button type="button" class="delete-zone-btn" data-zone-index="${index}">
+                        <i class="fas fa-trash-alt text-red-600"></i>
+                      </button>
                     </div>
-                    <div class="text-sm text-gray-600">
-                      <span>Pricing: ${
-                        pricingSections[zone.sectionIndex]?.category || "N/A"
-                      }</span>
-                    </div>
+                    <button type="button" class="assign-zone-seats-btn" data-zone-index="${index}">
+                      Assign Seats
+                    </button>
                   </div>
-                `
-                      )
+                `;
+                      })
                       .join("")
               );
-
-              attachZoneHandlers();
-              notify.success(`Zone "${newZone.name}" created`);
             }
           );
         });
@@ -2886,17 +2807,9 @@ export default {
                   title: `Assign Seats to "${zone.name}"`,
                   html: `
                 <div class="text-left space-y-4 text-gray-900">
-                  <div class="bg-${zone.color.replace(
-                    "#",
-                    ""
-                  )}-50 border border-${zone.color.replace(
-                    "#",
-                    ""
-                  )}-200 rounded-lg p-3">
+                  <div class="bg-indigo-50 border border-indigo-200 rounded-lg p-3">
                     <p class="text-sm">Click seats on the map to add/remove them from this zone</p>
-                    <p class="text-xs text-gray-600 mt-1">Currently assigned: <span id="zone-seat-count" class="font-bold">${
-                      zone.seats.length
-                    }</span> seats</p>
+                    <p class="text-xs text-gray-600 mt-1">Currently assigned: <span id="zone-seat-count" class="font-bold">${zone.seats.length}</span> seats</p>
                   </div>
 
                   <div class="bg-gray-50 rounded-lg p-4 overflow-auto" style="max-height: 400px;">

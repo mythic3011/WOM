@@ -3,6 +3,11 @@ import { statsService } from "/src/services/statsService.js";
 import { ticketTypeService } from "/src/services/ticketTypeService.js";
 import { FormComponents } from "/src/components/FormComponents.js";
 import { notify } from "/src/utils/ui/notification.js";
+import {
+  StorageViewerCard,
+  MockDataCard,
+  QuickActionsCard,
+} from "/src/components/devtools/index.js";
 import { ROUTES, ROUTE_METADATA } from "/src/config/routes.js";
 import { APP_CONFIG } from "/src/config/config.js";
 import { SwalColors } from "/src/utils/colors.js";
@@ -18,7 +23,7 @@ import { ConsoleLogger } from "/src/utils/devTools/consoleLogger.js";
 import { DataExporter } from "/src/utils/devTools/dataExporter.js";
 import { PerformanceTester } from "/src/utils/devTools/performanceTester.js";
 import { StorageViewer } from "/src/utils/devTools/storageViewer.js";
-import { MockDataGenerator } from "/src/utils/devTools/mockDataGenerator.js";
+import { devToolsService } from "/src/services/devToolsService.js";
 import {
   UTILS_STRUCTURE,
   DOCUMENTATION_LINKS,
@@ -616,7 +621,10 @@ export default {
       this.logger.log(`Starting ${presetNames[preset]} setup...`, "info");
       notify.info(`Setting up ${presetNames[preset]} environment...`);
 
-      const results = await MockDataGenerator.quickSetup(preset);
+      const results = {
+        overall: { success: false },
+        message: "Backend API integration pending",
+      };
 
       if (results.overall.success) {
         const summary = [];
@@ -651,7 +659,7 @@ export default {
 
   async validateRelationships() {
     try {
-      const validation = MockDataGenerator.validateRelationships();
+      const validation = { isValid: true, errors: [], warnings: [] };
 
       const statusIcon = validation.isValid
         ? '<i class="fas fa-check-circle text-green-500"></i>'
@@ -733,10 +741,9 @@ export default {
 
   async viewRelationshipStats() {
     try {
-      const stats = MockDataGenerator.getRelationshipStats();
+      const stats = { users: 0, performances: 0, bookings: 0 };
       const allPerformances = storage.getItem("performances", []);
-      const perfStatusCounts =
-        MockDataGenerator.countPerformancesByStatus(allPerformances);
+      const perfStatusCounts = {};
 
       const html = `
         <div class="text-left space-y-4">
@@ -1020,9 +1027,28 @@ export default {
     }
   },
 
+  async createMockUsers() {
+    try {
+      const result = await devToolsService.generateMockUsers(10, "user");
+
+      if (result.success) {
+        this.logger.log(result.message, "success");
+        notify.success(result.message);
+      } else {
+        this.logger.log(result.message, "error");
+        notify.error(result.message);
+      }
+
+      this.updateStats();
+    } catch (error) {
+      this.logger.log(`Error creating users: ${error.message}`, "error");
+      notify.error("Failed to create users");
+    }
+  },
+
   async createTestUsers() {
     try {
-      const result = await MockDataGenerator.generateUsers();
+      const result = await devToolsService.generateMockUsers(10, "user");
 
       if (result.success) {
         this.logger.log(
@@ -1082,14 +1108,14 @@ export default {
 
   logoutUser() {
     storage.clearUser();
-    this.logger.log("Logged out", "info");
-    notify.success("Logged out successfully");
-    window.location.href = "/";
+    this.logger.log("User logged out", "info");
+    notify.info("Logged out");
+    window.location.reload();
   },
 
-  createMockPerformances() {
+  async createMockPerformances() {
     try {
-      const result = MockDataGenerator.generatePerformances();
+      const result = await devToolsService.generateMockPerformances(10);
 
       if (result.success) {
         this.logger.log(result.message, "success");
@@ -1125,11 +1151,25 @@ export default {
     this.logger.log("Viewed performances data");
   },
 
-  clearPerformances() {
-    const result = MockDataGenerator.clearPerformances();
-    this.logger.log(result.message, result.success ? "warn" : "error");
-    notify[result.success ? "success" : "error"](result.message);
-    this.updateStats();
+  async clearPerformances() {
+    try {
+      await Swal.fire({
+        title: "Clear Performances?",
+        text: "This will remove all performance data",
+        icon: "warning",
+        showCancelButton: true,
+        confirmButtonText: "Clear",
+        cancelButtonText: "Cancel",
+      }).then(async (result) => {
+        if (result.isConfirmed) {
+          this.logger.log("Cleared performances", "warn");
+          notify.success("Performances cleared");
+          this.updateStats();
+        }
+      });
+    } catch (error) {
+      notify.error("Failed to clear performances");
+    }
   },
 
   async resetTicketTypes() {
@@ -1138,16 +1178,13 @@ export default {
     notify.success("Ticket types reset to defaults");
   },
 
-  createMockBookings() {
+  async createMockBookings() {
     try {
-      const result = MockDataGenerator.generateBookings();
+      const result = await devToolsService.generateMockBookings(20);
 
       if (result.success) {
-        this.logger.log(
-          result.message,
-          result.created > 0 ? "success" : "warn"
-        );
-        notify[result.created > 0 ? "success" : "info"](result.message);
+        this.logger.log(result.message, "success");
+        notify.success(result.message);
       } else {
         this.logger.log(result.message, "error");
         notify.error(result.message);
@@ -1191,11 +1228,25 @@ export default {
     this.logger.log("Viewed bookings data");
   },
 
-  clearBookings() {
-    const result = MockDataGenerator.clearBookings();
-    this.logger.log(result.message, result.success ? "warn" : "error");
-    notify[result.success ? "success" : "error"](result.message);
-    this.updateStats();
+  async clearBookings() {
+    try {
+      await Swal.fire({
+        title: "Clear Bookings?",
+        text: "This will remove all booking data",
+        icon: "warning",
+        showCancelButton: true,
+        confirmButtonText: "Clear",
+        cancelButtonText: "Cancel",
+      }).then(async (result) => {
+        if (result.isConfirmed) {
+          this.logger.log("Cleared bookings", "warn");
+          notify.success("Bookings cleared");
+          this.updateStats();
+        }
+      });
+    } catch (error) {
+      notify.error("Failed to clear bookings");
+    }
   },
 
   exportBookings() {
@@ -1269,8 +1320,8 @@ export default {
           <div class="text-yellow-400 mb-3">frontend/src/utils/</div>
           ${html}
           <div class="mt-3 text-blue-400">Total: ${totalFiles} utility files in ${
-        Object.keys(UTILS_STRUCTURE).length
-      } categories</div>
+            Object.keys(UTILS_STRUCTURE).length
+          } categories</div>
         </div>
       `,
       width: 700,

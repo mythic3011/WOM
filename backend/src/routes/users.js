@@ -1,7 +1,7 @@
 import express from "express";
 import * as userController from "../controllers/userController.js";
 import { validate } from "../middleware/validation.js";
-import { isAuthenticated, isAdmin } from "../middleware/auth.js";
+import { isAuthenticated, isAdmin, isOwnerOrAdminByParam } from "../middleware/auth.js";
 import {
   createUserValidator,
   updateUserValidator,
@@ -170,6 +170,7 @@ router.post(
 router.put(
   "/:id",
   isAuthenticated,
+  isOwnerOrAdminByParam,
   updateUserValidator,
   validate,
   userController.updateUser

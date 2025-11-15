@@ -1,14 +1,15 @@
+import { performanceHelpers } from "../services/performanceHelpers.js";
+
 export const performanceUtils = {
   calculateAvailability(totalSeats, availableSeats) {
-    if (!totalSeats || totalSeats <= 0) return 0;
-    return (availableSeats / totalSeats) * 100;
+    return performanceHelpers.calculateSeatAvailability(
+      totalSeats,
+      availableSeats
+    );
   },
 
   getAvailabilityCategory(availabilityPercent) {
-    if (availabilityPercent === 0) return "sold_out";
-    if (availabilityPercent > 0 && availabilityPercent < 10) return "low";
-    if (availabilityPercent >= 10 && availabilityPercent <= 50) return "medium";
-    return "high";
+    return performanceHelpers.getAvailabilityCategory(availabilityPercent);
   },
 
   getAvailabilityColor(category) {
@@ -57,28 +58,14 @@ export const performanceUtils = {
   },
 
   getSeatAvailabilityInfo(performance) {
-    const totalSeats =
-      performance.totalSeats || performance.ticketingInfo?.totalSeats || 0;
-    const availableSeats =
-      performance.availableSeats ??
-      performance.ticketingInfo?.availableSeats ??
-      0;
-    const bookedSeats = totalSeats - availableSeats;
-    const availabilityPercent = this.calculateAvailability(
-      totalSeats,
-      availableSeats
-    );
-    const category = this.getAvailabilityCategory(availabilityPercent);
-
+    const info = performanceHelpers.getSeatAvailabilityInfo(performance);
     return {
-      totalSeats,
-      availableSeats,
-      bookedSeats,
-      availabilityPercent,
-      category,
-      color: this.getAvailabilityColor(category),
-      progressColor: this.getAvailabilityProgressColor(availabilityPercent),
-      label: this.getAvailabilityLabel(category),
+      ...info,
+      color: this.getAvailabilityColor(info.category),
+      progressColor: this.getAvailabilityProgressColor(
+        info.availabilityPercent
+      ),
+      label: this.getAvailabilityLabel(info.category),
     };
   },
 
@@ -93,8 +80,8 @@ export const performanceUtils = {
             info.availabilityPercent === 0
               ? "text-red-600"
               : info.availabilityPercent < 30
-              ? "text-orange-600"
-              : "text-green-600"
+                ? "text-orange-600"
+                : "text-green-600"
           }">
             ${info.availableSeats}/${info.totalSeats} seats
           </span>
@@ -148,38 +135,14 @@ export const performanceUtils = {
     );
   },
 
-  isBookable(performance) {
-    const status = this.getPerformanceStatus(performance);
-    const info = this.getSeatAvailabilityInfo(performance);
-
-    return (
-      ["on_sale", "early_bird", "pre_order"].includes(status) &&
-      info.availableSeats > 0
-    );
-  },
-
   formatPerformanceDate(performance) {
     const dateTime = performance.showtimes?.[0]?.dateTime || performance.date;
-    if (!dateTime) return "Date TBA";
-
-    const date = new Date(dateTime);
-    return date.toLocaleDateString("en-US", {
-      weekday: "short",
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-    });
+    return performanceHelpers.formatPerformanceDate(dateTime);
   },
 
   formatPerformanceTime(performance) {
     const dateTime = performance.showtimes?.[0]?.dateTime || performance.date;
-    if (!dateTime) return "";
-
-    const date = new Date(dateTime);
-    return date.toLocaleTimeString("en-US", {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
+    return performanceHelpers.formatPerformanceTime(dateTime);
   },
 
   getVenueName(performance) {
@@ -187,30 +150,15 @@ export const performanceUtils = {
   },
 
   getPriceRange(performance) {
-    const showtimes = performance.showtimes || [];
-    if (showtimes.length === 0) return { min: 0, max: 0 };
-
-    let min = Infinity;
-    let max = -Infinity;
-
-    showtimes.forEach((showtime) => {
-      const sections = showtime.pricing?.sections || [];
-      sections.forEach((section) => {
-        if (section.price < min) min = section.price;
-        if (section.price > max) max = section.price;
-      });
-    });
-
-    if (min === Infinity) return { min: 0, max: 0 };
-    return { min, max };
+    return performanceHelpers.getPriceRange(performance);
   },
 
   formatPriceRange(performance) {
-    const { min, max } = this.getPriceRange(performance);
+    return performanceHelpers.formatPriceRange(performance);
+  },
 
-    if (min === 0 && max === 0) return "Price TBA";
-    if (min === max) return `HKD ${min}`;
-    return `HKD ${min} - ${max}`;
+  isBookable(performance) {
+    return performanceHelpers.isBookable(performance);
   },
 };
 

@@ -104,7 +104,7 @@ const DROPDOWN_MENU_ITEMS = {
 
 export function renderNavbar() {
   return `
-<nav class="bg-indigo-700 text-white shadow-lg border-b-4 border-indigo-900">
+<nav class="bg-indigo-700 text-white shadow-lg border-b-4 border-indigo-900 sticky top-0 z-50">
   <div class="container mx-auto px-4 sm:px-6 lg:px-8">
     <div class="flex justify-between h-16">
       <div class="flex items-center">
@@ -352,6 +352,32 @@ function getRoleDisplayInfo(role) {
     : { label: "User", icon: "fa-user", color: "blue" };
 }
 
+function attachLogoutHandlers() {
+  $(document)
+    .off("click", "#logoutBtn")
+    .on("click", "#logoutBtn", async function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      await handleLogout();
+    });
+
+  $(document)
+    .off("click", "#sidebarLogoutBtn")
+    .on("click", "#sidebarLogoutBtn", async function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      await handleLogout();
+    });
+
+  $(document)
+    .off("click", "#userDropdownBtn")
+    .on("click", "#userDropdownBtn", function (e) {
+      e.stopPropagation();
+      $("#userDropdownMenu").toggleClass("hidden");
+      $("#notificationsDropdown").addClass("hidden");
+    });
+}
+
 function renderUserSection(role, username) {
   if (role && username) {
     const initial = getUserInitial(username);
@@ -376,7 +402,7 @@ function renderUserSection(role, username) {
 
         <div
           id="userDropdownMenu"
-          class="absolute right-0 mt-2 ${NAVBAR_CONFIG.dropdownWidth} bg-white rounded-lg shadow-xl py-2 z-10 hidden transform transition-all duration-300 border border-gray-200"
+          class="absolute right-0 mt-2 ${NAVBAR_CONFIG.dropdownWidth} bg-white rounded-lg shadow-xl py-2 z-[60] hidden transform transition-all duration-300 border border-gray-200"
         >
           <div class="px-4 py-3 border-b border-gray-100">
             <div class="text-sm font-semibold text-gray-900">${username}</div>
@@ -397,19 +423,7 @@ function renderUserSection(role, username) {
       </div>
     `);
 
-    $(document)
-      .off("click", "#logoutBtn")
-      .on("click", "#logoutBtn", async function (e) {
-        e.preventDefault();
-        await handleLogout();
-      });
-
-    $(document)
-      .off("click", "#sidebarLogoutBtn")
-      .on("click", "#sidebarLogoutBtn", async function (e) {
-        e.preventDefault();
-        await handleLogout();
-      });
+    attachLogoutHandlers();
   } else {
     $("#userSection").html(`
       <a
@@ -592,7 +606,7 @@ function renderNotifications(role) {
     </button>
     <div
       id="notificationsDropdown"
-      class="absolute right-0 mt-2 w-80 bg-white rounded-md shadow-lg py-1 z-10 hidden"
+      class="absolute right-0 mt-2 w-80 bg-white rounded-md shadow-lg py-1 z-[60] hidden"
     >
       <div class="px-4 py-2 border-b border-gray-100">
         <div class="text-sm font-semibold text-gray-700">
@@ -638,8 +652,8 @@ function renderNotifications(role) {
           role === "guest"
             ? '<a href="/login" data-link class="text-sm text-indigo-600 hover:text-indigo-800">Login to view all</a>'
             : role === "admin"
-            ? '<a href="/admin/dashboard" data-link class="text-sm text-indigo-600 hover:text-indigo-800">View Dashboard</a>'
-            : '<a href="/user/dashboard" data-link class="text-sm text-indigo-600 hover:text-indigo-800">View all notifications</a>'
+              ? '<a href="/admin/dashboard" data-link class="text-sm text-indigo-600 hover:text-indigo-800">View Dashboard</a>'
+              : '<a href="/user/dashboard" data-link class="text-sm text-indigo-600 hover:text-indigo-800">View all notifications</a>'
         }
       </div>
     </div>

@@ -1,5 +1,6 @@
 import { User } from "../models/index.js";
 import { hashPassword, comparePassword } from "../utils/hash.js";
+import { ConflictError, UnauthorizedError, NotFoundError } from "../utils/errors.js";
 
 export const register = async (userData) => {
   const { email, username, password, name, phone, role = "user" } = userData;
@@ -11,7 +12,7 @@ export const register = async (userData) => {
   });
 
   if (existingUser) {
-    throw new Error("Email already registered");
+    throw new ConflictError("Email already registered");
   }
 
   const existingUsername = await User.findOne({
@@ -21,7 +22,7 @@ export const register = async (userData) => {
   });
 
   if (existingUsername) {
-    throw new Error("Username already taken");
+    throw new ConflictError("Username already taken");
   }
 
   const hashedPassword = await hashPassword(password);
@@ -54,17 +55,17 @@ export const login = async (identifier, password) => {
   });
 
   if (!user) {
-    throw new Error("Invalid username/email or password");
+    throw new UnauthorizedError("Invalid username/email or password");
   }
 
-  if (user.status !== "active") {
-    throw new Error("Account is not active");
+  if (!user.isActive()) {
+    throw new UnauthorizedError("Account is not active");
   }
 
-  const isValidPassword = await comparePassword(password, user.password);
+  const isValidPassword = await user.comparePassword(password);
 
   if (!isValidPassword) {
-    throw new Error("Invalid username/email or password");
+    throw new UnauthorizedError("Invalid username/email or password");
   }
 
   await user.update({

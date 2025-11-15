@@ -1,5 +1,6 @@
-import { DataTypes } from "sequelize";
+import { DataTypes, Op } from "sequelize";
 import sequelize from "../config/database.js";
+import bcrypt from "bcryptjs";
 
 const User = sequelize.define(
   "User",
@@ -77,6 +78,40 @@ const User = sequelize.define(
   {
     tableName: "users",
     timestamps: true,
+    hooks: {
+      beforeValidate: (user) => {
+        if (user.email) {
+          user.email = user.email.toLowerCase().trim();
+        }
+        if (user.username) {
+          user.username = user.username.trim();
+        }
+      },
+      beforeCreate: async (user) => {
+        if (user.password && !user.password.startsWith("$2a$")) {
+          user.password = await bcrypt.hash(user.password, 10);
+        }
+      },
+      beforeUpdate: async (user) => {
+        if (user.changed("password") && !user.password.startsWith("$2a$")) {
+          user.password = await bcrypt.hash(user.password, 10);
+        }
+      },
+    },
+    scopes: {
+      active: {
+        where: { status: "active" },
+      },
+      admin: {
+        where: { role: "admin" },
+      },
+      users: {
+        where: { role: "user" },
+      },
+      withBookings: {
+        include: [{ association: "bookings" }],
+      },
+    },
     indexes: [
       {
         unique: true,
@@ -88,7 +123,7 @@ const User = sequelize.define(
       },
       {
         unique: true,
-        fields: ["userId"],
+        fields: ["user_id"],
       },
     ],
   }
@@ -97,6 +132,22 @@ const User = sequelize.define(
 User.prototype.toSafeObject = function () {
   const { password: _password, ...safeUser } = this.toJSON();
   return safeUser;
+};
+
+User.prototype.comparePassword = async function (password) {
+  return bcrypt.compare(password, this.password);
+};
+
+User.prototype.isAdmin = function () {
+  return this.role === "admin";
+};
+
+User.prototype.isActive = function () {
+  return this.status === "active";
+};
+
+User.prototype.getFullName = function () {
+  return this.title ? `${this.title} ${this.name}` : this.name;
 };
 
 export default User;

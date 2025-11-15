@@ -180,8 +180,8 @@ export default {
             zone.sectionName
           }</h4>
           <span class="px-2 py-1 rounded text-xs font-bold ${colors.bg} ${
-      colors.text
-    }">
+            colors.text
+          }">
             ${tierLabel.toUpperCase()}
           </span>
         </div>

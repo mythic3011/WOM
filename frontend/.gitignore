@@ -20,8 +20,26 @@ public/webfonts
 !.vscode/extensions.json
 .idea
 .DS_Store
+**/.DS_Store
+Thumbs.db
+desktop.ini
 *.suo
 *.ntvs*
 *.njsproj
 *.sln
 *.sw?
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Optional npm cache directory
+.npm
+
+# Optional eslint cache
+.eslintcache
+
+# Coverage directory
+coverage
+.nyc_output

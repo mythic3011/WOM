@@ -1,3 +1,5 @@
+import { seatHelpers } from "../services/seatHelpers.js";
+
 function slugify(text) {
   return (text || "")
     .toString()
@@ -15,31 +17,9 @@ export function generateFullId(sectionName, rowLabel, seatNumber) {
 }
 
 export function parseFullId(fullId) {
-  const parts = fullId.split("-");
-  if (parts.length < 2) {
-    return null;
-  }
-
-  const rowAndSeat = parts[parts.length - 1];
-  const rowMatch = rowAndSeat.match(/^([a-z]+)(\d+)$/i);
-
-  if (!rowMatch) {
-    return null;
-  }
-
-  const sectionSlug = parts.slice(0, -1).join("-");
-  const rowLabel = rowMatch[1];
-  const seatNumber = parseInt(rowMatch[2], 10);
-
-  return {
-    sectionSlug,
-    rowLabel,
-    seatNumber,
-    displayLabel: `${rowLabel.toUpperCase()}${seatNumber}`,
-  };
+  return seatHelpers.parseSeatId(fullId);
 }
 
 export function getDisplayLabel(fullId) {
-  const parsed = parseFullId(fullId);
-  return parsed ? parsed.displayLabel : fullId;
+  return seatHelpers.getSeatDisplayLabel(fullId);
 }

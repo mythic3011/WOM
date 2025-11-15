@@ -17,6 +17,9 @@ import { userAPI, handleApiError } from "/src/services/apiClient.js";
 import { formatCurrency } from "/src/utils/utils.js";
 import { getTierBadge } from "/src/config/tierConfig.js";
 import { getDisplayLabel, parseFullId } from "/src/utils/seatIdHelper.js";
+import { SeatMap } from "/src/components/SeatMap.js";
+import { initSeatMapPanzoom } from "/src/utils/panzoomSeatMap.js";
+import { attachSeatTooltipListeners } from "/src/utils/booking/seatTooltip.js";
 import { bookingAPI } from "../../services/apiClient";
 const SEAT_GRID_CONFIG = {
   rows: ["A", "B", "C", "D", "E", "F", "G", "H"],
@@ -1364,30 +1367,117 @@ export default {
 
   async showSeatSelectionModal(currentSeats = [], performance) {
     let selectedSeats = [...currentSeats];
-    const bookedSeats = this.getBookedSeatsForPerformance(
-      performance?.id,
-      currentSeats
+    let detailedPerformance = performance;
+    try {
+      if (!detailedPerformance?.venue?.layout) {
+        detailedPerformance = await performanceService.getById(performance.id);
+      }
+    } catch (e) {}
+
+    const bookedSeatEntries = this.bookings
+      .filter(
+        (b) =>
+          String(b.performanceId) === String(detailedPerformance?.id) &&
+          b.status !== "cancelled"
+      )
+      .flatMap((b) => (Array.isArray(b.seats) ? b.seats : []));
+    const seatDetails = {};
+    bookedSeatEntries.forEach((s) => {
+      const key =
+        typeof s === "string"
+          ? s
+          : s.fullId || s.seatId || s.id || getDisplayLabel(s.seat || "");
+      if (key) seatDetails[key] = { status: "reserved" };
+    });
+
+    const layout = detailedPerformance?.venue?.layout ||
+      detailedPerformance?.layout || { sections: [] };
+    const seatMapHTML = SeatMap.generateFromLayout(
+      layout,
+      seatDetails,
+      selectedSeats,
+      true
     );
 
     const result = await Swal.fire({
       title: '<i class="fas fa-chair text-indigo-600"></i> Select Seats',
-      html: this.generateSeatSelectionHTML(
-        performance,
-        selectedSeats,
-        bookedSeats,
-        currentSeats
-      ),
+      html: `
+        <div class="text-left">
+          ${this.renderSeatSelectionHeader(detailedPerformance)}
+          <div class="mb-4 p-3 bg-indigo-50 rounded-lg">
+            <p class="text-sm font-medium text-indigo-900">
+              Selected Seats (<span id="selected-count">${
+                selectedSeats.length
+              }</span>):
+              <span id="selected-seats-display" class="font-normal">${
+                selectedSeats.join(", ") || "None"
+              }</span>
+            </p>
+          </div>
+          <div class="bg-white border border-gray-200 rounded-lg p-4 max-h-[70vh] overflow-y-auto">
+            <div id="seatMap" class="min-h-[400px]">${seatMapHTML}</div>
+          </div>
+        </div>
+      `,
       width: "900px",
       showCancelButton: true,
       confirmButtonText: `Confirm Selection (${selectedSeats.length})`,
       cancelButtonText: "Cancel",
       confirmButtonColor: SwalColors.primary,
       didOpen: () => {
-        this.setupSeatSelectionHandlers(
-          selectedSeats,
-          bookedSeats,
-          currentSeats
-        );
+        if (this._pz && this._pz.dispose) {
+          try {
+            this._pz.dispose();
+          } catch (e) {}
+        }
+        setTimeout(() => {
+          this._pz = initSeatMapPanzoom();
+          attachSeatTooltipListeners("#seatMap svg");
+          const refresh = () => {
+            $("#selected-count").text(selectedSeats.length);
+            $("#selected-seats-display").text(
+              selectedSeats.join(", ") || "None"
+            );
+            Swal.getConfirmButton().textContent = `Confirm Selection (${selectedSeats.length})`;
+          };
+          $(document)
+            .off("click.adminSeatSelect", "#seatMap svg g.interactive-seat")
+            .on(
+              "click.adminSeatSelect",
+              "#seatMap svg g.interactive-seat",
+              function () {
+                const fullId = $(this).attr("data-full-id");
+                const seatId = $(this).attr("data-seat-id");
+                const id = fullId || seatId;
+                const status = $(this).attr("data-status");
+                if (status === "occupied") return;
+                const idx = selectedSeats.indexOf(id);
+                const $rect = $(this).find("rect").first();
+                if (idx > -1) {
+                  selectedSeats.splice(idx, 1);
+                  $(this).attr("data-status", "available");
+                  const original =
+                    $rect.attr("data-original-color") || $rect.attr("fill");
+                  $rect.attr("fill", original);
+                  $rect.attr("stroke", original).attr("stroke-width", "1");
+                } else {
+                  selectedSeats.push(id);
+                  $(this).attr("data-status", "selected");
+                  $rect.attr("fill", "rgb(79, 70, 229)");
+                  $rect
+                    .attr("stroke", "rgb(202, 138, 4)")
+                    .attr("stroke-width", "2");
+                }
+                refresh();
+              }
+            );
+        }, 50);
+      },
+      willClose: () => {
+        $(document).off(".adminSeatSelect");
+        try {
+          if (this._pz && this._pz.dispose) this._pz.dispose();
+        } catch (e) {}
       },
     });
 

@@ -185,8 +185,8 @@ export default {
             <div class="flex items-center gap-3 p-3 bg-${
               activity.color
             }-50 rounded-lg border border-${
-                      activity.color
-                    }-100 hover:shadow-md transition-shadow">
+              activity.color
+            }-100 hover:shadow-md transition-shadow">
               <div class="w-10 h-10 bg-${
                 activity.color
               }-100 rounded-full flex items-center justify-center flex-shrink-0">
@@ -203,8 +203,8 @@ export default {
                   <span class="text-xs px-2 py-0.5 bg-${
                     activity.color
                   }-100 text-${activity.color}-700 rounded-full font-medium">${
-                      activity.status
-                    }</span>
+                    activity.status
+                  }</span>
                 </div>
               </div>
               <div class="text-right">

@@ -180,8 +180,8 @@ function renderTableContent({
                 ? "cursor-pointer hover:bg-gray-100 transition-colors"
                 : ""
             } ${col.nowrap ? "whitespace-nowrap" : ""} ${
-                col.headerClassName || ""
-              }"
+              col.headerClassName || ""
+            }"
               data-column="${col.key}"
               ${
                 col.sortable !== false && sortable ? `data-sortable="true"` : ""
@@ -226,8 +226,8 @@ function renderTableContent({
               .map(
                 (col) => `
               <td class="px-4 py-4 text-sm ${col.cellClassName || ""} ${
-                  col.nowrap ? "whitespace-nowrap" : ""
-                }">
+                col.nowrap ? "whitespace-nowrap" : ""
+              }">
                 ${
                   typeof col.render === "function"
                     ? col.render(row, index)
@@ -491,18 +491,18 @@ export function createSimpleTable({
   return `
     <div class="overflow-x-auto">
       <table class="w-full ${striped ? "table-striped" : ""} ${
-    hover ? "table-hover" : ""
-  }">
+        hover ? "table-hover" : ""
+      }">
         <thead class="bg-gray-50 border-b-2 border-gray-200">
           <tr>
             ${columns
               .map(
                 (col) => `
               <th class="px-${compact ? "3" : "4"} py-${
-                  compact ? "2" : "3"
-                } text-left text-xs font-semibold text-gray-600 uppercase ${
-                  col.nowrap ? "whitespace-nowrap" : ""
-                }">
+                compact ? "2" : "3"
+              } text-left text-xs font-semibold text-gray-600 uppercase ${
+                col.nowrap ? "whitespace-nowrap" : ""
+              }">
                 ${col.label}
               </th>
             `
@@ -521,8 +521,8 @@ export function createSimpleTable({
                   .map(
                     (col) => `
                   <td class="px-${compact ? "3" : "4"} py-${
-                      compact ? "2" : "4"
-                    } text-sm ${col.cellClassName || ""}">
+                    compact ? "2" : "4"
+                  } text-sm ${col.cellClassName || ""}">
                     ${
                       typeof col.render === "function"
                         ? col.render(row, index)

@@ -148,8 +148,8 @@ export function renderFooter() {
       <div class="flex flex-col md:flex-row justify-between items-center">
         <p class="text-gray-400 mb-4 md:mb-0">
           &copy; ${FOOTER_CONFIG.copyrightYear} ${
-    FOOTER_CONFIG.appName
-  }. All rights reserved.
+            FOOTER_CONFIG.appName
+          }. All rights reserved.
         </p>
         ${
           false

@@ -1,16 +1,13 @@
 import { createEmptyState } from "/src/components/EmptyState.js";
 import { createLoadingState } from "/src/components/LoadingState.js";
-import { createTable } from "/src/components/Table.js";
+import { createDataTable } from "/src/components/DataTable.js";
 import { FormComponents } from "/src/components/FormComponents.js";
 import { statsService } from "/src/services/statsService.js";
 import { phoneUtils } from "/src/utils/forms/phoneFormat.js";
 import { notify } from "/src/utils/ui/notification.js";
 import { SwalColors } from "/src/utils/colors.js";
 import { scrollbarUtils } from "/src/utils/ui/scrollbar.js";
-import {
-  initImageUpload,
-  getImageDataURL,
-} from "/src/components/ImageUpload.js";
+import { Avatar } from "/src/components/Avatar.js";
 import { userAPI, handleApiError } from "/src/services/apiClient.js";
 import { adminUserService } from "/src/services/adminUserService.js";
 import { bookingService } from "/src/services/bookingService.js";
@@ -52,50 +49,23 @@ export default {
           <div id="userStats" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
           </div>
 
-          ${FormComponents.filterBar({
-            searchId: "searchUsers",
-            searchPlaceholder: "Search by name, email, username...",
-            filters: [
-              {
-                id: "roleFilter",
-                options: [
-                  { value: "", label: "All Roles" },
-                  { value: "user", label: "Users" },
-                  { value: "admin", label: "Admins" },
-                ],
-              },
-              {
-                id: "statusFilter",
-                options: [
-                  { value: "", label: "All Status" },
-                  { value: "active", label: "Active" },
-                  { value: "suspended", label: "Suspended" },
-                ],
-              },
-            ],
-            actions: [
-              {
-                id: "importUsers",
-                text: "Import CSV",
-                icon: "fa-upload",
-                color: "cyan",
-              },
-              {
-                id: "exportUsers",
-                text: "Export CSV",
-                icon: "fa-download",
-                color: "green",
-              },
-              {
-                id: "addUser",
-                text: "Add User",
-                icon: "fa-plus",
-                color: "indigo",
-              },
-            ],
-          })}
+            <button
+              id="importUsers"
+              class="px-4 py-2 bg-cyan-600 text-white rounded-lg hover:bg-cyan-700 transition-colors flex items-center gap-2"
+            >
+              <i class="fas fa-upload"></i>
+              <span>Import CSV</span>
+            </button>
+            <button
+              id="exportUsers"
+              class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2"
+            >
+              <i class="fas fa-download"></i>
+              <span>Export CSV</span>
+            </button>
+          </div>
 
-          <div id="usersTable" class="bg-white rounded-lg shadow-md border border-gray-200 overflow-hidden">
+          <div id="usersTable">
             ${createLoadingState({ message: "Loading users..." })}
           </div>
         </div>
@@ -115,7 +85,6 @@ export default {
       );
 
       const users = await adminUserService.list();
-      console.log("Fetched users:", users);
 
       this.allUsers = users.map((user) => ({
         ...user,
@@ -125,16 +94,9 @@ export default {
       this.filteredUsers = this.allUsers;
 
       this.renderStats();
-      this.renderUsersTable();
+      this.renderDataTable();
     } catch (error) {
       console.error("Failed to load users:", error);
-      $("#usersTable").html(
-        createEmptyState(
-          "Failed to load users",
-          "Unable to fetch user data from server",
-          "fa-exclamation-circle"
-        )
-      );
       handleApiError(error, "Failed to load users");
     }
   },
@@ -192,120 +154,99 @@ export default {
     $("#userStats").html(statsHTML);
   },
 
-  renderUsersTable() {
-    const columns = [
-      {
-        key: "profile",
-        label: "User",
-        render: (user) => `
-          <div class="flex items-center gap-3">
-            ${
-              user.profileImage
-                ? `<img src="${user.profileImage}" class="h-10 w-10 rounded-full object-cover" alt="${user.name}" />`
-                : `<div class="h-10 w-10 rounded-full bg-indigo-600 flex items-center justify-center border-2 border-indigo-400 shadow-sm">
-                    <span class="text-white font-bold text-lg">${(
-                      user.name || "U"
-                    )
-                      .charAt(0)
-                      .toUpperCase()}</span>
-                  </div>`
-            }
-            <div>
-              <p class="font-semibold text-gray-900">${
-                user.title ? user.title + " " : ""
-              }${user.name}</p>
-              <p class="text-xs text-gray-500">@${user.username} <br>(ID: #${
-          user.userId
-        })</p>
-            </div>
-          </div>
-        `,
-      },
-      {
-        key: "email",
-        label: "Contact",
-        render: (user) => `
-          <div>
-            <p class="text-sm text-gray-900">${user.email}</p>
-            ${
-              user.phone
-                ? `<p class="text-xs text-gray-500"><i class="fas fa-phone mr-1"></i>${phoneUtils.formatHKPhone(
-                    user.phone
-                  )}</p>`
-                : ""
-            }
-            <p class="text-xs text-gray-500">
-              <i class="fas fa-${
-                user.gender === "male"
-                  ? "mars text-blue-500"
-                  : user.gender === "female"
-                  ? "venus text-pink-500"
-                  : "genderless text-gray-400"
-              }"></i>
-              ${
-                user.gender === "prefer_not_to_say"
-                  ? "Not specified"
-                  : user.gender.charAt(0).toUpperCase() + user.gender.slice(1)
-              }
-            </p>
-          </div>
-        `,
-      },
-      {
-        key: "birthday",
-        label: "Birthday",
-        render: (user) => {
-          const age = dayjs().diff(dayjs(user.birthday), "year");
-          return `
-            <div class="text-sm">
-              <p class="text-gray-900">${dayjs(user.birthday).format(
-                "MMM D, YYYY"
-              )}</p>
-              <p class="text-xs text-gray-500">${age} years old</p>
-            </div>
-          `;
-        },
-      },
-      {
-        key: "role",
-        label: "Role",
-        render: (user) =>
-          FormComponents.badge({
-            text: user.role === "admin" ? "Admin" : "User",
-            color: user.role === "admin" ? "purple" : "blue",
-          }),
-      },
-      {
-        key: "status",
-        label: "Status",
-        render: (user) =>
-          FormComponents.badge({
-            text: user.status === "active" ? "Active" : "Suspended",
-            color: user.status === "active" ? "green" : "red",
-          }),
-      },
-      {
-        key: "createdAt",
-        label: "Registered",
-        render: (user) => `
-          <div class="text-sm">
-            <p class="text-gray-900">${dayjs(user.createdAt).format(
-              "MMM D, YYYY"
-            )}</p>
-            <p class="text-xs text-gray-500">${dayjs(
-              user.createdAt
-            ).fromNow()}</p>
-          </div>
-        `,
-      },
-    ];
+  renderDataTable() {
+    const container = document.getElementById("usersTable");
+    if (!container) return;
 
-    const tableHTML = createTable({
-      columns,
-      data: this.filteredUsers,
-      title: "Users List",
-      icon: "fa-users",
-      subtitle: `Showing <span class="font-semibold text-indigo-600">${this.filteredUsers.length}</span> of <span class="font-semibold">${this.allUsers.length}</span> users`,
+    this.dataTable = createDataTable("usersTable", {
+      data: this.allUsers,
+      tableId: "adminUsersTable",
+      columnFilters: [
+        {
+          column: "role",
+          label: "Role",
+          options: [
+            { value: "user", label: "Users" },
+            { value: "admin", label: "Admins" },
+          ],
+        },
+        {
+          column: "status",
+          label: "Status",
+          options: [
+            { value: "active", label: "Active" },
+            { value: "inactive", label: "Inactive" },
+            { value: "suspended", label: "Suspended" },
+          ],
+        },
+      ],
+      columns: [
+        {
+          key: "profileImage",
+          label: "User",
+          sortable: false,
+          render: (user) => `
+            <div class="flex items-center">
+              <div class="mr-3">
+                ${Avatar.render({
+                  src: user.profileImage,
+                  name: user.name || "User",
+                  size: "sm",
+                  editable: false,
+                })}
+              </div>
+              <div class="text-left">
+                <p class="font-medium text-gray-900">${user.title ? user.title + " " : ""}${user.name}</p>
+                <p class="text-xs text-gray-500">@${user.username} <span class="text-gray-400">(ID: #${user.userId})</span></p>
+              </div>
+            </div>
+          `,
+        },
+        {
+          key: "email",
+          label: "Email",
+          type: "email",
+        },
+        {
+          key: "phone",
+          label: "Phone",
+          render: (user) => user.phone ? phoneUtils.formatHKPhone(user.phone) : "-",
+        },
+        {
+          key: "role",
+          label: "Role",
+          type: "badge",
+          badgeColors: {
+            admin: "purple",
+            user: "blue",
+          },
+        },
+        {
+          key: "status",
+          label: "Status",
+          type: "badge",
+          badgeColors: {
+            active: "green",
+            inactive: "gray",
+            suspended: "red",
+          },
+        },
+        {
+          key: "createdAt",
+          label: "Joined",
+          type: "date",
+          format: "MMM D, YYYY",
+        },
+      ],
+
+      sortable: true,
+      filterable: true,
+      paginate: true,
+      pageSize: 20,
+      defaultSort: { column: "userId", direction: "asc" },
+      onRowClick: (user) => {
+        this.viewUser(user.userId);
+      },
       rowActions: (user) => [
         `
         <div class="flex items-center gap-2">
@@ -369,13 +310,10 @@ export default {
       },
     });
 
-    $("#usersTable").html(tableHTML);
+    window.UsersPage = this;
   },
 
   attachEventListeners() {
-    $("#searchUsers").on("input", () => this.filterUsers());
-    $("#roleFilter, #statusFilter").on("change", () => this.filterUsers());
-    $("#clearFilters").on("click", () => this.clearFilters());
     $("#importUsers").on("click", () => this.importUsers());
     $("#exportUsers").on("click", () => this.exportUsers());
     $("#addUser, #createUserBtn").on("click", () => this.addUser());
@@ -423,35 +361,6 @@ export default {
       });
   },
 
-  filterUsers() {
-    const search = $("#searchUsers").val().toLowerCase();
-    const role = $("#roleFilter").val();
-    const status = $("#statusFilter").val();
-
-    this.filteredUsers = this.allUsers.filter((user) => {
-      const matchesSearch =
-        !search ||
-        String(user.userId).toLowerCase().includes(search) ||
-        (user.username && user.username.toLowerCase().includes(search)) ||
-        (user.name && user.name.toLowerCase().includes(search)) ||
-        (user.email && user.email.toLowerCase().includes(search));
-
-      const matchesRole = !role || user.role === role;
-      const matchesStatus = !status || user.status === status;
-
-      return matchesSearch && matchesRole && matchesStatus;
-    });
-
-    this.renderUsersTable();
-  },
-
-  clearFilters() {
-    $("#searchUsers").val("");
-    $("#roleFilter, #statusFilter").val("");
-    this.filteredUsers = this.allUsers;
-    this.renderUsersTable();
-  },
-
   async viewUser(userId) {
     const user = this.allUsers.find((u) => String(u.userId) === String(userId));
     if (!user) {
@@ -468,25 +377,24 @@ export default {
     const totalSpent = bookings.reduce((sum, b) => sum + (b.amount || 0), 0);
 
     await Swal.fire({
-      title: `<div class="flex items-center gap-3">
-        ${
-          user.profileImage
-            ? `<img src="${user.profileImage}" class="h-16 w-16 rounded-full object-cover" />`
-            : `<div class="h-16 w-16 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
-                <span class="text-white font-bold text-2xl">${(user.name || "U")
-                  .charAt(0)
-                  .toUpperCase()}</span>
-              </div>`
-        }
-        <div class="text-left">
-          <h3 class="text-xl font-bold text-gray-900">${
-            user.title ? user.title + " " : ""
-          }${user.name}</h3>
-          <p class="text-sm text-gray-500">@${user.username} (ID: #${
-        user.userId
-      })</p>
+      title: `
+        <div class="flex items-center gap-3">
+          ${Avatar.render({
+            src: user.profileImage,
+            name: user.name || "User",
+            size: "lg",
+            editable: false,
+          })}
+          <div>
+            <h3 class="text-lg font-bold text-gray-900">${
+              user.title ? user.title + " " : ""
+            }${user.name}</h3>
+            <p class="text-sm text-gray-500">@${user.username} (ID: #${
+              user.userId
+            })</p>
+          </div>
         </div>
-      </div>`,
+      `,
       html: `
         <div class="text-left space-y-4 mt-4">
           <div class="grid grid-cols-2 gap-4">
@@ -535,17 +443,17 @@ export default {
                 <p class="font-semibold text-gray-900">${dayjs(
                   user.birthday
                 ).format("MMMM D, YYYY")} (${dayjs().diff(
-        dayjs(user.birthday),
-        "year"
-      )} years old)</p>
+                  dayjs(user.birthday),
+                  "year"
+                )} years old)</p>
               </div>
               <div>
                 <p class="text-gray-600">Member Since</p>
                 <p class="font-semibold text-gray-900">${dayjs(
                   user.createdAt
                 ).format("MMMM D, YYYY")} (${dayjs(
-        user.createdAt
-      ).fromNow()})</p>
+                  user.createdAt
+                ).fromNow()})</p>
               </div>
             </div>
           </div>
@@ -686,29 +594,26 @@ export default {
   },
 
   generateEditUserTitle(user) {
-    const avatar = user.profileImage
-      ? `<img src="${user.profileImage}" class="h-12 w-12 rounded-full object-cover border-2 border-indigo-200" />`
-      : `<div class="h-12 w-12 rounded-full bg-indigo-600 flex items-center justify-center border-2 border-indigo-400">
-          <span class="text-white font-bold text-lg">${(user.name || "U")
-            .charAt(0)
-            .toUpperCase()}</span>
-        </div>`;
-
     return `
-      <div class="relative flex flex-col items-center justify-center w-full gap-2 py-3 px-4 border-b border-gray-200">
-        <button
-          type="button"
-          id="closeEditUserModal"
-          class="absolute top-2 right-2 text-gray-400 hover:text-gray-600 transition-colors"
+      <div class="flex items-center gap-3 mb-4 pb-4 border-b border-gray-200 relative">
+        <button 
+          type="button" 
+          class="swal2-close absolute -top-2 -right-2 bg-gray-200 hover:bg-gray-300 rounded-full w-8 h-8 flex items-center justify-center transition-colors"
+          onclick="Swal.close()"
         >
           <i class="fas fa-times text-xl"></i>
         </button>
-        ${avatar}
+        ${Avatar.render({
+          src: user.profileImage,
+          name: user.name || "User",
+          size: "lg",
+          editable: false,
+        })}
         <div class="text-center">
           <h3 class="text-lg font-bold text-gray-900 mb-0.5">Edit User</h3>
           <p class="text-xs text-gray-600">@${user.username} (ID: #${String(
-      user.userId
-    ).padStart(6, "0")})</p>
+            user.userId
+          ).padStart(6, "0")})</p>
         </div>
       </div>
     `;
@@ -741,9 +646,7 @@ export default {
           Profile Picture
         </h4>
         <div class="flex items-center gap-4">
-          <div id="editUserImagePreview" class="flex-shrink-0">
-            ${previewHTML}
-          </div>
+          <div id="usersTableContainer" class="mt-6"></div>
           <div class="flex-1">
             <input
               type="file"

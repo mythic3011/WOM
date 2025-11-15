@@ -1,6 +1,17 @@
 import rateLimit from "express-rate-limit";
 
-export const authLimiter = rateLimit({
+const isDevelopment = process.env.NODE_ENV === "development";
+
+const bypassLimiter = (req, res, next) => next();
+
+const createLimiter = (config) => {
+  if (isDevelopment) {
+    return bypassLimiter;
+  }
+  return rateLimit(config);
+};
+
+export const authLimiter = createLimiter({
   windowMs: 15 * 60 * 1000,
   max: 5,
   message: {
@@ -12,9 +23,9 @@ export const authLimiter = rateLimit({
   skipSuccessfulRequests: true,
 });
 
-export const apiLimiter = rateLimit({
+export const apiLimiter = createLimiter({
   windowMs: parseInt(process.env.RATE_LIMIT_WINDOW || "15") * 60 * 1000,
-  max: parseInt(process.env.RATE_LIMIT_MAX || "60"),
+  max: parseInt(process.env.RATE_LIMIT_MAX || "100"),
   message: {
     success: false,
     message: "Too many requests. Please try again later.",
@@ -23,7 +34,7 @@ export const apiLimiter = rateLimit({
   legacyHeaders: false,
 });
 
-export const bookingLimiter = rateLimit({
+export const bookingLimiter = createLimiter({
   windowMs: 15 * 60 * 1000,
   max: 10,
   message: {
@@ -34,7 +45,7 @@ export const bookingLimiter = rateLimit({
   legacyHeaders: false,
 });
 
-export const uploadLimiter = rateLimit({
+export const uploadLimiter = createLimiter({
   windowMs: 60 * 60 * 1000,
   max: 20,
   message: {

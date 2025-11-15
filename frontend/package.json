@@ -7,16 +7,18 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "postinstall": "node scripts/copy-webfonts.js"
+    "postinstall": "node scripts/copy-webfonts.js",
+    "format": "prettier --write \"src/**/*.{js,jsx,json,css,html}\"",
+    "format:check": "prettier --check \"src/**/*.{js,jsx,json,css,html}\""
   },
   "devDependencies": {
-    "@faker-js/faker": "^10.1.0",
     "@tailwindcss/aspect-ratio": "^0.4.2",
     "@tailwindcss/container-queries": "^0.1.1",
     "@tailwindcss/forms": "^0.5.10",
     "@tailwindcss/typography": "^0.5.19",
     "autoprefixer": "^10.4.21",
     "postcss": "^8.5.6",
+    "prettier": "^3.6.2",
     "tailwindcss": "^3.4.18",
     "vite": "^7.1.7",
     "vite-plugin-static-copy": "^3.1.4"
@@ -26,6 +28,7 @@
     "@svgdotjs/svg.js": "^3.2.5",
     "animejs": "^4.2.2",
     "bcryptjs": "^3.0.3",
+    "core-js": "^3.46.0",
     "crypto-js": "^4.2.0",
     "dayjs": "^1.11.19",
     "hammerjs": "^2.0.8",
@@ -38,11 +41,12 @@
     "lz-string": "^1.5.0",
     "notyf": "^3.10.0",
     "overlayscrollbars": "^2.12.0",
-    "panzoom": "^9.4.0",
     "page": "^1.11.6",
+    "panzoom": "^9.4.0",
     "papaparse": "^5.5.3",
     "pdfmake": "^0.2.20",
     "qrcode": "^1.5.4",
+    "regenerator-runtime": "^0.14.1",
     "sortablejs": "^1.15.6",
     "sweetalert2": "^11.26.3",
     "vanilla-context-menu": "^1.6.0"

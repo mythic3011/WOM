@@ -9,6 +9,8 @@ import { keyboard, registerGlobalShortcuts } from "/src/utils/ui/keyboard.js";
 import { seatMapGenerator } from "/src/utils/booking/seatMapGenerator.js";
 import { performanceOptimizer } from "/src/utils/performance.js";
 import { attachSeatTooltipListeners } from "/src/utils/booking/seatTooltip.js";
+import { initSeatMapPanzoom } from "/src/utils/panzoomSeatMap.js";
+import { seatHelpers } from "/src/services/seatHelpers.js";
 import dayjs from "dayjs";
 import Swal from "sweetalert2";
 
@@ -18,6 +20,7 @@ export default {
   selectedPerformance: null,
   selectedShowtime: null,
   selectedSeats: [],
+  panzoomInstance: null,
 
   async render() {
     return `
@@ -229,8 +232,8 @@ export default {
           );
           $showtimeSelect.append(`
             <option value="${index}">${dateTime} - ${
-            showtime.venueName || "Venue TBA"
-          }</option>
+              showtime.venueName || "Venue TBA"
+            }</option>
           `);
         });
         $("#showtimeSelectContainer").removeClass("hidden");
@@ -313,6 +316,14 @@ export default {
     );
     $("#seatMapContainer").html(seatMapHTML);
     this.updateLegend();
+
+    // Initialize panzoom for better navigation
+    setTimeout(() => {
+      if (this.panzoomInstance) {
+        this.panzoomInstance.dispose();
+      }
+      this.panzoomInstance = initSeatMapPanzoom();
+    }, 100);
   },
 
   getSeatColor(seatDetail) {
@@ -384,8 +395,8 @@ export default {
             <rect x="${seatX}" y="${rowY}" width="${seatSize}" height="${seatSize}"
               fill="${fillColor}" rx="4" stroke="#ffffff" stroke-width="2" />
             <text x="${seatX + seatSize / 2}" y="${
-          rowY + seatSize / 2 + 4
-        }" fill="white"
+              rowY + seatSize / 2 + 4
+            }" fill="white"
               text-anchor="middle" font-size="11" font-weight="bold">${seatId}</text>
           </g>
         `;
@@ -393,20 +404,22 @@ export default {
     }
 
     return `
-      <svg width="${svgWidth}" height="${svgHeight}" class="bg-white rounded shadow-lg">
-        <rect x="${stagePadding}" y="${stagePadding}" width="${stageWidth}" height="${stageHeight}"
-          fill="#374151" rx="5" />
-        <text x="${svgWidth / 2}" y="${
-      stagePadding + stageHeight / 2 + 6
-    }" fill="white"
-          text-anchor="middle" font-size="16" font-weight="bold">STAGE</text>
-        ${seatsHTML}
+      <svg id="seatMap" width="${svgWidth}" height="${svgHeight}" class="bg-white rounded shadow-lg" viewBox="0 0 ${svgWidth} ${svgHeight}">
+        <g id="content-layer">
+          <rect x="${stagePadding}" y="${stagePadding}" width="${stageWidth}" height="${stageHeight}"
+            fill="#374151" rx="5" class="stage" />
+          <text x="${svgWidth / 2}" y="${
+            stagePadding + stageHeight / 2 + 6
+          }" fill="white"
+            text-anchor="middle" font-size="16" font-weight="bold">STAGE</text>
+          ${seatsHTML}
+        </g>
       </svg>
     `;
   },
 
   initializeSeatDetails(rows, seatsPerRow) {
-    return seatMapGenerator.initializeSeatDetails(rows, seatsPerRow);
+    return seatHelpers.initializeSeatDetails(rows, seatsPerRow);
   },
 
   updateStats() {
@@ -415,30 +428,22 @@ export default {
       rows: 5,
       seatsPerRow: 8,
     };
+
+    const stats = seatHelpers.calculateStats(seatDetails);
+    stats.total = layout.rows * layout.seatsPerRow;
+
     const seatTypes = this.getSeatTypes();
-
-    const stats = {
-      total: layout.rows * layout.seatsPerRow,
-      available: 0,
-      blocked: 0,
-    };
-
     seatTypes.forEach((type) => {
       if (type.value !== "available" && type.value !== "blocked") {
-        stats[type.value] = 0;
+        const key = `section-${type.sectionIndex}`;
+        stats[key] = 0;
       }
     });
 
     Object.values(seatDetails).forEach((detail) => {
-      if (detail.status === "available") {
-        stats.available++;
-      } else if (detail.status === "blocked") {
-        stats.blocked++;
-      } else if (detail.sectionIndex !== undefined) {
+      if (detail.sectionIndex !== undefined) {
         const key = `section-${detail.sectionIndex}`;
         if (stats[key] !== undefined) stats[key]++;
-      } else if (stats[detail.status] !== undefined) {
-        stats[detail.status]++;
       }
     });
 
@@ -550,8 +555,8 @@ export default {
                   .map(
                     (type) => `
                   <option value="${type.value}" data-section-index="${
-                      type.sectionIndex || ""
-                    }">${type.label}</option>
+                    type.sectionIndex || ""
+                  }">${type.label}</option>
                 `
                   )
                   .join("")}
@@ -690,11 +695,11 @@ export default {
           <g class="interactive-seat cursor-pointer" data-seat-id="${seatId}">
             <rect x="${seatX}" y="${rowY}" width="${seatSize}" height="${seatSize}"
               fill="${fillColor}" rx="4" stroke="${
-          isSelected ? "#ca8a04" : "#ffffff"
-        }" stroke-width="${isSelected ? "3" : "1"}" />
+                isSelected ? "#ca8a04" : "#ffffff"
+              }" stroke-width="${isSelected ? "3" : "1"}" />
             <text x="${seatX + seatSize / 2}" y="${
-          rowY + seatSize / 2 + 4
-        }" fill="white"
+              rowY + seatSize / 2 + 4
+            }" fill="white"
               text-anchor="middle" font-size="11" font-weight="bold">${seatId}</text>
           </g>
         `;
@@ -705,8 +710,8 @@ export default {
       <svg width="${svgWidth}" height="${svgHeight}" class="bg-white rounded shadow-sm mx-auto">
         <rect x="${stagePadding}" y="${stagePadding}" width="${stageWidth}" height="${stageHeight}" fill="#374151" rx="4" />
         <text x="${svgWidth / 2}" y="${
-      stagePadding + stageHeight / 2 + 5
-    }" fill="white"
+          stagePadding + stageHeight / 2 + 5
+        }" fill="white"
           text-anchor="middle" font-size="14" font-weight="bold">STAGE</text>
         ${seatsHTML}
       </svg>
