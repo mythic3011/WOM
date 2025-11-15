@@ -33,6 +33,14 @@ export const sanitizeObject = (obj) => {
     return obj;
   }
 
+  if (Array.isArray(obj)) {
+    return obj.map((value) => {
+      if (typeof value === "string") return sanitizeString(value);
+      if (typeof value === "object" && value !== null) return sanitizeObject(value);
+      return value;
+    });
+  }
+
   const sanitized = {};
   for (const [key, value] of Object.entries(obj)) {
     if (typeof value === "string") {

@@ -22,13 +22,14 @@ export function buildSeatMapFromVenueLayout(layout = {}) {
     const sectionSlug = slugify(section.name);
     const rows = Array.from({ length: section.rows || 0 }, (_, rowIndex) => {
       const rowLabel = sys.computeRowLabel(sectionIndex, rowIndex);
+      const rowKey = String(rowLabel || "").toLowerCase();
       const rowSeats = sys
         .enumerateRow(sectionIndex, rowIndex)
         .filter((s) => !s.skipped && !s.empty && s.label && !s.label.endsWith("-SKIP"))
         .map((s) => {
           const seatNumber = Number((s.label || "").replace(/[^0-9]/g, ""));
           const displayLabel = s.label;
-          const fullId = `${sectionSlug}-${rowLabel}${seatNumber}`;
+          const fullId = `${sectionSlug}-${rowKey}${seatNumber}`;
           const seat = {
             fullId,
             displayLabel,
@@ -39,7 +40,7 @@ export function buildSeatMapFromVenueLayout(layout = {}) {
             seatIndex: s.seatIndex,
             effectiveIndex: s.effectiveIndex,
           };
-          indexMap[fullId] = seat;
+          indexMap[fullId.toLowerCase()] = seat;
           return seat;
         });
       return { rowLabel, seats: rowSeats };
@@ -68,7 +69,9 @@ export function countSeats(seatMap) {
 }
 
 export function resolveSeatId(seatMap, inputId) {
-  if (!seatMap?.indexMap) return null;
+  if (!seatMap?.indexMap) {
+    return null;
+  }
   const normalized = inputId.toLowerCase().trim();
   if (seatMap.indexMap[normalized]) {
     return seatMap.indexMap[normalized];

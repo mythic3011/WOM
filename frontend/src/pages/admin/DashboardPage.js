@@ -5,6 +5,7 @@ import { statsAPI, handleApiError } from "/src/services/apiClient.js";
 import { formatCurrency, formatNumber } from "/src/utils/utils.js";
 import dayjs from "dayjs";
 import { ResponseExtractor } from "../../services/responseExtractor";
+import { statsService } from "../../services/statsService.js";
 
 export default {
   title: "Admin Dashboard | WOM",
@@ -40,6 +41,7 @@ export default {
             }`,
             date: booking.bookingDate,
             status: booking.status,
+            amount: booking.totalAmount || 0,
             color: booking.status === "confirmed" ? "green" : "yellow",
             icon: "fa-ticket-alt",
           }))

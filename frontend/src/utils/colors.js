@@ -84,6 +84,24 @@ export const SeatStatusColors = {
     class: "bg-gray-700",
     name: "Booked",
   },
+  placeholder: {
+    rgb: "rgb(229, 231, 235)",
+    class: "bg-gray-200",
+    name: "Placeholder",
+    opacity: 0.6,
+  },
+  loading: {
+    rgb: "rgb(209, 213, 219)",
+    class: "bg-gray-300",
+    name: "Loading",
+    opacity: 0.8,
+  },
+  focused: {
+    rgb: TailwindColors.blue[500],
+    class: "bg-blue-500",
+    name: "Focused",
+    ringClass: "ring-2 ring-blue-500 ring-offset-2",
+  },
 };
 
 export const SectionColors = [
@@ -109,6 +127,14 @@ export function getSeatStatusColor(status) {
 
 export function getSeatStatusClass(status) {
   return SeatStatusColors[status]?.class || SeatStatusColors.available.class;
+}
+
+export function getSeatStatusOpacity(status) {
+  return SeatStatusColors[status]?.opacity || 1;
+}
+
+export function getSeatStatusRing(status) {
+  return SeatStatusColors[status]?.ringClass || "";
 }
 
 export const SwalColors = {
@@ -175,4 +201,67 @@ export function getPerformanceStatusClass(status) {
 
 export function getPerformanceStatusLabel(status) {
   return PerformanceStatusColors[status]?.name || status;
+}
+
+export const VirtualizationColors = {
+  threshold_low: {
+    rgb: "rgb(209, 250, 229)",
+    class: "bg-green-100",
+    borderClass: "border-green-300",
+    name: "Standard Rendering",
+    description: "< 400 seats, full render",
+  },
+  threshold_medium: {
+    rgb: "rgb(254, 243, 199)",
+    class: "bg-amber-100",
+    borderClass: "border-amber-300",
+    name: "Virtualized",
+    description: "400-1000 seats, viewport-based",
+  },
+  threshold_high: {
+    rgb: "rgb(254, 226, 226)",
+    class: "bg-red-100",
+    borderClass: "border-red-300",
+    name: "Paginated",
+    description: "> 1000 seats, section tabs",
+  },
+  viewport_visible: {
+    rgb: "rgba(59, 130, 246, 0.1)",
+    class: "bg-blue-500/10",
+    borderClass: "border-blue-400",
+    name: "Visible Viewport",
+  },
+  viewport_buffer: {
+    rgb: "rgba(168, 85, 247, 0.05)",
+    class: "bg-purple-500/5",
+    borderClass: "border-purple-300 border-dashed",
+    name: "Buffer Zone",
+  },
+};
+
+export function getVirtualizationThreshold(seatCount) {
+  if (seatCount < 400) return "threshold_low";
+  if (seatCount <= 1000) return "threshold_medium";
+  return "threshold_high";
+}
+
+export function getVirtualizationColor(threshold) {
+  return (
+    VirtualizationColors[threshold]?.rgb ||
+    VirtualizationColors.threshold_low.rgb
+  );
+}
+
+export function getVirtualizationClass(threshold) {
+  return (
+    VirtualizationColors[threshold]?.class ||
+    VirtualizationColors.threshold_low.class
+  );
+}
+
+export function getVirtualizationBorder(threshold) {
+  return (
+    VirtualizationColors[threshold]?.borderClass ||
+    VirtualizationColors.threshold_low.borderClass
+  );
 }

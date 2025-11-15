@@ -62,9 +62,14 @@
 
 svg g.interactive-seat {
   pointer-events: all;
+  cursor: pointer;
 }
 
-svg g.interactive-seat * {
+svg g.interactive-seat rect {
+  pointer-events: all;
+}
+
+svg g.interactive-seat text {
   pointer-events: none;
 }
 

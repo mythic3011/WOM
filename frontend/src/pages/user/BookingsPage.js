@@ -288,7 +288,9 @@ export default {
   },
 
   viewBooking(bookingId) {
-    const booking = this.bookings.find((b) => b.id === bookingId);
+    const booking = this.bookings.find(
+      (b) => String(b.id) === String(bookingId)
+    );
     if (!booking) return;
 
     const performance = this.performances.find(
@@ -325,7 +327,7 @@ export default {
       </div>`,
       html: `
         <div class="text-left space-y-3">
-          <div class="bg-gradient-to-br from-indigo-500 to-purple-600 text-white rounded-xl p-4 shadow-lg">
+          <div class="bg-indigo-600 text-white rounded-xl p-4 shadow-lg border-2 border-indigo-700">
             <div class="flex justify-between items-start mb-2">
               <div>
                 <p class="text-xs font-semibold uppercase tracking-wider opacity-90 mb-1">Booking ID</p>
@@ -448,13 +450,27 @@ export default {
                       })
                       .join("")
                   : booking.seats
-                      .map((seatId) => {
+                      .map((seat) => {
+                        const seatId =
+                          typeof seat === "string"
+                            ? seat
+                            : seat.fullId || seat.seatId || seat;
                         const seatParts =
                           typeof seatId === "string" ? seatId.split("-") : [];
                         const seatNumber =
-                          seatParts[seatParts.length - 1] || seatId;
+                          typeof seat === "string"
+                            ? seatParts[seatParts.length - 1] || seatId
+                            : seat.displayLabel ||
+                              seat.seatNumber ||
+                              seatParts[seatParts.length - 1] ||
+                              seatId;
                         const section =
-                          seatParts.length >= 3 ? seatParts[2] : "";
+                          typeof seat === "string"
+                            ? seatParts.length >= 3
+                              ? seatParts[2]
+                              : ""
+                            : seat.sectionName ||
+                              (seatParts.length >= 3 ? seatParts[2] : "");
                         return `
                 <div class="bg-white rounded-lg border border-purple-200 p-2 hover:border-purple-300 transition-colors">
                   <div class="flex items-start justify-between gap-2">
@@ -483,7 +499,7 @@ export default {
             </div>
           </div>
 
-          <div class="bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg p-4 border-2 border-green-200 shadow-sm">
+          <div class="bg-green-50 rounded-lg p-4 border-2 border-green-300 shadow-sm">
             <div class="flex justify-between items-center">
               <div>
                 <p class="text-xs font-semibold text-green-700 uppercase tracking-wide mb-1">Total Amount</p>
@@ -544,7 +560,9 @@ export default {
   },
 
   async downloadTicket(bookingId) {
-    const booking = this.bookings.find((b) => b.id === bookingId);
+    const booking = this.bookings.find(
+      (b) => String(b.id) === String(bookingId)
+    );
     if (!booking) return;
 
     const performance = this.performances.find(
@@ -576,7 +594,9 @@ export default {
   },
 
   async printTicket(bookingId) {
-    const booking = this.bookings.find((b) => b.id === bookingId);
+    const booking = this.bookings.find(
+      (b) => String(b.id) === String(bookingId)
+    );
     if (!booking) return;
 
     const performance = this.performances.find(
@@ -608,7 +628,9 @@ export default {
   },
 
   async downloadInvoice(bookingId) {
-    const booking = this.bookings.find((b) => b.id === bookingId);
+    const booking = this.bookings.find(
+      (b) => String(b.id) === String(bookingId)
+    );
     if (!booking) return;
 
     const performance = this.performances.find(
@@ -640,7 +662,9 @@ export default {
   },
 
   async printInvoice(bookingId) {
-    const booking = this.bookings.find((b) => b.id === bookingId);
+    const booking = this.bookings.find(
+      (b) => String(b.id) === String(bookingId)
+    );
     if (!booking) return;
 
     const performance = this.performances.find(
@@ -672,7 +696,9 @@ export default {
   },
 
   async cancelBooking(bookingId) {
-    const booking = this.bookings.find((b) => b.id === bookingId);
+    const booking = this.bookings.find(
+      (b) => String(b.id) === String(bookingId)
+    );
     if (!booking) return;
 
     const result = await Swal.fire({

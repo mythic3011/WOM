@@ -11,7 +11,7 @@ export const BookingCard = {
     const statusBadge = this.getStatusBadge(booking.status);
 
     return `
-      <div class="border-l-4 border-indigo-600 bg-gradient-to-r from-indigo-50 to-white p-4 rounded-lg hover:shadow-md transition-shadow">
+      <div class="border-l-4 border-indigo-600 bg-indigo-50 p-4 rounded-lg hover:shadow-md transition-shadow">
         <div class="flex items-start justify-between">
           <div class="flex-1">
             <h3 class="font-bold text-gray-900 text-lg mb-1">${
@@ -86,7 +86,7 @@ export const BookingCard = {
 
     const statusConfig = {
       confirmed: {
-        gradient: "from-emerald-500 to-green-600",
+        solidColor: "emerald-500",
         bgColor: "bg-emerald-50",
         borderColor: "border-emerald-200",
         textColor: "text-emerald-800",
@@ -95,7 +95,7 @@ export const BookingCard = {
         text: "Confirmed",
       },
       pending: {
-        gradient: "from-amber-500 to-orange-600",
+        solidColor: "amber-500",
         bgColor: "bg-amber-50",
         borderColor: "border-amber-200",
         textColor: "text-amber-800",
@@ -104,7 +104,7 @@ export const BookingCard = {
         text: "Pending",
       },
       cancelled: {
-        gradient: "from-rose-500 to-red-600",
+        solidColor: "rose-500",
         bgColor: "bg-rose-50",
         borderColor: "border-rose-200",
         textColor: "text-rose-800",
@@ -113,7 +113,7 @@ export const BookingCard = {
         text: "Cancelled",
       },
       completed: {
-        gradient: "from-blue-500 to-indigo-600",
+        solidColor: "blue-500",
         bgColor: "bg-blue-50",
         borderColor: "border-blue-200",
         textColor: "text-blue-800",
@@ -144,10 +144,9 @@ export const BookingCard = {
             : ""
         }
 
-        <div class="relative bg-gradient-to-br ${
-          status.gradient
-        } text-white p-6 pb-20">
-          <div class="absolute inset-0 bg-black/10"></div>
+        <div class="relative bg-${
+          status.solidColor
+        } text-white p-6 pb-20 shadow-lg border-b-4 border-black/20">
           <div class="relative z-10">
             <div class="flex items-start justify-between mb-4">
               <div class="flex items-center gap-3">
@@ -222,13 +221,17 @@ export const BookingCard = {
                 <div class="flex flex-wrap gap-1.5">
                   ${booking.seats
                     .slice(0, 6)
-                    .map(
-                      (seat) => `
+                    .map((seat) => {
+                      const seatId =
+                        typeof seat === "string"
+                          ? seat
+                          : seat.fullId || seat.seatId || seat;
+                      return `
                     <span class="inline-flex items-center px-2.5 py-1 bg-indigo-100 text-indigo-700 rounded text-xs font-medium">
-                      ${seat}
+                      ${getDisplayLabel(seatId)}
                     </span>
-                  `
-                    )
+                  `;
+                    })
                     .join("")}
                   ${
                     seatCount > 6
@@ -363,14 +366,16 @@ export const BookingCard = {
 
     const seatArray = Array.isArray(seats) ? seats : [seats];
     return seatArray
-      .map(
-        (seat) => `
+      .map((seat) => {
+        const seatId =
+          typeof seat === "string" ? seat : seat.fullId || seat.seatId || seat;
+        return `
         <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-indigo-100 text-indigo-800">
           <i class="fas fa-chair mr-1"></i>
-          ${seat}
+          ${getDisplayLabel(seatId)}
         </span>
-      `
-      )
+      `;
+      })
       .join("");
   },
 

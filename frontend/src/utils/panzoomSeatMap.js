@@ -1,7 +1,9 @@
 class CustomSVGPanZoom {
   constructor(svg, layer, options = {}) {
-    this.svg = svg;
-    this.layer = layer;
+    this.$svg = $(svg);
+    this.$layer = $(layer);
+    this.svg = this.$svg[0];
+    this.layer = this.$layer[0];
 
     this.scale = 1;
     this.panX = 0;
@@ -21,28 +23,32 @@ class CustomSVGPanZoom {
     this.dragStart = { x: 0, y: 0 };
     this.panStart = { x: 0, y: 0 };
 
+    this.pendingUpdate = false;
+    this.lastWheelTime = 0;
+    this.wheelThrottle = 16;
+
     this.viewBox = this._getViewBox();
     this.containerSize = this._getContainerSize();
     this.contentSize = this._getContentSize();
 
     this.boundHandleWheel = this._handleWheel.bind(this);
-    this.boundHandleMouseDown = this._handleMouseDown.bind(this);
-    this.boundHandleMouseMove = this._handleMouseMove.bind(this);
-    this.boundHandleMouseUp = this._handleMouseUp.bind(this);
     this.boundHandleTouchStart = this._handleTouchStart.bind(this);
     this.boundHandleTouchMove = this._handleTouchMove.bind(this);
     this.boundHandleTouchEnd = this._handleTouchEnd.bind(this);
 
-    this.layer.style.transformOrigin = "0 0";
-    this.layer.style.transformBox = "fill-box";
-    this.layer.style.pointerEvents = "all";
+    this.$layer.css({
+      transformOrigin: "0 0",
+      transformBox: "fill-box",
+      pointerEvents: "all",
+      willChange: "transform",
+    });
 
     this._attachEventListeners();
     this._updateTransform();
   }
 
   _getViewBox() {
-    const viewBoxAttr = this.svg.getAttribute("viewBox");
+    const viewBoxAttr = this.$svg.attr("viewBox");
     if (viewBoxAttr) {
       const [x, y, width, height] = viewBoxAttr.split(" ").map(Number);
       return { x, y, width, height };
@@ -71,7 +77,7 @@ class CustomSVGPanZoom {
     this.svg.addEventListener("wheel", this.boundHandleWheel, {
       passive: false,
     });
-    this.svg.addEventListener("mousedown", this.boundHandleMouseDown);
+    this.$svg.on("mousedown.panzoom", (e) => this._handleMouseDown(e));
     this.svg.addEventListener("touchstart", this.boundHandleTouchStart, {
       passive: true,
     });
@@ -86,6 +92,12 @@ class CustomSVGPanZoom {
   _handleWheel(e) {
     e.preventDefault();
 
+    const now = performance.now();
+    if (now - this.lastWheelTime < this.wheelThrottle) {
+      return;
+    }
+    this.lastWheelTime = now;
+
     const rect = this.svg.getBoundingClientRect();
     const mouseX = e.clientX - rect.left;
     const mouseY = e.clientY - rect.top;
@@ -98,7 +110,7 @@ class CustomSVGPanZoom {
   }
 
   _handleMouseDown(e) {
-    if (e.target.closest(".seat, .interactive-seat")) {
+    if ($(e.target).closest(".seat, .interactive-seat, .stage").length) {
       this.isPanning = false;
       return;
     }
@@ -108,10 +120,11 @@ class CustomSVGPanZoom {
     this.isPanCandidate = true;
     this.isPanning = false;
 
-    this.layer.style.transition = "none";
+    this.$layer.css("transition", "none");
 
-    document.addEventListener("mousemove", this.boundHandleMouseMove);
-    document.addEventListener("mouseup", this.boundHandleMouseUp);
+    $(document)
+      .on("mousemove.panzoom", (e) => this._handleMouseMove(e))
+      .on("mouseup.panzoom", (e) => this._handleMouseUp(e));
   }
 
   _handleMouseMove(e) {
@@ -140,26 +153,25 @@ class CustomSVGPanZoom {
   _handleMouseUp() {
     this.isPanning = false;
     this.isPanCandidate = false;
-    this.layer.style.transition = "none";
+    this.$layer.css("transition", "none");
 
-    document.removeEventListener("mousemove", this.boundHandleMouseMove);
-    document.removeEventListener("mouseup", this.boundHandleMouseUp);
+    $(document).off("mousemove.panzoom mouseup.panzoom");
   }
 
   _handleTouchStart(e) {
     if (e.touches.length === 1) {
-      if (e.target.closest(".seat, .interactive-seat")) {
+      if ($(e.target).closest(".seat, .interactive-seat").length) {
         return;
       }
       this.isPanning = true;
       this.dragStart = { x: e.touches[0].clientX, y: e.touches[0].clientY };
       this.panStart = { x: this.panX, y: this.panY };
-      this.layer.style.transition = "none";
+      this.$layer.css("transition", "none");
     } else if (e.touches.length === 2) {
       this.isPanning = false;
       const distance = this._getTouchDistance(e.touches[0], e.touches[1]);
       this.lastTouchDistance = distance;
-      this.layer.style.transition = "none";
+      this.$layer.css("transition", "none");
     }
   }
 
@@ -193,7 +205,7 @@ class CustomSVGPanZoom {
     }
     if (e.touches.length === 0) {
       this.isPanning = false;
-      this.layer.style.transition = "none";
+      this.$layer.css("transition", "none");
     }
   }
 
@@ -212,13 +224,14 @@ class CustomSVGPanZoom {
       Math.min(this.maxZoom, calculatedScale)
     );
 
-    if (newScale === this.scale) return;
+    if (Math.abs(newScale - this.scale) < 0.001) return;
 
     const scaleChange = newScale / this.scale;
+    const offsetX = x - this.panX;
+    const offsetY = y - this.panY;
 
-    this.panX = x - (x - this.panX) * scaleChange;
-    this.panY = y - (y - this.panY) * scaleChange;
-
+    this.panX = x - offsetX * scaleChange;
+    this.panY = y - offsetY * scaleChange;
     this.scale = newScale;
 
     this._clampPan();
@@ -277,9 +290,22 @@ class CustomSVGPanZoom {
     this.panY = Math.max(topLimit, Math.min(bottomLimit, this.panY));
   }
 
-  _updateTransform() {
-    const t = `translate(${this.panX}, ${this.panY}) scale(${this.scale})`;
-    this.layer.setAttribute("transform", t);
+  _updateTransform(immediate = false) {
+    if (immediate) {
+      const t = `translate(${this.panX}, ${this.panY}) scale(${this.scale})`;
+      this.layer.setAttribute("transform", t);
+      this.pendingUpdate = false;
+      return;
+    }
+
+    if (this.pendingUpdate) return;
+
+    this.pendingUpdate = true;
+    requestAnimationFrame(() => {
+      const t = `translate(${this.panX}, ${this.panY}) scale(${this.scale})`;
+      this.layer.setAttribute("transform", t);
+      this.pendingUpdate = false;
+    });
   }
 
   _animateZoom(targetScale, duration = 150) {
@@ -314,7 +340,7 @@ class CustomSVGPanZoom {
       this.panX = startPanX + (endPanX - startPanX) * k;
       this.panY = startPanY + (endPanY - startPanY) * k;
       this._clampPan();
-      this._updateTransform();
+      this._updateTransform(true);
       if (t < 1) {
         requestAnimationFrame(step);
       } else {
@@ -416,60 +442,52 @@ class CustomSVGPanZoom {
 
   destroy() {
     this.svg.removeEventListener("wheel", this.boundHandleWheel);
-    this.svg.removeEventListener("mousedown", this.boundHandleMouseDown);
     this.svg.removeEventListener("touchstart", this.boundHandleTouchStart);
     this.svg.removeEventListener("touchmove", this.boundHandleTouchMove);
     this.svg.removeEventListener("touchend", this.boundHandleTouchEnd);
+    this.$svg.off(".panzoom");
+    $(document).off(".panzoom");
 
-    document.removeEventListener("mousemove", this.boundHandleMouseMove);
-    document.removeEventListener("mouseup", this.boundHandleMouseUp);
+    if (this.$layer && this.$layer.length) {
+      this.$layer.css("willChange", "auto");
+    }
   }
 }
 
 export function initSeatMapPanzoom() {
-  const svg = document.querySelector("#seatMap svg");
-  if (!svg) return null;
+  const $svg = $("#seatMap svg");
+  if (!$svg.length) return null;
 
-  const layer = svg.querySelector("#seats-layer");
-  if (!layer) {
-    console.warn("seats-layer not found in SVG");
-    return null;
+  // Prefer content-layer (stage + seats) so both move together; fallback for older maps
+  let $layer = $svg.find("#content-layer");
+  if (!$layer.length) {
+    $layer = $svg.find("#seats-layer");
+    if (!$layer.length) {
+      console.warn("content-layer/seats-layer not found in SVG");
+      return null;
+    }
   }
 
-  const instance = new CustomSVGPanZoom(svg, layer, {
+  const instance = new CustomSVGPanZoom($svg[0], $layer[0], {
     minZoom: 0.5,
     maxZoom: 3,
     zoomSensitivity: 0.1,
   });
 
-  svg.addEventListener(
-    "wheel",
-    function (e) {
-      e.stopPropagation();
-    },
-    { passive: true }
-  );
+  const svg = $svg[0];
+  svg.addEventListener("wheel", (e) => e.stopPropagation(), { passive: true });
+  svg.addEventListener("touchstart", (e) => e.stopPropagation(), {
+    passive: true,
+  });
+  svg.addEventListener("touchmove", (e) => e.stopPropagation(), {
+    passive: true,
+  });
 
-  svg.addEventListener(
-    "touchstart",
-    function (e) {
-      e.stopPropagation();
-    },
-    { passive: true }
-  );
-
-  svg.addEventListener(
-    "touchmove",
-    function (e) {
-      e.stopPropagation();
-    },
-    { passive: true }
-  );
-
-  document.addEventListener("keydown", function (e) {
+  $(document).on("keydown.panzoom", (e) => {
+    const $activeEl = $(document.activeElement);
     if (
-      !svg.contains(document.activeElement) &&
-      document.activeElement.tagName !== "BODY"
+      !$svg[0].contains(document.activeElement) &&
+      $activeEl.prop("tagName") !== "BODY"
     ) {
       return;
     }
@@ -523,16 +541,17 @@ export function initSeatMapPanzoom() {
     "ontouchstart" in window || navigator.maxTouchPoints > 0;
 
   if (isTouchDevice) {
-    const hint = document.createElement("div");
-    hint.className =
-      "fixed bottom-20 left-1/2 -translate-x-1/2 bg-gray-900 text-white text-xs px-4 py-2 rounded-full shadow-lg z-50 pointer-events-none";
-    hint.textContent = "Pinch to zoom, drag to pan";
-    hint.style.opacity = "0.9";
-    document.body.appendChild(hint);
+    const $hint = $("<div></div>")
+      .addClass(
+        "fixed bottom-20 left-1/2 -translate-x-1/2 bg-gray-900 text-white text-xs px-4 py-2 rounded-full shadow-lg z-50 pointer-events-none"
+      )
+      .text("Pinch to zoom, drag to pan")
+      .css("opacity", "0.9")
+      .appendTo("body");
+
     setTimeout(() => {
-      hint.style.transition = "opacity 0.5s";
-      hint.style.opacity = "0";
-      setTimeout(() => hint.remove(), 500);
+      $hint.css("transition", "opacity 0.5s").css("opacity", "0");
+      setTimeout(() => $hint.remove(), 500);
     }, 3000);
   }
 

@@ -17,8 +17,10 @@ import { generateFullId, getDisplayLabel } from "/src/utils/seatIdHelper.js";
 import { SeatMap } from "/src/components/SeatMap.js";
 import { initSeatMapPanzoom } from "/src/utils/panzoomSeatMap.js";
 import { attachSeatTooltipListeners } from "/src/utils/booking/seatTooltip.js";
+import { ROUTES } from "/src/config/routes.js";
 import Swal from "sweetalert2";
 import dayjs from "dayjs";
+import page from "page";
 
 export default {
   title: "Book Your Seats | WOM",
@@ -97,7 +99,7 @@ export default {
         return;
       }
 
-      this.renderBookingForm();
+      await this.renderBookingForm();
     } catch (error) {
       console.error("Error loading performance:", error);
       this.showError("Failed to load performance data");
@@ -329,10 +331,68 @@ export default {
     const venue = this.performanceData.venue;
     const layout = venue?.layout || { sections: [] };
     const bookedSeats = await this.getBookedSeats();
+
+    const selectedShowtime = this.selectedShowtimeId
+      ? this.performanceData.showtimes?.find(
+          (st) => st.id === this.selectedShowtimeId
+        )
+      : null;
+    const pricingSections =
+      selectedShowtime?.pricing?.sections ||
+      this.performanceData.pricingSections ||
+      [];
+
     const seatDetails = bookedSeats.reduce((acc, id) => {
       acc[id] = { status: "reserved" };
       return acc;
     }, {});
+
+    if (pricingSections.length > 0 && layout.sections) {
+      layout.sections.forEach((section, sectionIndex) => {
+        const pricing = pricingSections.find((ps) => {
+          const byName =
+            ps.sectionName &&
+            section.name &&
+            ps.sectionName.toLowerCase() === section.name.toLowerCase();
+          const byTier =
+            ps.tier &&
+            section.tier &&
+            ps.tier.toLowerCase() === section.tier.toLowerCase();
+          const byCode =
+            ps.sectionCode &&
+            section.sectionCode &&
+            ps.sectionCode.toLowerCase() ===
+              String(section.sectionCode).toLowerCase();
+          return byName || byTier || byCode;
+        });
+        if (pricing) {
+          const numbering = section.seatNumbering || {
+            globalDirection: "L_TO_R",
+            startNumber: 1,
+          };
+          const skipIndices = numbering.skipSeatIndices || [];
+
+          for (let row = 0; row < section.rows; row++) {
+            for (let seat = 0; seat < section.seatsPerRow; seat++) {
+              if (skipIndices.includes(seat)) continue;
+
+              const rowLabel = this.computeRowLabel(section, row);
+              const startNumber = Number(numbering.startNumber || 1);
+              const seatNumber = startNumber + seat;
+              const sectionKey = section.name || `section-${sectionIndex}`;
+              const fullId = generateFullId(sectionKey, rowLabel, seatNumber);
+              if (!seatDetails[fullId]) {
+                seatDetails[fullId] = {
+                  status: "available",
+                  price: Number(pricing.basePrice) || 0,
+                };
+              }
+            }
+          }
+        }
+      });
+    }
+
     const seatMapHTML = SeatMap.generateFromLayout(
       layout,
       seatDetails,
@@ -404,7 +464,7 @@ export default {
       case 1:
         return await this.renderSeatSelection();
       case 2:
-        return this.renderTicketSelection();
+        return await this.renderTicketSelection();
       case 3:
         return this.renderReviewBooking();
       case 4:
@@ -453,48 +513,6 @@ export default {
     `;
   },
 
-  // Legacy HTML layout generator removed in favor of SVG SeatMap.
-
-  async generateSeatMap() {
-    const rows = ["A", "B", "C", "D", "E", "F", "G", "H"];
-    const seatsPerRow = 12;
-    const bookedSeats = await this.getBookedSeats();
-
-    return rows
-      .map((row) => {
-        const seats = [];
-        for (let i = 1; i <= seatsPerRow; i++) {
-          const seatId = `${row}${i}`;
-          const isBooked = bookedSeats.includes(seatId);
-          const isSelected = this.selectedSeats.includes(seatId);
-
-          seats.push(`
-            <button
-              class="seat-btn w-10 h-10 rounded ${
-                isBooked
-                  ? "bg-gray-400 border-gray-500 text-gray-700 cursor-not-allowed"
-                  : isSelected
-                  ? "bg-indigo-600 border-indigo-700 text-white hover:bg-indigo-700"
-                  : "bg-white border-gray-300 text-gray-900 hover:bg-gray-100"
-              } border-2 transition-colors text-xs font-semibold"
-              data-seat="${seatId}"
-              ${isBooked ? "disabled" : ""}
-            >
-              ${seatId}
-            </button>
-          `);
-        }
-
-        return `
-          <div class="flex items-center justify-center gap-1">
-            <span class="w-8 text-center font-bold text-gray-700">${row}</span>
-            ${seats.join("")}
-          </div>
-        `;
-      })
-      .join("");
-  },
-
   async getBookedSeats() {
     try {
       const response = await bookingAPI.getAll();
@@ -517,10 +535,10 @@ export default {
     }
   },
 
-  renderTicketSelection() {
+  async renderTicketSelection() {
     let ticketTypes = [];
     try {
-      const result = ticketTypeService.getAll();
+      const result = await ticketTypeService.getAll();
       ticketTypes = Array.isArray(result) ? result : [];
     } catch (error) {
       console.error("Error loading ticket types:", error);
@@ -555,7 +573,15 @@ export default {
       `;
     }
 
-    const pricingSections = this.performanceData.pricingSections || [];
+    const selectedShowtime = this.selectedShowtimeId
+      ? this.performanceData.showtimes?.find(
+          (st) => st.id === this.selectedShowtimeId
+        )
+      : null;
+    const pricingSections =
+      selectedShowtime?.pricing?.sections ||
+      this.performanceData.pricingSections ||
+      [];
     const allAssigned = this.selectedSeats.every(
       (seat) => this.seatTicketTypes[seat]
     );
@@ -1283,18 +1309,6 @@ export default {
       attachSeatTooltipListeners("#seatMap svg");
       const $seats = $("#seatMap svg g.interactive-seat");
       $seats.attr("tabindex", "0");
-      $seats.off("click.seat").on("click.seat", function (e) {
-        const id = $(this).attr("data-full-id") || $(this).attr("data-seat-id");
-        if (!id) return;
-        self.toggleSeat(id);
-      });
-      $seats.off("keydown.seat").on("keydown.seat", function (e) {
-        if (e.key !== "Enter" && e.key !== " ") return;
-        e.preventDefault();
-        const id = $(this).attr("data-full-id") || $(this).attr("data-seat-id");
-        if (!id) return;
-        self.toggleSeat(id);
-      });
     }, 100);
 
     $(document)
@@ -1410,18 +1424,18 @@ export default {
             .addClass("animate-fade-in");
           $("#confirmPayment").prop("disabled", true);
         } else {
-          if (method === "alipay") {
-            $(this).addClass("border-blue-600 bg-blue-50");
-          } else if (method === "wechat") {
-            $(this).addClass("border-green-600 bg-green-50");
-          } else if (method === "paypal") {
-            $(this).addClass("border-yellow-600 bg-yellow-50");
+          const methodColors = {
+            alipay: "border-blue-600 bg-blue-50",
+            wechat: "border-green-600 bg-green-50",
+            paypal: "border-yellow-600 bg-yellow-50",
+          };
+          if (methodColors[method]) {
+            $(this).addClass(methodColors[method]);
           }
           $("#cardPaymentForm").addClass("hidden");
           $("#confirmPayment").prop("disabled", false);
         }
       });
-
     $(document)
       .off("input", "#cardNumber")
       .on("input", "#cardNumber", function (e) {
@@ -1518,6 +1532,20 @@ export default {
       });
   },
 
+  computeRowLabel(section, rowIndex) {
+    const startRow = section.startRow || "A";
+    const startCode = startRow.charCodeAt(startRow.length - 1) - 65;
+    const totalIndex = startCode + rowIndex;
+
+    if (totalIndex < 26) {
+      return String.fromCharCode(65 + totalIndex);
+    }
+
+    const first = Math.floor(totalIndex / 26) - 1;
+    const second = totalIndex % 26;
+    return String.fromCharCode(65 + first) + String.fromCharCode(65 + second);
+  },
+
   async toggleSeat(seatId) {
     const index = this.selectedSeats.indexOf(seatId);
     if (index > -1) {
@@ -1527,8 +1555,74 @@ export default {
       this.selectedSeats.push(seatId);
     }
     this.selectedSeats.sort();
-    await this.renderBookingForm();
+    this.updateSeatSelection();
+  },
+
+  updateSeatSelection() {
+    const self = this;
+    $("#seatMap svg g.interactive-seat").each(function () {
+      const fullId = $(this).attr("data-full-id");
+      const seatId = $(this).attr("data-seat-id");
+      const id = fullId || seatId;
+      const isSelected = self.selectedSeats.includes(id);
+      const isBooked = $(this).attr("data-status") === "occupied";
+
+      if (!isBooked) {
+        const $rect = $(this).find("rect").first();
+        if (isSelected) {
+          $rect.attr("fill", "rgb(79, 70, 229)");
+          $rect.attr("stroke", "rgb(202, 138, 4)");
+          $rect.attr("stroke-width", "2");
+          $(this).attr("data-status", "selected");
+        } else {
+          const sectionIndex = $(this).attr("data-section");
+          const originalColor =
+            $rect.attr("data-original-color") ||
+            self.getSectionColorForIndex(sectionIndex);
+          $rect.attr("fill", originalColor);
+          $rect.attr("stroke", originalColor);
+          $rect.attr("stroke-width", "1");
+          $(this).attr("data-status", "available");
+        }
+      }
+    });
+
+    $("#bookingContent .text-2xl.font-bold.text-indigo-600").text(
+      this.selectedSeats.length
+    );
+
+    const selectedSeatsDisplay =
+      this.selectedSeats.length > 0
+        ? this.selectedSeats.map((s) => getDisplayLabel(s)).join(", ")
+        : "Click on available seats to select";
+    $("#bookingContent .min-h-\\[20px\\]").text(selectedSeatsDisplay);
+
+    $("#continueToTickets").prop("disabled", this.selectedSeats.length === 0);
+
     this.updateProgressSteps();
+    this.updateBookingSummary();
+  },
+
+  getSectionColorForIndex(index) {
+    const colors = [
+      "rgb(99, 102, 241)",
+      "rgb(168, 85, 247)",
+      "rgb(236, 72, 153)",
+      "rgb(251, 146, 60)",
+      "rgb(34, 197, 94)",
+      "rgb(14, 165, 233)",
+    ];
+    return colors[index % colors.length] || "rgb(99, 102, 241)";
+  },
+
+  updateBookingSummary() {
+    const totalPrice = this.selectedSeats.reduce((sum, seat) => {
+      const assigned = this.seatTicketTypes[seat];
+      return sum + (assigned ? assigned.price : 0);
+    }, 0);
+
+    const summaryHTML = this.renderBookingSummary();
+    $("#bookingContent").parent().find(".lg\\:col-span-4").html(summaryHTML);
   },
 
   updateProgressSteps() {
@@ -1626,8 +1720,14 @@ export default {
           customerInfo,
         };
 
-        const createdBooking = await bookingAPI.create(booking);
-        const bookingId = createdBooking.bookingReference || createdBooking.id;
+        const createResp = await bookingAPI.create(booking);
+        const createdBooking =
+          ResponseExtractor.extractSingle(createResp, "booking") ||
+          createResp?.data?.booking ||
+          createResp?.booking ||
+          createResp;
+        const bookingId =
+          createdBooking?.bookingReference || createdBooking?.id || "";
 
         Swal.fire({
           title: "Booking Confirmed!",
@@ -1648,7 +1748,7 @@ export default {
           confirmButtonText: user ? "View My Bookings" : "Go to Homepage",
           confirmButtonColor: SwalColors.success,
         }).then(() => {
-          window.location.href = "/user/bookings";
+          page.redirect(ROUTES.USER.BOOKINGS);
         });
       } catch (error) {
         console.error("Error creating booking:", error);
@@ -1677,7 +1777,15 @@ export default {
   },
 
   renderZoneSummary() {
-    const sections = this.performanceData.pricingSections || [];
+    const selectedShowtime = this.selectedShowtimeId
+      ? this.performanceData.showtimes?.find(
+          (st) => st.id === this.selectedShowtimeId
+        )
+      : null;
+    const sections =
+      selectedShowtime?.pricing?.sections ||
+      this.performanceData.pricingSections ||
+      [];
     if (!sections.length) return "";
     const rows = ZonePricing.getZoneSummary(sections)
       .map((zone) => {

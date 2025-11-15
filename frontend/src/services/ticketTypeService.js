@@ -1,10 +1,14 @@
 import { ticketTypeAPI } from "./apiClient.js";
+import { ResponseExtractor } from "./responseExtractor.js";
 
 export const ticketTypeService = {
   async getAll() {
     try {
       const response = await ticketTypeAPI.getAll();
-      return response.success ? response.data : [];
+      const items = ResponseExtractor.extract(response, "ticketTypes");
+      return items.filter(
+        (t) => t && (t.isActive === undefined || t.isActive === true)
+      );
     } catch (error) {
       console.error("Failed to fetch ticket types:", error);
       return [];

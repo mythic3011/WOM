@@ -17,8 +17,6 @@ import {
   Auth,
 } from "/src/pages/index.js";
 
-import SeatMapTest from "/src/pages/test/SeatMapTest.js";
-
 const LOADING_HTML = `
   <div class="flex items-center justify-center min-h-screen">
     <div class="animate-spin rounded-full h-16 w-16 border-b-4 border-indigo-600"></div>
@@ -118,8 +116,6 @@ export function setupRouter() {
   );
 
   page(ROUTES.PUBLIC.DEV_TOOLS, checkDevMode, () => loadPage(DevToolsPage));
-
-  page("/test/seat-map", () => loadPage(SeatMapTest));
 
   page(ROUTES.AUTH.LOGIN, () => loadPage(Auth.LoginPage));
   page(ROUTES.AUTH.REGISTER, () => loadPage(Auth.RegisterPage));

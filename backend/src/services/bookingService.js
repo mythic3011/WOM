@@ -94,7 +94,7 @@ export const createBooking = async (bookingData, userId) => {
     bookingDate: new Date(),
     status: "pending",
     paymentMethod,
-    paymentStatus: "pending",
+    paymentStatus: "paid",
     customerInfo,
   });
 

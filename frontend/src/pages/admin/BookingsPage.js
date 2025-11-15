@@ -17,7 +17,7 @@ import { userAPI, handleApiError } from "/src/services/apiClient.js";
 import { formatCurrency } from "/src/utils/utils.js";
 import { getTierBadge } from "/src/config/tierConfig.js";
 import { getDisplayLabel, parseFullId } from "/src/utils/seatIdHelper.js";
-
+import { bookingAPI } from "../../services/apiClient";
 const SEAT_GRID_CONFIG = {
   rows: ["A", "B", "C", "D", "E", "F", "G", "H"],
   seatsPerRow: 15,
@@ -66,7 +66,7 @@ export default {
   renderStats() {
     const stats = this.calculateStats();
     return `
-      <div class="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
+      <div id="bookingsStats" class="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
         ${stats.map((stat) => FormComponents.statCard(stat)).join("")}
       </div>
     `;
@@ -256,6 +256,7 @@ export default {
       this.filteredBookings = [...this.bookings];
 
       this.renderBookingsTable();
+      this.updateStatsBar();
     } catch (error) {
       console.error("Failed to load bookings:", error);
       $("#bookingsTableContainer").html(
@@ -328,6 +329,7 @@ export default {
     );
     this.sortBookings(filters.sortBy);
     this.renderBookingsTable();
+    this.updateStatsBar();
   },
 
   getFilterValues() {
@@ -536,8 +538,12 @@ export default {
   },
 
   renderAmountCell(booking) {
-    const ticketTypeInfo = booking.ticketType
-      ? `<div class="text-xs text-gray-500">${booking.ticketType}</div>`
+    const ticketTypeName =
+      typeof booking.ticketType === "object"
+        ? booking.ticketType?.name
+        : booking.ticketType;
+    const ticketTypeInfo = ticketTypeName
+      ? `<div class="text-xs text-gray-500">${ticketTypeName}</div>`
       : "";
     return `
       <span class="text-sm font-bold text-gray-900">${formatCurrency(
@@ -723,7 +729,10 @@ export default {
         getDisplayLabel(seat.fullId || seat.seatId || ""),
       section: seat.sectionName || seat.section || "-",
       tier: seat.tier || null,
-      ticketType: seat.ticketType || "-",
+      ticketType:
+        typeof seat.ticketType === "object"
+          ? seat.ticketType?.name || "-"
+          : seat.ticketType || "-",
       price: seat.finalPrice ? formatCurrency(seat.finalPrice) : "-",
     };
   },
@@ -863,7 +872,7 @@ export default {
       .join("");
 
     return `
-      <div class="bg-gradient-to-br from-green-50 to-emerald-50 rounded-lg p-4 border border-green-200">
+      <div class="bg-green-50 rounded-lg p-4 border-2 border-green-300 shadow-sm">
         <h3 class="font-semibold text-gray-900 mb-3">
           <i class="fas fa-chair text-green-600 mr-2"></i>Seats Details
         </h3>
@@ -1096,11 +1105,12 @@ export default {
   },
 
   renderEditSeatsField(seats) {
+    const labels = this.extractSeatNumbers(seats);
     return `
       <div>
         <label class="block text-sm font-medium text-gray-700 mb-1">Selected Seats</label>
         <div class="flex gap-2">
-          <input id="edit-seats" type="text" value="${seats.join(
+          <input id="edit-seats" type="text" value="${labels.join(
             ", "
           )}" class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="A1, A2, A3" readonly>
           <button id="select-seats-btn" type="button" class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 focus:ring-2 focus:ring-indigo-500 transition-colors">
@@ -1113,17 +1123,19 @@ export default {
   },
 
   renderEditTicketTypeSelect(selectedType, ticketTypes) {
+    const selectedName =
+      typeof selectedType === "object" ? selectedType?.name : selectedType;
     const options =
       ticketTypes.length > 0
         ? ticketTypes
             .map(
               (type) =>
                 `<option value="${type.name}" ${
-                  type.name === selectedType ? "selected" : ""
+                  type.name === selectedName ? "selected" : ""
                 }>${type.name}${type.isCustom ? " (Custom)" : ""}</option>`
             )
             .join("")
-        : `<option value="${selectedType}" selected>${selectedType}</option>`;
+        : `<option value="${selectedName}" selected>${selectedName}</option>`;
 
     return `
       <div>
@@ -1383,14 +1395,28 @@ export default {
   },
 
   getBookedSeatsForPerformance(performanceId, excludeSeats = []) {
-    return this.bookings
+    const seats = this.bookings
       .filter(
         (b) =>
           String(b.performanceId) === String(performanceId) &&
           b.status !== "cancelled"
       )
-      .flatMap((b) => b.seats)
-      .filter((seat) => !excludeSeats.includes(seat));
+      .flatMap((b) => (Array.isArray(b.seats) ? b.seats : []));
+    const toLabel = (s) => {
+      if (typeof s === "string") return getDisplayLabel(s);
+      return (
+        s.displayLabel ||
+        s.seatNumber ||
+        s.seat ||
+        s.id ||
+        getDisplayLabel(s.fullId || s.seatId || "")
+      );
+    };
+    const exclude = excludeSeats;
+    return seats
+      .map((s) => toLabel(s))
+      .filter((v) => v)
+      .filter((seat) => !exclude.includes(seat));
   },
 
   generateSeatSelectionHTML(
@@ -1440,6 +1466,13 @@ export default {
         </div>
       </div>
     `;
+  },
+
+  updateStatsBar() {
+    const stats = this.calculateStats();
+    const html = stats.map((stat) => FormComponents.statCard(stat)).join("");
+    const el = document.getElementById("bookingsStats");
+    if (el) el.innerHTML = html;
   },
 
   renderSelectedSeatsDisplay(selectedSeats) {

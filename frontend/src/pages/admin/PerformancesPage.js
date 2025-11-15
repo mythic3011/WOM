@@ -4,6 +4,7 @@ import { performanceUtils } from "/src/utils/performanceUtils.js";
 import { createModal, openModal, closeModal } from "/src/components/Modal.js";
 import { ResponseExtractor } from "/src/services/responseExtractor.js";
 import { getTierBadge } from "/src/config/tierConfig.js";
+import { getDisplayLabel } from "/src/utils/seatIdHelper.js";
 import {
   initImageUpload,
   getImageDataURL,
@@ -2427,10 +2428,15 @@ export default {
               <div class="mt-2 pt-2 border-t border-gray-100">
                 <div class="flex flex-wrap gap-1">
                   ${booking.seats
-                    .map(
-                      (seat) =>
-                        `<span class="px-2 py-0.5 bg-indigo-50 text-indigo-700 rounded text-xs font-mono">${seat}</span>`
-                    )
+                    .map((seat) => {
+                      const seatId =
+                        typeof seat === "string"
+                          ? seat
+                          : seat.fullId || seat.seatId || seat;
+                      return `<span class="px-2 py-0.5 bg-indigo-50 text-indigo-700 rounded text-xs font-mono">${getDisplayLabel(
+                        seatId
+                      )}</span>`;
+                    })
                     .join("")}
                 </div>
               </div>

@@ -33,10 +33,14 @@ function getSeatData($seat) {
     status === "occupied" ||
     status === "reserved";
 
+  const seatId = $seat.attr("data-seat-id") || $seat.data("seat-id") || "";
+  const fullId = $seat.attr("data-full-id") || $seat.data("full-id") || "";
+  const displayId = seatId || (fullId ? fullId.split("-").pop() : "");
+
   return {
-    seatId: $seat.attr("data-seat-id") || $seat.data("seat-id"),
-    fullId: $seat.attr("data-full-id") || $seat.data("full-id"),
-    zone: $seat.attr("data-zone") || $seat.data("zone") || "Zone",
+    seatId: displayId,
+    fullId: fullId,
+    zone: $seat.attr("data-zone") || $seat.data("zone") || "Section",
     price: $seat.attr("data-price") || $seat.data("price") || "0",
     status: status || "available",
     isOccupied,
@@ -67,6 +71,8 @@ function updateTooltipContent(data) {
   if (!$tooltip) return;
 
   const statusInfo = getStatusInfo(data);
+  const priceValue = parseFloat(data.price) || 0;
+  const formattedPrice = `HKD ${priceValue.toLocaleString()}`;
 
   $tooltip.find("[data-tooltip-title]").text(`Seat ${data.seatId}`);
   $tooltip.find("[data-tooltip-zone]").text(data.zone);
@@ -74,11 +80,7 @@ function updateTooltipContent(data) {
   $tooltip
     .find("[data-tooltip-status-icon]")
     .attr("class", `fas fa-circle text-[8px] ${statusInfo.iconClass}`);
-  $tooltip
-    .find("[data-tooltip-price]")
-    .text(
-      data.price.replace(/^\$/, "") ? `$${data.price.replace(/^\$/, "")}` : "$0"
-    );
+  $tooltip.find("[data-tooltip-price]").text(formattedPrice);
 }
 
 function positionTooltip(event) {
@@ -158,15 +160,15 @@ export function attachSeatTooltipListeners(containerSelector = "svg") {
 
   createTooltip();
 
-  $container.off("mouseenter.seatTooltip", ".seat");
-  $container.off("mouseleave.seatTooltip", ".seat");
+  $container.off("mouseenter.seatTooltip", "g.interactive-seat");
+  $container.off("mouseleave.seatTooltip", "g.interactive-seat");
   $(document).off("mousemove.seatTooltip");
 
-  $container.on("mouseenter.seatTooltip", ".seat", function (e) {
+  $container.on("mouseenter.seatTooltip", "g.interactive-seat", function (e) {
     showTooltip($(this), e);
   });
 
-  $container.on("mouseleave.seatTooltip", ".seat", function () {
+  $container.on("mouseleave.seatTooltip", "g.interactive-seat", function () {
     hideTooltip();
   });
 
