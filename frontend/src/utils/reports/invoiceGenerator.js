@@ -1,8 +1,8 @@
 import dayjs from "dayjs";
-import { statsService } from "/src/services/statsService.js";
+import { statsService } from "@services/statsService.js";
 import pdfMake from "pdfmake/build/pdfmake";
-import { COMPANY_INFO } from "/src/config/config.js";
-import { getDisplayLabel } from "/src/utils/seatIdHelper.js";
+import { COMPANY_INFO } from "@config/config.js";
+import { getDisplayLabel } from "@utils/seatIdHelper.js";
 
 const initPdfMake = async () => {
   try {
@@ -40,56 +40,56 @@ export const InvoiceGenerator = {
 
     const seatTableBody = booking.seatTicketTypes
       ? Object.entries(booking.seatTicketTypes).map(([seat, ticket]) => [
+        {
+          text: getDisplayLabel(seat),
+          style: "tableCell",
+          alignment: "center",
+        },
+        { text: ticket.name, style: "tableCell" },
+        { text: "1", style: "tableCell", alignment: "center" },
+        {
+          text: statsService.formatCurrency(ticket.price),
+          style: "tableCell",
+          alignment: "right",
+        },
+        {
+          text: statsService.formatCurrency(ticket.price),
+          style: "tableCell",
+          alignment: "right",
+          bold: true,
+        },
+      ])
+      : booking.seats.map((seat) => {
+        const seatId =
+          typeof seat === "string" ? seat : seat.fullId || seat.seatId || "";
+        return [
           {
-            text: getDisplayLabel(seat),
+            text: getDisplayLabel(seatId),
             style: "tableCell",
             alignment: "center",
           },
-          { text: ticket.name, style: "tableCell" },
+          {
+            text: booking.ticketType || "Standard",
+            style: "tableCell",
+          },
           { text: "1", style: "tableCell", alignment: "center" },
           {
-            text: statsService.formatCurrency(ticket.price),
+            text: statsService.formatCurrency(
+              booking.amount / booking.seats.length
+            ),
             style: "tableCell",
             alignment: "right",
           },
           {
-            text: statsService.formatCurrency(ticket.price),
+            text: statsService.formatCurrency(
+              booking.amount / booking.seats.length
+            ),
             style: "tableCell",
             alignment: "right",
             bold: true,
           },
-        ])
-      : booking.seats.map((seat) => {
-          const seatId =
-            typeof seat === "string" ? seat : seat.fullId || seat.seatId || "";
-          return [
-            {
-              text: getDisplayLabel(seatId),
-              style: "tableCell",
-              alignment: "center",
-            },
-            {
-              text: booking.ticketType || "Standard",
-              style: "tableCell",
-            },
-            { text: "1", style: "tableCell", alignment: "center" },
-            {
-              text: statsService.formatCurrency(
-                booking.amount / booking.seats.length
-              ),
-              style: "tableCell",
-              alignment: "right",
-            },
-            {
-              text: statsService.formatCurrency(
-                booking.amount / booking.seats.length
-              ),
-              style: "tableCell",
-              alignment: "right",
-              bold: true,
-            },
-          ];
-        });
+        ];
+      });
 
     const subtotal = booking.amount;
     const tax = 0;
@@ -212,8 +212,8 @@ export const InvoiceGenerator = {
                   text: [
                     performanceDate
                       ? dayjs(performanceDate).format(
-                          "MMMM D, YYYY [at] h:mm A"
-                        ) + "\n"
+                        "MMMM D, YYYY [at] h:mm A"
+                      ) + "\n"
                       : "",
                     performanceVenue,
                   ],

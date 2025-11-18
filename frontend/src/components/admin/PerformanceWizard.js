@@ -1,4 +1,4 @@
-import { FormComponents } from "/src/components/FormComponents.js";
+import { FormComponents } from "@components/FormComponents.js";
 import dayjs from "dayjs";
 
 export const PerformanceWizard = {
@@ -36,44 +36,39 @@ export const PerformanceWizard = {
     return `
       <div class="flex items-center justify-between mb-2">
         ${steps
-          .map((step, index) => {
-            const isActive = step.number === this.currentStep;
-            const isCompleted = step.number < this.currentStep;
-            return `
+        .map((step, index) => {
+          const isActive = step.number === this.currentStep;
+          const isCompleted = step.number < this.currentStep;
+          return `
               <div class="flex items-center ${index < steps.length - 1 ? "flex-1" : ""}">
                 <div class="flex flex-col items-center">
-                  <div class="${
-                    isActive
-                      ? "bg-indigo-600 text-white"
-                      : isCompleted
-                        ? "bg-green-600 text-white"
-                        : "bg-gray-300 text-gray-600"
-                  } w-10 h-10 rounded-full flex items-center justify-center font-bold transition-colors">
-                    ${
-                      isCompleted ? '<i class="fas fa-check"></i>' : step.number
-                    }
+                  <div class="${isActive
+              ? "bg-indigo-600 text-white"
+              : isCompleted
+                ? "bg-green-600 text-white"
+                : "bg-gray-300 text-gray-600"
+            } w-10 h-10 rounded-full flex items-center justify-center font-bold transition-colors">
+                    ${isCompleted ? '<i class="fas fa-check"></i>' : step.number
+            }
                   </div>
-                  <div class="mt-2 text-xs font-medium ${
-                    isActive
-                      ? "text-indigo-600"
-                      : isCompleted
-                        ? "text-green-600"
-                        : "text-gray-500"
-                  }">
+                  <div class="mt-2 text-xs font-medium ${isActive
+              ? "text-indigo-600"
+              : isCompleted
+                ? "text-green-600"
+                : "text-gray-500"
+            }">
                     ${step.label}
                   </div>
                 </div>
-                ${
-                  index < steps.length - 1
-                    ? `<div class="flex-1 h-0.5 mx-2 ${
-                        isCompleted ? "bg-green-600" : "bg-gray-300"
-                      } transition-colors"></div>`
-                    : ""
-                }
+                ${index < steps.length - 1
+              ? `<div class="flex-1 h-0.5 mx-2 ${isCompleted ? "bg-green-600" : "bg-gray-300"
+              } transition-colors"></div>`
+              : ""
+            }
               </div>
             `;
-          })
-          .join("")}
+        })
+        .join("")}
       </div>
     `;
   },
@@ -429,21 +424,19 @@ export const PerformanceWizard = {
     const isLastStep = this.currentStep === this.totalSteps;
 
     return `
-      ${
-        !isFirstStep
-          ? `<button type="button" id="wizardPrevBtn"
+      ${!isFirstStep
+        ? `<button type="button" id="wizardPrevBtn"
               class="px-6 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors font-medium">
               <i class="fas fa-arrow-left mr-2"></i>Previous
             </button>`
-          : "<div></div>"
+        : "<div></div>"
       }
-      ${
-        !isLastStep
-          ? `<button type="button" id="wizardNextBtn"
+      ${!isLastStep
+        ? `<button type="button" id="wizardNextBtn"
               class="px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-medium">
               Next<i class="fas fa-arrow-right ml-2"></i>
             </button>`
-          : `<button type="button" id="wizardSubmitBtn"
+        : `<button type="button" id="wizardSubmitBtn"
               class="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium">
               <i class="fas fa-check mr-2"></i>Create Performance
             </button>`

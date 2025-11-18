@@ -1,11 +1,11 @@
-import { createEmptyState } from "/src/components/EmptyState.js";
-import { createButton } from "/src/components/Button.js";
-import { createBadge } from "/src/components/Badge.js";
-import { createImageUpload } from "/src/components/ImageUpload.js";
-import { VenueLayoutEditor } from "/src/components/VenueLayoutEditor.js";
-import { SeatLayoutEditor } from "/src/components/SeatLayoutEditor.js";
-import { SeatMap } from "/src/components/SeatMap.js";
-import { SeatNumberingSystem } from "/src/utils/SeatNumberingSystem.js";
+import { createEmptyState } from "@components/EmptyState.js";
+import { createButton } from "@components/common/Button.js";
+import { createBadge } from "@components/common/Badge.js";
+import { createImageUpload } from "@components/ImageUpload.js";
+import { VenueLayoutEditor } from "@components/VenueLayoutEditor.js";
+import { SeatLayoutEditor } from "@components/SeatLayoutEditor.js";
+import { SeatMap } from "@components/SeatMap.js";
+import { SeatNumberingSystem } from "@utils/SeatNumberingSystem.js";
 
 export class VenueView {
   constructor() {
@@ -32,10 +32,10 @@ export class VenueView {
                 <span class="hidden sm:inline">Import</span>
               </button>
               ${createButton({
-                text: "Add Venue",
-                icon: "fa-plus",
-                id: "addVenueBtn",
-              })}
+      text: "Add Venue",
+      icon: "fa-plus",
+      id: "addVenueBtn",
+    })}
             </div>
           </div>
         </div>
@@ -155,8 +155,8 @@ export class VenueView {
     const statsHtml = `
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         ${stats
-          .map(
-            (stat) => `
+        .map(
+          (stat) => `
           <div class="${stat.bgColor} ${stat.borderColor} border rounded-xl p-4 hover:shadow-md transition-shadow">
             <div class="flex items-center justify-between mb-2">
               <div class="w-10 h-10 ${stat.bgColor} rounded-lg flex items-center justify-center">
@@ -167,8 +167,8 @@ export class VenueView {
             <p class="text-sm ${stat.textColor} font-medium mt-1">${stat.label}</p>
           </div>
         `
-          )
-          .join("")}
+        )
+        .join("")}
       </div>
     `;
 
@@ -185,16 +185,15 @@ export class VenueView {
     return `
       <div class="venue-card bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-lg hover:border-indigo-200 transition-all duration-300 group">
         <div class="relative h-48 bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 overflow-hidden">
-          ${
-            venue.image
-              ? `<img src="${venue.image}" alt="${venue.name}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />`
-              : `<div class="w-full h-full flex items-center justify-center">
+          ${venue.image
+        ? `<img src="${venue.image}" alt="${venue.name}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />`
+        : `<div class="w-full h-full flex items-center justify-center">
                   <div class="text-center">
                     <i class="fas fa-building text-white text-6xl opacity-40 mb-2"></i>
                     <p class="text-white text-sm opacity-60">No Image</p>
                   </div>
                 </div>`
-          }
+      }
           <div class="absolute top-3 right-3">
             ${statusBadge}
           </div>
@@ -206,9 +205,8 @@ export class VenueView {
           <div class="mb-4">
             <p class="text-sm text-gray-600 flex items-center gap-2">
               <i class="fas fa-map-marker-alt text-indigo-500"></i>
-              <span class="truncate">${
-                venue.address || "No address provided"
-              }</span>
+              <span class="truncate">${venue.address || "No address provided"
+      }</span>
             </p>
           </div>
 
@@ -225,9 +223,8 @@ export class VenueView {
                 <i class="fas fa-th-large text-purple-600 text-sm"></i>
                 <span class="text-xs text-gray-600">Sections</span>
               </div>
-              <p class="text-lg font-bold text-gray-900">${
-                venue.layout?.sections?.length || 0
-              }</p>
+              <p class="text-lg font-bold text-gray-900">${venue.layout?.sections?.length || 0
+      }</p>
             </div>
           </div>
 
@@ -251,23 +248,22 @@ export class VenueView {
       <div class="mb-4">
         <div class="flex gap-2 flex-wrap">
           ${facilities
-            .slice(0, 3)
-            .map(
-              (f) => `
+        .slice(0, 3)
+        .map(
+          (f) => `
             <span class="inline-flex items-center gap-1 px-3 py-1.5 bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-700 text-xs font-medium rounded-full border border-blue-100">
               <i class="fas fa-check-circle text-blue-500"></i>
               ${f}
             </span>
           `
-            )
-            .join("")}
-          ${
-            facilities.length > 3
-              ? `<span class="inline-flex items-center px-3 py-1.5 bg-gray-100 text-gray-600 text-xs font-medium rounded-full border border-gray-200">
+        )
+        .join("")}
+          ${facilities.length > 3
+        ? `<span class="inline-flex items-center px-3 py-1.5 bg-gray-100 text-gray-600 text-xs font-medium rounded-full border border-gray-200">
                 +${facilities.length - 3} more
               </span>`
-              : ""
-          }
+        : ""
+      }
         </div>
       </div>
     `;
@@ -410,12 +406,10 @@ export class VenueView {
               id="venueStatus"
               class="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all bg-white"
             >
-              <option value="active" ${
-                venue?.status === "active" ? "selected" : ""
-              }>Active</option>
-              <option value="inactive" ${
-                venue?.status === "inactive" ? "selected" : ""
-              }>Inactive</option>
+              <option value="active" ${venue?.status === "active" ? "selected" : ""
+      }>Active</option>
+              <option value="inactive" ${venue?.status === "inactive" ? "selected" : ""
+      }>Inactive</option>
             </select>
           </div>
         </div>
@@ -567,18 +561,14 @@ export class VenueView {
               <i class="fas fa-crown mr-1"></i>Tier Level
             </label>
             <select class="section-tier w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all bg-white">
-              <option value="vip" ${
-                section?.tier === "vip" ? "selected" : ""
-              }>VIP</option>
-              <option value="premium" ${
-                section?.tier === "premium" ? "selected" : ""
-              }>Premium</option>
-              <option value="standard" ${
-                section?.tier === "standard" ? "selected" : ""
-              }>Standard</option>
-              <option value="economy" ${
-                section?.tier === "economy" ? "selected" : ""
-              }>Economy</option>
+              <option value="vip" ${section?.tier === "vip" ? "selected" : ""
+      }>VIP</option>
+              <option value="premium" ${section?.tier === "premium" ? "selected" : ""
+      }>Premium</option>
+              <option value="standard" ${section?.tier === "standard" ? "selected" : ""
+      }>Standard</option>
+              <option value="economy" ${section?.tier === "economy" ? "selected" : ""
+      }>Economy</option>
             </select>
           </div>
 
@@ -599,9 +589,8 @@ export class VenueView {
         <div class="mt-4 bg-white bg-opacity-60 rounded-lg p-3 border border-gray-200">
           <div class="flex items-center gap-2 text-xs text-gray-600">
             <i class="fas fa-info-circle text-indigo-600"></i>
-            <span>Capacity: <strong class="text-gray-900">${
-              section ? (section.rows || 0) * (section.seatsPerRow || 0) : 0
-            } seats</strong></span>
+            <span>Capacity: <strong class="text-gray-900">${section ? (section.rows || 0) * (section.seatsPerRow || 0) : 0
+      } seats</strong></span>
           </div>
         </div>
       </div>

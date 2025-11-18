@@ -1,4 +1,4 @@
-import { createStatsCard } from "/src/components/StatsCard.js";
+import { createStatsCard } from "@components/StatsCard.js";
 
 export const FormComponents = {
   select({
@@ -11,12 +11,10 @@ export const FormComponents = {
     required = false,
   }) {
     return `
-      ${
-        label
-          ? `<label for="${id}" class="block text-sm font-medium text-gray-700 mb-1">${label}${
-              required ? '<span class="text-red-500 ml-1">*</span>' : ""
-            }</label>`
-          : ""
+      ${label
+        ? `<label for="${id}" class="block text-sm font-medium text-gray-700 mb-1">${label}${required ? '<span class="text-red-500 ml-1">*</span>' : ""
+        }</label>`
+        : ""
       }
       <select
         id="${id}"
@@ -25,14 +23,14 @@ export const FormComponents = {
         ${required ? "required" : ""}
       >
         ${options
-          .map(
-            (opt) => `
+        .map(
+          (opt) => `
           <option value="${opt.value}" ${opt.value === value ? "selected" : ""}>
             ${opt.label}
           </option>
         `
-          )
-          .join("")}
+        )
+        .join("")}
       </select>
     `;
   },
@@ -49,23 +47,19 @@ export const FormComponents = {
     disabled = false,
   }) {
     return `
-      ${
-        label
-          ? `<label for="${id}" class="block text-sm font-medium text-gray-700 mb-1">${label}${
-              required ? '<span class="text-red-500 ml-1">*</span>' : ""
-            }</label>`
-          : ""
+      ${label
+        ? `<label for="${id}" class="block text-sm font-medium text-gray-700 mb-1">${label}${required ? '<span class="text-red-500 ml-1">*</span>' : ""
+        }</label>`
+        : ""
       }
       <input
         type="${type}"
         id="${id}"
         value="${value}"
         placeholder="${placeholder}"
-        class="w-full px-4 py-2.5 text-sm font-medium text-gray-900 bg-white border border-gray-300 rounded-lg shadow-sm hover:bg-gray-50 hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 focus:-translate-y-0.5 focus:shadow-md transition-all duration-200 ${
-          readonly ? "bg-gray-50 cursor-not-allowed" : ""
-        } ${
-          disabled ? "bg-gray-100 text-gray-500 cursor-not-allowed" : ""
-        } ${className}"
+        class="w-full px-4 py-2.5 text-sm font-medium text-gray-900 bg-white border border-gray-300 rounded-lg shadow-sm hover:bg-gray-50 hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 focus:-translate-y-0.5 focus:shadow-md transition-all duration-200 ${readonly ? "bg-gray-50 cursor-not-allowed" : ""
+      } ${disabled ? "bg-gray-100 text-gray-500 cursor-not-allowed" : ""
+      } ${className}"
         ${required ? "required" : ""}
         ${readonly ? "readonly" : ""}
         ${disabled ? "disabled" : ""}
@@ -83,12 +77,10 @@ export const FormComponents = {
     required = false,
   }) {
     return `
-      ${
-        label
-          ? `<label for="${id}" class="block text-sm font-medium text-gray-700 mb-1">${label}${
-              required ? '<span class="text-red-500 ml-1">*</span>' : ""
-            }</label>`
-          : ""
+      ${label
+        ? `<label for="${id}" class="block text-sm font-medium text-gray-700 mb-1">${label}${required ? '<span class="text-red-500 ml-1">*</span>' : ""
+        }</label>`
+        : ""
       }
       <textarea
         id="${id}"
@@ -130,9 +122,8 @@ export const FormComponents = {
       <button
         ${id ? `id="${id}"` : ""}
         type="${type}"
-        class="inline-flex items-center gap-2 ${sizeClasses[size]} ${
-          colorClasses[color] || colorClasses.indigo
-        } text-white rounded-lg focus:outline-none focus:ring-2 transition-colors shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed ${className}"
+        class="inline-flex items-center gap-2 ${sizeClasses[size]} ${colorClasses[color] || colorClasses.indigo
+      } text-white rounded-lg focus:outline-none focus:ring-2 transition-colors shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed ${className}"
         ${disabled ? "disabled" : ""}
       >
         ${icon ? `<i class="fas ${icon} text-white"></i>` : ""}
@@ -168,20 +159,20 @@ export const FormComponents = {
         <div class="flex flex-col sm:flex-row gap-4 mb-6">
           <div class="flex-1">
             ${this.searchInput({
-              id: searchId,
-              placeholder: searchPlaceholder,
-              className: "",
-            })}
+      id: searchId,
+      placeholder: searchPlaceholder,
+      className: "",
+    })}
           </div>
           ${filters
-            .map(
-              (filter) => `
+        .map(
+          (filter) => `
             <div>
               ${this.select(filter)}
             </div>
           `
-            )
-            .join("")}
+        )
+        .join("")}
           <button
             id="${clearButtonId}"
             class="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg shadow-sm hover:bg-gray-50 hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-all duration-200"
@@ -284,9 +275,8 @@ export const FormComponents = {
       <button
         type="button"
         ${id ? `id="${id}"` : ""}
-        class="inline-flex items-center ${sizeClass} ${colors.bg} ${
-          colors.text
-        } ${colors.hover} rounded-lg transition-colors font-medium"
+        class="inline-flex items-center ${sizeClass} ${colors.bg} ${colors.text
+      } ${colors.hover} rounded-lg transition-colors font-medium"
         ${dataAttrs}
         ${title || tooltip ? `title="${title || tooltip}"` : ""}
         ${onClick ? `onclick="${onClick}"` : ""}
@@ -327,8 +317,7 @@ export const FormComponents = {
     const colors = colorClasses[color] || colorClasses.gray;
 
     return `
-      <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${
-        colors.bg
+      <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${colors.bg
       } ${colors.text}">
         ${icon ? `<i class="fas ${icon} mr-1 ${colors.icon}"></i>` : ""}
         ${text}
@@ -379,11 +368,10 @@ export const FormComponents = {
         <div class="flex items-start gap-3">
           <i class="fas ${colors.icon} ${colors.iconColor} text-lg mt-0.5"></i>
           <div class="flex-1">
-            ${
-              title
-                ? `<h4 class="text-sm font-semibold ${colors.titleColor} mb-1">${title}</h4>`
-                : ""
-            }
+            ${title
+        ? `<h4 class="text-sm font-semibold ${colors.titleColor} mb-1">${title}</h4>`
+        : ""
+      }
             <p class="text-sm ${colors.textColor}">${message}</p>
           </div>
         </div>
@@ -396,21 +384,19 @@ export const FormComponents = {
       <div class="mb-8 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 class="text-3xl font-bold text-gray-900 flex items-center">
-            ${
-              icon ? `<i class="fas ${icon} text-indigo-600 mr-3"></i>` : ""
-            }${title}
+            ${icon ? `<i class="fas ${icon} text-indigo-600 mr-3"></i>` : ""
+      }${title}
           </h1>
           ${subtitle ? `<p class="text-gray-600 mt-2">${subtitle}</p>` : ""}
         </div>
-        ${
-          actions.length > 0
-            ? `
+        ${actions.length > 0
+        ? `
           <div class="flex gap-2">
             ${actions.join("")}
           </div>
         `
-            : ""
-        }
+        : ""
+      }
       </div>
     `;
   },
@@ -431,40 +417,38 @@ export const FormComponents = {
           <thead class="bg-gray-50 border-b-2 border-gray-200">
             <tr>
               ${columns
-                .map(
-                  (col) => `
-                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider ${
-                  col.className || ""
-                }">
+        .map(
+          (col) => `
+                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider ${col.className || ""
+            }">
                   ${col.label}
                 </th>
               `
-                )
-                .join("")}
+        )
+        .join("")}
             </tr>
           </thead>
           <tbody class="bg-white divide-y divide-gray-200">
             ${rows
-              .map(
-                (row) => `
+        .map(
+          (row) => `
               <tr class="hover:bg-gray-50 transition-colors">
                 ${columns
-                  .map(
-                    (col) => `
+              .map(
+                (col) => `
                   <td class="px-4 py-4 ${col.tdClassName || ""}">
-                    ${
-                      typeof col.render === "function"
-                        ? col.render(row)
-                        : row[col.key] || ""
-                    }
+                    ${typeof col.render === "function"
+                    ? col.render(row)
+                    : row[col.key] || ""
+                  }
                   </td>
                 `
-                  )
-                  .join("")}
-              </tr>
-            `
               )
               .join("")}
+              </tr>
+            `
+        )
+        .join("")}
           </tbody>
         </table>
       </div>
@@ -476,9 +460,8 @@ export const FormComponents = {
 
     return `
       <div class="bg-white rounded-lg shadow-md border border-gray-200 overflow-hidden">
-        ${
-          searchable
-            ? `
+        ${searchable
+        ? `
           <div class="p-4 border-b border-gray-200">
             <div class="relative">
               <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -492,75 +475,69 @@ export const FormComponents = {
             </div>
           </div>
         `
-            : ""
-        }
+        : ""
+      }
 
         <div class="overflow-x-auto">
-          ${
-            hasData
-              ? `
+          ${hasData
+        ? `
             <table class="w-full">
               <thead class="bg-gray-50 border-b-2 border-gray-200">
                 <tr>
                   ${columns
-                    .map(
-                      (col) => `
-                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider whitespace-nowrap ${
-                      col.sortable ? "cursor-pointer hover:bg-gray-100" : ""
-                    } ${col.headerClassName || ""}">
+          .map(
+            (col) => `
+                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider whitespace-nowrap ${col.sortable ? "cursor-pointer hover:bg-gray-100" : ""
+              } ${col.headerClassName || ""}">
                       <div class="flex items-center gap-2">
                         <span>${col.label}</span>
-                        ${
-                          col.sortable
-                            ? '<i class="fas fa-sort text-gray-400"></i>'
-                            : ""
-                        }
+                        ${col.sortable
+                ? '<i class="fas fa-sort text-gray-400"></i>'
+                : ""
+              }
                       </div>
                     </th>
                   `
-                    )
-                    .join("")}
+          )
+          .join("")}
                 </tr>
               </thead>
               <tbody class="bg-white divide-y divide-gray-200">
                 ${data
-                  .map(
-                    (row, index) => `
+          .map(
+            (row, index) => `
                   <tr class="hover:bg-gray-50 transition-colors" data-row-index="${index}">
                     ${columns
-                      .map(
-                        (col) => `
-                      <td class="px-4 py-4 ${col.cellClassName || ""} ${
-                        col.nowrap ? "whitespace-nowrap" : ""
-                      }">
-                        ${
-                          typeof col.render === "function"
-                            ? col.render(row, index)
-                            : row[col.key] || "-"
-                        }
+                .map(
+                  (col) => `
+                      <td class="px-4 py-4 ${col.cellClassName || ""} ${col.nowrap ? "whitespace-nowrap" : ""
+                    }">
+                        ${typeof col.render === "function"
+                      ? col.render(row, index)
+                      : row[col.key] || "-"
+                    }
                       </td>
                     `
-                      )
-                      .join("")}
+                )
+                .join("")}
                   </tr>
                 `
-                  )
-                  .join("")}
+          )
+          .join("")}
               </tbody>
             </table>
           `
-              : `
+        : `
             <div class="text-center py-16">
               <i class="fas fa-inbox text-gray-300 text-6xl mb-4"></i>
               <p class="text-gray-500 text-lg">No data available</p>
             </div>
           `
-          }
+      }
         </div>
 
-        ${
-          pagination
-            ? `
+        ${pagination
+        ? `
           <div class="px-6 py-4 border-t border-gray-200 flex items-center justify-between bg-gray-50">
             <div class="text-sm text-gray-600">
               Showing <span class="font-semibold">${pagination.from}</span> to
@@ -568,49 +545,46 @@ export const FormComponents = {
               <span class="font-semibold">${pagination.total}</span> results
             </div>
             <div class="flex gap-2">
-              <button class="px-3 py-1.5 text-sm border border-gray-300 rounded-lg hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed text-gray-700" ${
-                pagination.currentPage === 1 ? "disabled" : ""
-              }>
+              <button class="px-3 py-1.5 text-sm border border-gray-300 rounded-lg hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed text-gray-700" ${pagination.currentPage === 1 ? "disabled" : ""
+        }>
                 <i class="fas fa-chevron-left text-gray-700"></i>
               </button>
               ${Array.from({ length: pagination.totalPages }, (_, i) => i + 1)
-                .filter((page) => {
-                  return (
-                    page === 1 ||
-                    page === pagination.totalPages ||
-                    Math.abs(page - pagination.currentPage) <= 1
-                  );
-                })
-                .map((page, index, arr) => {
-                  const prev = arr[index - 1];
-                  const gap =
-                    prev && page - prev > 1
-                      ? '<span class="px-2 text-gray-400">...</span>'
-                      : "";
-                  return `
+          .filter((page) => {
+            return (
+              page === 1 ||
+              page === pagination.totalPages ||
+              Math.abs(page - pagination.currentPage) <= 1
+            );
+          })
+          .map((page, index, arr) => {
+            const prev = arr[index - 1];
+            const gap =
+              prev && page - prev > 1
+                ? '<span class="px-2 text-gray-400">...</span>'
+                : "";
+            return `
                     ${gap}
-                    <button class="px-3 py-1.5 text-sm border rounded-lg ${
-                      page === pagination.currentPage
-                        ? "bg-indigo-600 text-white border-indigo-600"
-                        : "border-gray-300 hover:bg-gray-100 text-gray-700"
-                    }" data-page="${page}">
+                    <button class="px-3 py-1.5 text-sm border rounded-lg ${page === pagination.currentPage
+                ? "bg-indigo-600 text-white border-indigo-600"
+                : "border-gray-300 hover:bg-gray-100 text-gray-700"
+              }" data-page="${page}">
                       ${page}
                     </button>
                   `;
-                })
-                .join("")}
-              <button class="px-3 py-1.5 text-sm border border-gray-300 rounded-lg hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed text-gray-700" ${
-                pagination.currentPage === pagination.totalPages
-                  ? "disabled"
-                  : ""
-              }>
+          })
+          .join("")}
+              <button class="px-3 py-1.5 text-sm border border-gray-300 rounded-lg hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed text-gray-700" ${pagination.currentPage === pagination.totalPages
+          ? "disabled"
+          : ""
+        }>
                 <i class="fas fa-chevron-right text-gray-700"></i>
               </button>
             </div>
           </div>
         `
-            : ""
-        }
+        : ""
+      }
       </div>
     `;
   },

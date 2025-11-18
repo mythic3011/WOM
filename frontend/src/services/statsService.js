@@ -1,14 +1,10 @@
-import { storage } from "/src/services/storageService.js";
-import { ResponseExtractor } from "/src/services/responseExtractor.js";
-import {
-  performanceAPI,
-  bookingAPI,
-  userAPI,
-} from "/src/services/apiClient.js";
+import { storage } from "./storageService.js";
+import { ResponseExtractor } from "./responseExtractor.js";
+import { performanceAPI, bookingAPI, userAPI } from "./apiClient.js";
 import {
   formatCurrency as utilsFormatCurrency,
   formatNumber as utilsFormatNumber,
-} from "/src/utils/utils.js";
+} from "@utils/utils.js";
 
 export const statsService = {
   migrateShowtimes(performances) {

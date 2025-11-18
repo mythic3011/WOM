@@ -1,11 +1,11 @@
-import { getCurrentUser } from "/src/utils/core/auth.js";
-import { FormComponents } from "/src/components/FormComponents.js";
-import { createEmptyState } from "/src/components/EmptyState.js";
-import { createLoadingState } from "/src/components/LoadingState.js";
-import { BookingCard } from "/src/components/BookingCard.js";
-import { bookingService } from "/src/services/bookingService.js";
-import { performanceService } from "/src/services/performanceService.js";
-import { handleApiError } from "/src/services/apiClient.js";
+import { getCurrentUser } from "@utils/core/auth.js";
+import { FormComponents } from "@components/FormComponents.js";
+import { createEmptyState } from "@components/EmptyState.js";
+import { createLoadingState } from "@components/LoadingState.js";
+import { BookingCard } from "@components/BookingCard.js";
+import { bookingService } from "@services/bookingService.js";
+import { performanceService } from "@services/performanceService.js";
+import { handleApiError } from "@services/apiClient.js";
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
 
@@ -53,8 +53,8 @@ export default {
             <div class="bg-gradient-to-r from-indigo-500 to-purple-600 text-white px-6 py-3 rounded-lg shadow-lg">
               <p class="text-sm opacity-90">Member Since</p>
               <p class="text-lg font-bold">${dayjs(
-                user?.createdAt || new Date()
-              ).format("MMM YYYY")}</p>
+        user?.createdAt || new Date()
+      ).format("MMM YYYY")}</p>
             </div>
           </div>
         </div>
@@ -62,33 +62,33 @@ export default {
 
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         ${FormComponents.statCard({
-          title: "Total Bookings",
-          value: bookingStats.total,
-          icon: "fa-ticket-alt",
-          bgColor: "bg-blue-500",
-          subtitle: `${bookingStats.upcoming} upcoming`,
-        })}
+        title: "Total Bookings",
+        value: bookingStats.total,
+        icon: "fa-ticket-alt",
+        bgColor: "bg-blue-500",
+        subtitle: `${bookingStats.upcoming} upcoming`,
+      })}
         ${FormComponents.statCard({
-          title: "Confirmed",
-          value: bookingStats.confirmed,
-          icon: "fa-check-circle",
-          bgColor: "bg-green-500",
-          subtitle: "Ready to attend",
-        })}
+        title: "Confirmed",
+        value: bookingStats.confirmed,
+        icon: "fa-check-circle",
+        bgColor: "bg-green-500",
+        subtitle: "Ready to attend",
+      })}
         ${FormComponents.statCard({
-          title: "Total Spent",
-          value: `$${bookingStats.totalSpent}`,
-          icon: "fa-dollar-sign",
-          bgColor: "bg-purple-500",
-          subtitle: "All time",
-        })}
+        title: "Total Spent",
+        value: `$${bookingStats.totalSpent}`,
+        icon: "fa-dollar-sign",
+        bgColor: "bg-purple-500",
+        subtitle: "All time",
+      })}
         ${FormComponents.statCard({
-          title: "Past Events",
-          value: bookingStats.past,
-          icon: "fa-history",
-          bgColor: "bg-gray-500",
-          subtitle: "Attended",
-        })}
+        title: "Past Events",
+        value: bookingStats.past,
+        icon: "fa-history",
+        bgColor: "bg-gray-500",
+        subtitle: "Attended",
+      })}
       </div>
 
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
@@ -132,9 +132,8 @@ export default {
             View All <i class="fas fa-arrow-right ml-1"></i>
           </a>
         </div>
-        ${
-          bookings.length === 0
-            ? `
+        ${bookings.length === 0
+        ? `
           <div class="text-center py-12">
             <div class="text-6xl text-gray-300 mb-4">
               <i class="far fa-calendar"></i>
@@ -146,26 +145,25 @@ export default {
             </a>
           </div>
         `
-            : `
+        : `
           <div class="space-y-4">
             ${bookings
-              .slice(0, 3)
-              .map((booking) => BookingCard.renderCompact(booking))
-              .join("")}
-            ${
-              bookings.length > 3
-                ? `
+          .slice(0, 3)
+          .map((booking) => BookingCard.renderCompact(booking))
+          .join("")}
+            ${bookings.length > 3
+          ? `
               <div class="text-center pt-2">
                 <a href="/user/bookings" data-link class="text-indigo-600 hover:text-indigo-800 font-medium text-sm">
                   View ${bookings.length - 3} more upcoming events →
                 </a>
               </div>
             `
-                : ""
-            }
+          : ""
+        }
           </div>
         `
-        }
+      }
       </div>
     `;
   },
@@ -253,8 +251,8 @@ export default {
         </h2>
         <div class="space-y-3">
           ${actions
-            .map((action) => this.renderQuickActionCard(action))
-            .join("")}
+        .map((action) => this.renderQuickActionCard(action))
+        .join("")}
         </div>
 
         <div class="mt-6 pt-6 border-t border-gray-200">
@@ -279,19 +277,18 @@ export default {
             View All <i class="fas fa-arrow-right ml-1"></i>
           </a>
         </div>
-        ${
-          performances.length === 0
-            ? `
+        ${performances.length === 0
+        ? `
           <div class="text-center py-8">
             <i class="fas fa-music text-4xl text-gray-300 mb-3"></i>
             <p class="text-gray-500">No upcoming performances available</p>
           </div>
         `
-            : `
+        : `
           <div class="space-y-4">
             ${performances
-              .map(
-                (perf) => `
+          .map(
+            (perf) => `
               <div class="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
                 <div class="flex gap-4">
                   <div class="w-20 h-20 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg flex items-center justify-center text-white flex-shrink-0">
@@ -304,12 +301,10 @@ export default {
                       ${dayjs(perf.date).format("MMM D, YYYY")}
                     </p>
                     <div class="flex items-center justify-between">
-                      <span class="text-lg font-bold text-indigo-600">From $${
-                        perf.price
-                      }</span>
-                      <a href="/performances/${
-                        perf.id
-                      }" data-link class="px-3 py-1 bg-indigo-600 text-white text-sm rounded hover:bg-indigo-700 transition-colors">
+                      <span class="text-lg font-bold text-indigo-600">From $${perf.price
+              }</span>
+                      <a href="/performances/${perf.id
+              }" data-link class="px-3 py-1 bg-indigo-600 text-white text-sm rounded hover:bg-indigo-700 transition-colors">
                         Book Now
                       </a>
                     </div>
@@ -317,11 +312,11 @@ export default {
                 </div>
               </div>
             `
-              )
-              .join("")}
+          )
+          .join("")}
           </div>
         `
-        }
+      }
       </div>
     `;
   },
@@ -335,58 +330,54 @@ export default {
             Recent Activity
           </h2>
         </div>
-        ${
-          bookings.length === 0
-            ? `
+        ${bookings.length === 0
+        ? `
           <div class="text-center py-8">
             <i class="fas fa-inbox text-4xl text-gray-300 mb-3"></i>
             <p class="text-gray-500">No booking history yet</p>
             <p class="text-sm text-gray-400 mt-2">Your bookings will appear here</p>
           </div>
         `
-            : `
+        : `
           <div class="space-y-3">
             ${bookings
-              .map((booking) => {
-                const isPast = dayjs(booking.performanceDate).isBefore(dayjs());
-                const statusColors = {
-                  confirmed: "green",
-                  pending: "yellow",
-                  cancelled: "red",
-                };
-                return `
+          .map((booking) => {
+            const isPast = dayjs(booking.performanceDate).isBefore(dayjs());
+            const statusColors = {
+              confirmed: "green",
+              pending: "yellow",
+              cancelled: "red",
+            };
+            return `
                 <div class="flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
-                  <div class="w-10 h-10 ${
-                    isPast ? "bg-gray-400" : "bg-indigo-600"
-                  } rounded-lg flex items-center justify-center text-white flex-shrink-0">
+                  <div class="w-10 h-10 ${isPast ? "bg-gray-400" : "bg-indigo-600"
+              } rounded-lg flex items-center justify-center text-white flex-shrink-0">
                     <i class="fas fa-ticket-alt"></i>
                   </div>
                   <div class="flex-1 min-w-0">
-                    <p class="font-semibold text-gray-900 truncate">${
-                      booking.performanceTitle
-                    }</p>
+                    <p class="font-semibold text-gray-900 truncate">${booking.performanceTitle
+              }</p>
                     <p class="text-xs text-gray-500">
                       ${dayjs(booking.performanceDate).format(
-                        "MMM D, YYYY"
-                      )} • ${booking.seats.length} seat(s)
+                "MMM D, YYYY"
+              )} • ${booking.seats.length} seat(s)
                     </p>
                   </div>
                   <div class="text-right flex-shrink-0">
                     ${FormComponents.badge({
-                      text: booking.status,
-                      color: statusColors[booking.status] || "gray",
-                    })}
-                    <p class="text-sm font-bold text-gray-900 mt-1">$${
-                      booking.amount
-                    }</p>
+                text: booking.status,
+                color: statusColors[booking.status] || "gray",
+              })}
+                    <p class="text-sm font-bold text-gray-900 mt-1">$${booking.amount
+              }</p>
                   </div>
                 </div>
               `;
-              })
-              .join("")}
+          })
+          .join("")}
           </div>
         `
-        }
+      }
       </div>
     `;
   },

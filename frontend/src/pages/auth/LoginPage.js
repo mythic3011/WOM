@@ -1,8 +1,8 @@
-import { notify } from "/src/utils/ui/notification.js";
-import { navigate } from "/src/utils/core/navigation.js";
-import { login } from "/src/utils/core/auth.js";
-import { handleApiError } from "/src/services/apiClient.js";
-import { ROUTES } from "/src/config/routes.js";
+import { notify } from "@utils/ui/notification.js";
+import { navigate } from "@utils/core/navigation.js";
+import { login } from "@utils/core/auth.js";
+import { handleApiError } from "@services/apiClient.js";
+import { ROUTES } from "@config/routes.js";
 
 const REMEMBER_KEY = "wom_remembered_user";
 

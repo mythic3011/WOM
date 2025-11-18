@@ -1,6 +1,16 @@
 import { defineConfig } from "vite";
+import path from "path";
 
 export default defineConfig({
+  resolve: {
+    alias: {
+      "@": path.resolve(__dirname, "./src"),
+      "@config": path.resolve(__dirname, "./src/config"),
+      "@components": path.resolve(__dirname, "./src/components"),
+      "@services": path.resolve(__dirname, "./src/services"),
+      "@utils": path.resolve(__dirname, "./src/utils"),
+    },
+  },
   server: {
     port: 5173,
     host: true,

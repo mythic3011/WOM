@@ -1,10 +1,14 @@
 import js from "@eslint/js";
 import prettierConfig from "eslint-config-prettier";
+import importPlugin from "eslint-plugin-import";
 
 export default [
   js.configs.recommended,
   prettierConfig,
   {
+    plugins: {
+      import: importPlugin,
+    },
     languageOptions: {
       ecmaVersion: 2024,
       sourceType: "module",
@@ -18,6 +22,24 @@ export default [
         setInterval: "readonly",
         clearTimeout: "readonly",
         clearInterval: "readonly",
+      },
+    },
+    settings: {
+      "import/resolver": {
+        alias: {
+          map: [
+            ["@", "./src"],
+            ["@config", "./src/config"],
+            ["@controllers", "./src/controllers"],
+            ["@services", "./src/services"],
+            ["@models", "./src/models"],
+            ["@middleware", "./src/middleware"],
+            ["@utils", "./src/utils"],
+            ["@db", "./src/db"],
+            ["@routes", "./src/routes"],
+          ],
+          extensions: [".js", ".cjs"],
+        },
       },
     },
     rules: {

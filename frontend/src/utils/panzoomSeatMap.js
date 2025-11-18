@@ -458,7 +458,6 @@ export function initSeatMapPanzoom() {
   const $svg = $("#seatMap svg");
   if (!$svg.length) return null;
 
-  // Prefer content-layer (stage + seats) so both move together; fallback for older maps
   let $layer = $svg.find("#content-layer");
   if (!$layer.length) {
     $layer = $svg.find("#seats-layer");
@@ -604,7 +603,7 @@ export function initSeatMapPanzoom() {
     resize: function () {
       instance.resize();
     },
-    updateBBox: function () {},
+    updateBBox: function () { },
     isPanning: function () {
       return instance.isPanning;
     },

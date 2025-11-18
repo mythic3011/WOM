@@ -1,12 +1,10 @@
+import env from "./config/env.js";
 import app from "./app.js";
 import sequelize, { testConnection, syncDatabase } from "./config/database.js";
 import { autoSetupDatabase } from "./db/autoSetup.js";
-import dotenv from "dotenv";
 
-dotenv.config();
-
-const PORT = process.env.PORT || 3000;
-const NODE_ENV = process.env.NODE_ENV || "development";
+const PORT = env.PORT || 3000;
+const NODE_ENV = env.NODE_ENV || "development";
 
 const startServer = async () => {
   try {
@@ -18,16 +16,30 @@ const startServer = async () => {
       process.exit(1);
     }
 
-    const FORCE_SYNC = process.env.DB_SYNC_FORCE === "true";
+    const FORCE_SYNC = env.DB_SYNC_FORCE === "true";
     if (FORCE_SYNC) {
       console.log("Force synchronizing database...");
       await syncDatabase(true);
     } else {
       console.log("Skipping sync (using migrations)...");
+
+      if (NODE_ENV === "development") {
+        console.log("Running migrations...");
+        const { execSync } = await import("child_process");
+        try {
+          execSync("npm run db:migrate", {
+            cwd: process.cwd(),
+            stdio: "inherit"
+          });
+          console.log("Migrations completed");
+        } catch (error) {
+          console.error("Migration failed:", error.message);
+        }
+      }
     }
 
     const ENABLE_AUTOSETUP =
-      (process.env.DB_AUTOSETUP || "true") === "true" &&
+      (env.DB_AUTOSETUP || "true") === "true" &&
       NODE_ENV === "development";
     if (ENABLE_AUTOSETUP) {
       console.log("Checking database setup...");

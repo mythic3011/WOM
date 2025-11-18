@@ -1,14 +1,14 @@
-import { notify } from "/src/utils/ui/notification.js";
-import { navigate } from "/src/utils/core/navigation.js";
-import { formValidator } from "/src/utils/forms/formValidator.js";
-import { phoneUtils } from "/src/utils/forms/phoneFormat.js";
-import { authAPI, handleApiError } from "/src/services/apiClient.js";
-import { setUser } from "/src/utils/core/auth.js";
+import { notify } from "@utils/ui/notification.js";
+import { navigate } from "@utils/core/navigation.js";
+import { formValidator } from "@utils/forms/formValidator.js";
+import { phoneUtils } from "@utils/forms/phoneFormat.js";
+import { authAPI, handleApiError } from "@services/apiClient.js";
+import { setUser } from "@utils/core/auth.js";
 import {
   createImageUpload,
   initImageUpload,
   getImageDataURL,
-} from "/src/components/ImageUpload.js";
+} from "@components/ImageUpload.js";
 
 export default {
   title: "Register | WOM",
@@ -323,7 +323,6 @@ export default {
 
     $("#registerForm").on("submit", (e) => this.handleRegister(e));
 
-    // Toggle password visibility
     $("#togglePassword").on("click", () =>
       this.togglePasswordVisibility("password", "togglePasswordIcon")
     );

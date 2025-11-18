@@ -72,13 +72,12 @@ export const ShowtimeActions = {
           <select class="showtime-venue w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 text-black">
             <option value="">Select venue</option>
             ${venues
-              .map(
-                (v) =>
-                  `<option value="${v.id}" ${
-                    showtime.venueId == v.id ? "selected" : ""
-                  }>${v.name}</option>`
-              )
-              .join("")}
+        .map(
+          (v) =>
+            `<option value="${v.id}" ${showtime.venueId == v.id ? "selected" : ""
+            }>${v.name}</option>`
+        )
+        .join("")}
           </select>
         </div>
       </div>

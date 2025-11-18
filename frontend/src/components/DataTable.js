@@ -1,7 +1,7 @@
 import { createTable, initTableFeatures } from "./Table.js";
-import { TableSortUtil } from "/src/utils/table/tableSortUtil.js";
-import { TableFilterUtil } from "/src/utils/table/tableFilterUtil.js";
-import { Avatar } from "./Avatar.js";
+import { TableSortUtil } from "@utils/table/tableSortUtil.js";
+import { TableFilterUtil } from "@utils/table/tableFilterUtil.js";
+import { Avatar } from "./common/Avatar.js";
 import dayjs from "dayjs";
 
 export class DataTable {
@@ -272,7 +272,7 @@ export class DataTable {
     if (hasFilters) {
       filters = this.options.columnFilters.map((filter) => {
         const currentValue = this.state.activeColumnFilters[filter.column] || "";
-        
+
         return `
           <div class="flex flex-col">
             <label class="text-xs font-medium text-gray-700 mb-1">${filter.label || filter.column}</label>
@@ -361,18 +361,18 @@ export class DataTable {
 
     const pagination = this.options.paginate
       ? {
-          currentPage: this.state.currentPage,
-          totalPages: Math.ceil(
-            this.state.filteredData.length / this.options.pageSize
-          ),
-          totalItems: this.state.filteredData.length,
-          pageSize: this.options.pageSize,
-        }
+        currentPage: this.state.currentPage,
+        totalPages: Math.ceil(
+          this.state.filteredData.length / this.options.pageSize
+        ),
+        totalItems: this.state.filteredData.length,
+        pageSize: this.options.pageSize,
+      }
       : null;
 
     const columnFiltersHtml = this.renderColumnFilters();
 
-    const visibleColumns = this.options.columns.filter(col => 
+    const visibleColumns = this.options.columns.filter(col =>
       this.state.visibleColumns.has(col.key)
     );
 
@@ -407,7 +407,7 @@ export class DataTable {
     $(document).on("change", `${tableSelector} .column-filter`, (e) => {
       const column = $(e.target).data("column");
       const value = $(e.target).val();
-      
+
       this.state.activeColumnFilters[column] = value;
       this.applyFilter(this.state.searchTerm);
       this.state.currentPage = 1;
@@ -438,13 +438,13 @@ export class DataTable {
     $(document).on("change", `${tableSelector} .column-visibility-toggle`, (e) => {
       const column = $(e.target).data("column");
       const isChecked = $(e.target).prop("checked");
-      
+
       if (isChecked) {
         this.state.visibleColumns.add(column);
       } else {
         this.state.visibleColumns.delete(column);
       }
-      
+
       this.render();
       this.attachEventListeners();
     });
@@ -483,9 +483,9 @@ export class DataTable {
       },
       onRowClick: this.options.onRowClick
         ? (rowIndex) => {
-            const row = this.state.displayData[rowIndex];
-            this.options.onRowClick(row);
-          }
+          const row = this.state.displayData[rowIndex];
+          this.options.onRowClick(row);
+        }
         : null,
     });
   }

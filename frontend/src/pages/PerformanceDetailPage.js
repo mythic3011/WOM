@@ -1,9 +1,9 @@
 import dayjs from "dayjs";
-import { performanceService } from "/src/services/performanceService.js";
-import { getStatusBadge } from "/src/utils/status.js";
-import { notify } from "/src/utils/ui/notification.js";
-import { ZonePricing } from "/src/utils/booking/zonePricing.js";
-import { getTierColors, getTierLabel } from "/src/config/tierConfig.js";
+import { performanceService } from "@services/performanceService.js";
+import { getStatusBadge } from "@utils/status.js";
+import { notify } from "@utils/ui/notification.js";
+import { ZonePricing } from "@utils/booking/zonePricing.js";
+import { getTierColors, getTierLabel } from "@config/tierConfig.js";
 
 export default {
   title: "Performance Details | WOM",
@@ -85,21 +85,19 @@ export default {
               ${this.renderInfoField("Composer", perf.composer)}
               ${this.renderInfoField("Conductor", perf.conductor)}
               ${this.renderInfoField("Orchestra", perf.orchestra)}
-              ${
-                perf.ticketingInfo?.duration
-                  ? this.renderInfoField(
-                      "Duration",
-                      perf.ticketingInfo.duration
-                    )
-                  : ""
-              }
+              ${perf.ticketingInfo?.duration
+        ? this.renderInfoField(
+          "Duration",
+          perf.ticketingInfo.duration
+        )
+        : ""
+      }
             </div>
 
             <div class="mb-6">
               <h3 class="text-sm font-semibold text-gray-500 uppercase mb-2">Description</h3>
-              <p class="text-gray-700 leading-relaxed">${
-                perf.description || "No description available"
-              }</p>
+              <p class="text-gray-700 leading-relaxed">${perf.description || "No description available"
+      }</p>
             </div>
 
             <div class="mb-6" id="showtimes">
@@ -163,8 +161,8 @@ export default {
     return `
       <div class="space-y-2">
         ${showtimes
-          .map((showtime) => this.renderShowtimeCard(showtime, performanceId))
-          .join("")}
+        .map((showtime) => this.renderShowtimeCard(showtime, performanceId))
+        .join("")}
       </div>
     `;
   },
@@ -176,12 +174,10 @@ export default {
     return `
       <div class="bg-white rounded-lg p-4 border-2 ${colors.border}">
         <div class="flex items-center justify-between mb-2">
-          <h4 class="font-semibold text-gray-900 text-sm">${
-            zone.sectionName
-          }</h4>
-          <span class="px-2 py-1 rounded text-xs font-bold ${colors.bg} ${
-            colors.text
-          }">
+          <h4 class="font-semibold text-gray-900 text-sm">${zone.sectionName
+      }</h4>
+          <span class="px-2 py-1 rounded text-xs font-bold ${colors.bg} ${colors.text
+      }">
             ${tierLabel.toUpperCase()}
           </span>
         </div>

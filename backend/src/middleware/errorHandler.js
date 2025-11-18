@@ -1,5 +1,5 @@
-import logger from "../config/logger.js";
-import { AppError } from "../utils/errors.js";
+import logger from "#config/logger.js";
+import { AppError } from "#utils/errors.js";
 
 export const errorHandler = (err, req, res, _next) => {
   logger.error("Error:", {

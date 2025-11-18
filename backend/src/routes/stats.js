@@ -1,6 +1,6 @@
 import express from "express";
-import * as statsController from "../controllers/statsController.js";
-import { isAuthenticated, isAdmin } from "../middleware/auth.js";
+import * as statsController from "#controllers/statsController.js";
+import { isAuthenticated, isAdmin } from "#middleware/auth.js";
 
 const router = express.Router();
 

@@ -1,4 +1,4 @@
-import { SeatStatusColors, getSeatStatusOpacity } from "/src/utils/colors.js";
+import { SeatStatusColors, getSeatStatusOpacity } from "@utils/colors.js";
 
 export class VirtualizationManager {
   constructor(options = {}) {

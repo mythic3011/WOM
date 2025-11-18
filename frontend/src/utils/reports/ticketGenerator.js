@@ -1,9 +1,9 @@
 import dayjs from "dayjs";
-import { statsService } from "/src/services/statsService.js";
+import { statsService } from "@services/statsService.js";
 import QRCode from "qrcode";
 import pdfMake from "pdfmake/build/pdfmake";
-import { COMPANY_INFO } from "/src/config/config.js";
-import { parseFullId, getDisplayLabel } from "/src/utils/seatIdHelper.js";
+import { COMPANY_INFO } from "@config/config.js";
+import { parseFullId, getDisplayLabel } from "@utils/seatIdHelper.js";
 
 const initPdfMake = async () => {
   try {
@@ -98,57 +98,57 @@ export const TicketGenerator = {
 
     const seatTableBody = booking.seatTicketTypes
       ? Object.entries(booking.seatTicketTypes).map(([seatId, ticket]) => {
-          const parsed = parseFullId(seatId);
-          const seatNumber = parsed
-            ? parsed.displayLabel
-            : getDisplayLabel(seatId);
-          const section = parsed
-            ? parsed.sectionSlug
-                .replace(/-/g, " ")
-                .replace(/\b\w/g, (l) => l.toUpperCase())
-            : "N/A";
-          const tier = ticket.tier || ticket.section || "Standard";
+        const parsed = parseFullId(seatId);
+        const seatNumber = parsed
+          ? parsed.displayLabel
+          : getDisplayLabel(seatId);
+        const section = parsed
+          ? parsed.sectionSlug
+            .replace(/-/g, " ")
+            .replace(/\b\w/g, (l) => l.toUpperCase())
+          : "N/A";
+        const tier = ticket.tier || ticket.section || "Standard";
 
-          return [
-            { text: seatNumber, style: "seatCell" },
-            { text: section, style: "ticketCell" },
-            { text: tier, style: "ticketCell" },
-            {
-              text: statsService.formatCurrency(ticket.price),
-              style: "priceCell",
-              alignment: "right",
-            },
-          ];
-        })
+        return [
+          { text: seatNumber, style: "seatCell" },
+          { text: section, style: "ticketCell" },
+          { text: tier, style: "ticketCell" },
+          {
+            text: statsService.formatCurrency(ticket.price),
+            style: "priceCell",
+            alignment: "right",
+          },
+        ];
+      })
       : booking.seats.map((seatId) => {
-          const seatIdStr =
-            typeof seatId === "string"
-              ? seatId
-              : seatId.fullId || seatId.seatId || "";
-          const parsed = parseFullId(seatIdStr);
-          const seatNumber = parsed
-            ? parsed.displayLabel
-            : getDisplayLabel(seatIdStr);
-          const section = parsed
-            ? parsed.sectionSlug
-                .replace(/-/g, " ")
-                .replace(/\b\w/g, (l) => l.toUpperCase())
-            : "N/A";
-          const tier = booking.ticketType || "Standard";
+        const seatIdStr =
+          typeof seatId === "string"
+            ? seatId
+            : seatId.fullId || seatId.seatId || "";
+        const parsed = parseFullId(seatIdStr);
+        const seatNumber = parsed
+          ? parsed.displayLabel
+          : getDisplayLabel(seatIdStr);
+        const section = parsed
+          ? parsed.sectionSlug
+            .replace(/-/g, " ")
+            .replace(/\b\w/g, (l) => l.toUpperCase())
+          : "N/A";
+        const tier = booking.ticketType || "Standard";
 
-          return [
-            { text: seatNumber, style: "seatCell" },
-            { text: section, style: "ticketCell" },
-            { text: tier, style: "ticketCell" },
-            {
-              text: statsService.formatCurrency(
-                booking.amount / booking.seats.length
-              ),
-              style: "priceCell",
-              alignment: "right",
-            },
-          ];
-        });
+        return [
+          { text: seatNumber, style: "seatCell" },
+          { text: section, style: "ticketCell" },
+          { text: tier, style: "ticketCell" },
+          {
+            text: statsService.formatCurrency(
+              booking.amount / booking.seats.length
+            ),
+            style: "priceCell",
+            alignment: "right",
+          },
+        ];
+      });
 
     return {
       pageSize: "A4",
@@ -252,8 +252,8 @@ export const TicketGenerator = {
                 {
                   text: performanceDate
                     ? dayjs(performanceDate).format(
-                        "dddd, MMMM D, YYYY [at] h:mm A"
-                      )
+                      "dddd, MMMM D, YYYY [at] h:mm A"
+                    )
                     : "TBA",
                   style: "tableValue",
                 },

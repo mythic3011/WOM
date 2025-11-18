@@ -1,4 +1,4 @@
-import { getDisplayLabel } from "/src/utils/seatIdHelper.js";
+import { getDisplayLabel } from "@utils/seatIdHelper.js";
 import dayjs from "dayjs";
 
 export const BookingSummaryCard = {
@@ -19,46 +19,43 @@ export const BookingSummaryCard = {
                 <i class="fas fa-map-marker-alt text-gray-400 mr-1"></i>
                 ${performanceData.venue?.name || performanceData.venue || "TBA"}
               </p>
-              ${
-                performanceData.date
-                  ? `
+              ${performanceData.date
+        ? `
                 <p class="text-sm text-gray-600 mt-1">
                   <i class="fas fa-calendar text-gray-400 mr-1"></i>
                   ${dayjs(performanceData.date).format("MMM D, YYYY")}
                 </p>
               `
-                  : ""
-              }
+        : ""
+      }
             </div>
           </div>
 
           <div class="border-t border-gray-200 pt-4">
             <p class="text-sm text-gray-600 mb-2">Selected Seats & Tickets</p>
-            ${
-              selectedSeats.length > 0
-                ? `
+            ${selectedSeats.length > 0
+        ? `
               <div class="space-y-1.5">
                 ${selectedSeats
-                  .map((seat) => {
-                    const ticket = seatTicketTypes[seat];
-                    const displayLabel = getDisplayLabel(seat);
-                    return `
+          .map((seat) => {
+            const ticket = seatTicketTypes[seat];
+            const displayLabel = getDisplayLabel(seat);
+            return `
                       <div class="flex items-center justify-between text-sm bg-gray-50 p-2 rounded">
                         <span class="font-mono font-medium text-indigo-700">${displayLabel}</span>
-                        ${
-                          ticket
-                            ? `<span class="text-gray-900">$${ticket.price}</span>`
-                            : `<span class="text-gray-400 text-xs">No ticket</span>`
-                        }
+                        ${ticket
+                ? `<span class="text-gray-900">$${ticket.price}</span>`
+                : `<span class="text-gray-400 text-xs">No ticket</span>`
+              }
                       </div>
                     `;
-                  })
-                  .join("")}
+          })
+          .join("")}
               </div>
               <p class="text-xs text-gray-500 mt-2">${selectedSeats.length} seat${selectedSeats.length > 1 ? "s" : ""}</p>
             `
-                : `<p class="text-sm text-gray-400 italic">No seats selected</p>`
-            }
+        : `<p class="text-sm text-gray-400 italic">No seats selected</p>`
+      }
           </div>
 
           <div class="border-t border-gray-200 pt-4">

@@ -1,4 +1,4 @@
-import { templateService } from "/src/services/templateService.js";
+import { templateService } from "@services/templateService.js";
 
 export async function createTemplateSelector(onSelect) {
   const templates = await templateService.getAll();
@@ -40,45 +40,40 @@ export async function createTemplateSelector(onSelect) {
       
       <div id="templateGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 max-h-96 overflow-y-auto">
         ${templates
-          .map(
-            (template) => `
-          <div class="template-card border border-gray-300 rounded-lg p-4 cursor-pointer hover:border-indigo-500 hover:shadow-lg transition-all" data-template-id="${
-            template.id
+      .map(
+        (template) => `
+          <div class="template-card border border-gray-300 rounded-lg p-4 cursor-pointer hover:border-indigo-500 hover:shadow-lg transition-all" data-template-id="${template.id
           }">
             <div class="flex items-start justify-between mb-2">
               <h4 class="font-semibold text-gray-900">${template.name}</h4>
-              ${
-                template.isDefault
-                  ? '<span class="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">Default</span>'
-                  : ""
-              }
+              ${template.isDefault
+            ? '<span class="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">Default</span>'
+            : ""
+          }
             </div>
             <p class="text-sm text-gray-600 mb-3">${template.description}</p>
             <div class="bg-gray-100 rounded p-2 mb-2">
               <div class="grid grid-cols-2 gap-2 text-xs">
-                <div><span class="text-gray-600">Rows:</span> <span class="font-semibold">${
-                  template.preview.rows
-                }</span></div>
-                <div><span class="text-gray-600">Seats/Row:</span> <span class="font-semibold">${
-                  template.preview.seatsPerRow
-                }</span></div>
-                <div class="col-span-2"><span class="text-gray-600">Total:</span> <span class="font-semibold">${
-                  template.preview.totalSeats
-                } seats</span></div>
+                <div><span class="text-gray-600">Rows:</span> <span class="font-semibold">${template.preview.rows
+          }</span></div>
+                <div><span class="text-gray-600">Seats/Row:</span> <span class="font-semibold">${template.preview.seatsPerRow
+          }</span></div>
+                <div class="col-span-2"><span class="text-gray-600">Total:</span> <span class="font-semibold">${template.preview.totalSeats
+          } seats</span></div>
               </div>
             </div>
             <div class="flex gap-1 flex-wrap">
               ${template.tags
-                .map(
-                  (tag) =>
-                    `<span class="px-2 py-1 bg-gray-200 text-gray-700 text-xs rounded-full">${tag}</span>`
-                )
-                .join("")}
+            .map(
+              (tag) =>
+                `<span class="px-2 py-1 bg-gray-200 text-gray-700 text-xs rounded-full">${tag}</span>`
+            )
+            .join("")}
             </div>
           </div>
         `
-          )
-          .join("")}
+      )
+      .join("")}
       </div>
     </div>
   `;
@@ -137,29 +132,24 @@ export function initTemplateSelector(onSelect) {
     const html = templates
       .map(
         (template) => `
-      <div class="template-card border border-gray-300 rounded-lg p-4 cursor-pointer hover:border-indigo-500 hover:shadow-lg transition-all" data-template-id="${
-        template.id
-      }">
+      <div class="template-card border border-gray-300 rounded-lg p-4 cursor-pointer hover:border-indigo-500 hover:shadow-lg transition-all" data-template-id="${template.id
+          }">
         <div class="flex items-start justify-between mb-2">
           <h4 class="font-semibold text-gray-900">${template.name}</h4>
-          ${
-            template.isDefault
-              ? '<span class="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">Default</span>'
-              : ""
+          ${template.isDefault
+            ? '<span class="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">Default</span>'
+            : ""
           }
         </div>
         <p class="text-sm text-gray-600 mb-3">${template.description}</p>
         <div class="bg-gray-100 rounded p-2 mb-2">
           <div class="grid grid-cols-2 gap-2 text-xs">
-            <div><span class="text-gray-600">Rows:</span> <span class="font-semibold">${
-              template.preview.rows
-            }</span></div>
-            <div><span class="text-gray-600">Seats/Row:</span> <span class="font-semibold">${
-              template.preview.seatsPerRow
-            }</span></div>
-            <div class="col-span-2"><span class="text-gray-600">Total:</span> <span class="font-semibold">${
-              template.preview.totalSeats
-            } seats</span></div>
+            <div><span class="text-gray-600">Rows:</span> <span class="font-semibold">${template.preview.rows
+          }</span></div>
+            <div><span class="text-gray-600">Seats/Row:</span> <span class="font-semibold">${template.preview.seatsPerRow
+          }</span></div>
+            <div class="col-span-2"><span class="text-gray-600">Total:</span> <span class="font-semibold">${template.preview.totalSeats
+          } seats</span></div>
           </div>
         </div>
         <div class="flex gap-1 flex-wrap">
@@ -177,7 +167,7 @@ export function initTemplateSelector(onSelect) {
 
     $("#templateGrid").html(
       html ||
-        '<p class="text-gray-500 text-center col-span-3">No templates found</p>'
+      '<p class="text-gray-500 text-center col-span-3">No templates found</p>'
     );
   }
 }

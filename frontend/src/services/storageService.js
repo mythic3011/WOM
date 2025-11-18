@@ -1,5 +1,5 @@
 import LZString from "lz-string";
-import { encrypt, decrypt } from "/src/utils/core/crypto.js";
+import { encrypt, decrypt } from "@utils/core/crypto.js";
 
 const STORAGE_KEYS = {
   USER: "user",
@@ -239,7 +239,7 @@ class StorageService {
           localStorage.removeItem(fullKey);
           cleaned++;
         }
-      } catch (error) {}
+      } catch (error) { }
     });
 
     if (cleaned > 0) {

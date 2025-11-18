@@ -1,6 +1,6 @@
-import { Performance, Venue, Booking } from "../models/index.js";
+import { Performance, Venue, Booking } from "#models/index.js";
 import { Op } from "sequelize";
-import { buildSeatMapFromVenueLayout, countSeats } from "../utils/seatMapBuilder.js";
+import { buildSeatMapFromVenueLayout, countSeats } from "#utils/seatMapBuilder.js";
 
 export const getAllPerformances = async (filters = {}) => {
   const where = {};

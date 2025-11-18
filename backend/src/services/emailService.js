@@ -1,6 +1,6 @@
 import nodemailer from "nodemailer";
-import logger from "../config/logger.js";
-import { formatDateTime } from "../utils/dateUtils.js";
+import logger from "#config/logger.js";
+import { formatDateTime } from "#utils/dateUtils.js";
 
 const createTransporter = () => {
   if (process.env.NODE_ENV === "production") {

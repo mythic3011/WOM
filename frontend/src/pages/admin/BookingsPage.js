@@ -1,26 +1,22 @@
-import { createEmptyState } from "/src/components/EmptyState.js";
-import { FormComponents } from "/src/components/FormComponents.js";
-import { createTable, initTableFeatures } from "/src/components/Table.js";
-import { ticketTypeService } from "/src/services/ticketTypeService.js";
-import { bookingService } from "/src/services/bookingService.js";
-import { performanceService } from "/src/services/performanceService.js";
-import { SwalColors } from "/src/utils/colors.js";
+import { createEmptyState } from "@components/EmptyState.js";
+import { FormComponents } from "@components/FormComponents.js";
+import { createTable, initTableFeatures } from "@components/Table.js";
+import { ticketTypeService, bookingService, performanceService, userAPI, handleApiError, bookingAPI } from "@services/index.js";
+import { SwalColors } from "@utils/colors.js";
 import dayjs from "dayjs";
 import Swal from "sweetalert2";
-import { notify } from "/src/utils/ui/notification.js";
+import { notify } from "@utils/ui/notification.js";
 import {
   getStatusBadge,
   getStatusConfig,
   STATUS_CONFIGS,
-} from "/src/utils/status.js";
-import { userAPI, handleApiError } from "/src/services/apiClient.js";
-import { formatCurrency } from "/src/utils/utils.js";
-import { getTierBadge } from "/src/config/tierConfig.js";
-import { getDisplayLabel, parseFullId } from "/src/utils/seatIdHelper.js";
-import { SeatMap } from "/src/components/SeatMap.js";
-import { initSeatMapPanzoom } from "/src/utils/panzoomSeatMap.js";
-import { attachSeatTooltipListeners } from "/src/utils/booking/seatTooltip.js";
-import { bookingAPI } from "../../services/apiClient";
+} from "@utils/status.js";
+import { formatCurrency } from "@utils/utils.js";
+import { getTierBadge } from "@config/tierConfig.js";
+import { getDisplayLabel, parseFullId } from "@utils/seatIdHelper.js";
+import { SeatMap } from "@components/SeatMap.js";
+import { initSeatMapPanzoom } from "@utils/panzoomSeatMap.js";
+import { attachSeatTooltipListeners } from "@utils/booking/seatTooltip.js";
 const SEAT_GRID_CONFIG = {
   rows: ["A", "B", "C", "D", "E", "F", "G", "H"],
   seatsPerRow: 15,
@@ -45,18 +41,18 @@ export default {
     return `
       <main class="container mx-auto px-4 py-8 max-w-7xl">
         ${FormComponents.pageHeader({
-          title: "Manage Bookings",
-          subtitle: "View and manage all customer bookings",
-          icon: "fa-clipboard-list",
-          actions: [
-            FormComponents.button({
-              id: "exportBookings",
-              text: "Export",
-              icon: "fa-download",
-              color: "green",
-            }),
-          ],
-        })}
+      title: "Manage Bookings",
+      subtitle: "View and manage all customer bookings",
+      icon: "fa-clipboard-list",
+      actions: [
+        FormComponents.button({
+          id: "exportBookings",
+          text: "Export",
+          icon: "fa-download",
+          color: "green",
+        }),
+      ],
+    })}
 
         ${this.renderStats()}
         ${this.renderFilters()}
@@ -165,11 +161,11 @@ export default {
         <select id="statusFilter" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
           <option value="all">All Status</option>
           ${Object.entries(STATUS_CONFIGS.booking)
-            .map(
-              ([key, config]) =>
-                `<option value="${key}">${config.text}</option>`
-            )
-            .join("")}
+        .map(
+          ([key, config]) =>
+            `<option value="${key}">${config.text}</option>`
+        )
+        .join("")}
         </select>
       </div>
     `;
@@ -184,8 +180,8 @@ export default {
         <select id="performanceFilter" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
           <option value="all">All Performances</option>
           ${this.performances
-            .map((p) => `<option value="${p.id}">${p.title}</option>`)
-            .join("")}
+        .map((p) => `<option value="${p.id}">${p.title}</option>`)
+        .join("")}
         </select>
       </div>
     `;
@@ -469,8 +465,7 @@ export default {
         key: "id",
         nowrap: true,
         render: (booking) =>
-          `<span class="font-mono text-sm font-semibold text-indigo-700">${
-            booking.bookingReference || booking.id
+          `<span class="font-mono text-sm font-semibold text-indigo-700">${booking.bookingReference || booking.id
           }</span>`,
       },
       {
@@ -535,8 +530,8 @@ export default {
         ${seats.length} seat${seats.length > 1 ? "s" : ""}
       </span>
       <div class="text-xs text-gray-500 mt-1 font-mono">${seats.join(
-        ", "
-      )}</div>
+      ", "
+    )}</div>
     `;
   },
 
@@ -550,8 +545,8 @@ export default {
       : "";
     return `
       <span class="text-sm font-bold text-gray-900">${formatCurrency(
-        booking.amount
-      )}</span>
+      booking.amount
+    )}</span>
       ${ticketTypeInfo}
     `;
   },
@@ -743,8 +738,8 @@ export default {
   renderSeatDetailRow(seatData) {
     const tierBadge = seatData.tier
       ? `<span class="px-2 py-0.5 rounded-full text-xs font-semibold ${getTierBadge(
-          seatData.tier
-        )}">${seatData.tier}</span>`
+        seatData.tier
+      )}">${seatData.tier}</span>`
       : "-";
 
     return `
@@ -794,9 +789,9 @@ export default {
         ${this.renderPerformanceInfoSection(performanceData)}
         ${this.renderCustomerInfoSection(customer)}
         ${this.renderSeatsDetailsSection(
-          seats,
-          booking.amount || booking.totalAmount
-        )}
+      seats,
+      booking.amount || booking.totalAmount
+    )}
       </div>
     `;
   },
@@ -808,17 +803,15 @@ export default {
           <i class="fas fa-info-circle text-gray-600 mr-2"></i>Booking Information
         </h3>
         <div class="space-y-2 text-sm">
-          <p><span class="font-medium">Booking ID:</span> <span class="font-mono font-semibold text-indigo-700">${
-            booking.bookingReference || booking.id
-          }</span></p>
+          <p><span class="font-medium">Booking ID:</span> <span class="font-mono font-semibold text-indigo-700">${booking.bookingReference || booking.id
+      }</span></p>
           <p><span class="font-medium">Booking Date:</span> ${dayjs(
-            booking.bookingDate || booking.date
-          ).format("MMMM D, YYYY h:mm A")}</p>
+        booking.bookingDate || booking.date
+      ).format("MMMM D, YYYY h:mm A")}</p>
           <p>
             <span class="font-medium">Status:</span>
-            <span class="px-3 py-1 rounded-full text-xs font-semibold inline-flex items-center gap-1 ${
-              statusConfig.badgeClass
-            }">
+            <span class="px-3 py-1 rounded-full text-xs font-semibold inline-flex items-center gap-1 ${statusConfig.badgeClass
+      }">
               <i class="fas ${statusConfig.icon}"></i>
               ${statusConfig.text}
             </span>
@@ -899,8 +892,8 @@ export default {
                 <td colspan="5" class="py-3 px-3 text-sm font-semibold text-gray-900 text-right">Total Amount:</td>
                 <td class="py-3 px-3 text-right">
                   <span class="text-lg font-bold text-green-700">${formatCurrency(
-                    totalAmount
-                  )}</span>
+      totalAmount
+    )}</span>
                 </td>
               </tr>
             </tfoot>
@@ -1021,23 +1014,23 @@ export default {
     return `
       <div class="text-left space-y-4">
         ${this.renderEditField(
-          "Booking ID",
-          "edit-booking-id",
-          "text",
-          booking.id,
-          true
-        )}
+      "Booking ID",
+      "edit-booking-id",
+      "text",
+      booking.id,
+      true
+    )}
         ${this.renderEditPerformanceSelect(booking.performanceId)}
         ${this.renderEditCustomerSelect(customerEmail)}
         ${this.renderEditSeatsField(seats)}
         ${this.renderEditField(
-          "Amount (HKD)",
-          "edit-amount",
-          "number",
-          booking.amount,
-          false,
-          { min: "0", step: "1" }
-        )}
+      "Amount (HKD)",
+      "edit-amount",
+      "number",
+      booking.amount,
+      false,
+      { min: "0", step: "1" }
+    )}
         ${this.renderEditTicketTypeSelect(booking.ticketType, ticketTypes)}
         ${this.renderEditStatusSelect(booking.status)}
       </div>
@@ -1071,8 +1064,7 @@ export default {
     const options = this.performances
       .map(
         (p) =>
-          `<option value="${p.id}" ${
-            String(p.id) === String(selectedId) ? "selected" : ""
+          `<option value="${p.id}" ${String(p.id) === String(selectedId) ? "selected" : ""
           }>${p.title}</option>`
       )
       .join("");
@@ -1091,8 +1083,7 @@ export default {
     const options = this.users
       .map(
         (u) =>
-          `<option value="${u.id}" ${
-            u.email === selectedEmail ? "selected" : ""
+          `<option value="${u.id}" ${u.email === selectedEmail ? "selected" : ""
           }>${u.name} (${u.email})</option>`
       )
       .join("");
@@ -1114,8 +1105,8 @@ export default {
         <label class="block text-sm font-medium text-gray-700 mb-1">Selected Seats</label>
         <div class="flex gap-2">
           <input id="edit-seats" type="text" value="${labels.join(
-            ", "
-          )}" class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="A1, A2, A3" readonly>
+      ", "
+    )}" class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="A1, A2, A3" readonly>
           <button id="select-seats-btn" type="button" class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 focus:ring-2 focus:ring-indigo-500 transition-colors">
             <i class="fas fa-chair mr-2"></i>Select Seats
           </button>
@@ -1131,13 +1122,12 @@ export default {
     const options =
       ticketTypes.length > 0
         ? ticketTypes
-            .map(
-              (type) =>
-                `<option value="${type.name}" ${
-                  type.name === selectedName ? "selected" : ""
-                }>${type.name}${type.isCustom ? " (Custom)" : ""}</option>`
-            )
-            .join("")
+          .map(
+            (type) =>
+              `<option value="${type.name}" ${type.name === selectedName ? "selected" : ""
+              }>${type.name}${type.isCustom ? " (Custom)" : ""}</option>`
+          )
+          .join("")
         : `<option value="${selectedName}" selected>${selectedName}</option>`;
 
     return `
@@ -1155,8 +1145,7 @@ export default {
     const options = statuses
       .map(
         (status) =>
-          `<option value="${status}" ${
-            status === selectedStatus ? "selected" : ""
+          `<option value="${status}" ${status === selectedStatus ? "selected" : ""
           }>${getStatusConfig(status, "booking").text}</option>`
       )
       .join("");
@@ -1249,29 +1238,27 @@ export default {
     return `
       <div class="text-left space-y-4">
         <div class="bg-gray-50 rounded-lg p-4 mb-4">
-          <p class="text-sm"><span class="font-medium">Booking ID:</span> ${
-            booking.id
-          }</p>
+          <p class="text-sm"><span class="font-medium">Booking ID:</span> ${booking.id
+      }</p>
           <p class="text-sm"><span class="font-medium">Original Amount:</span> ${formatCurrency(
-            booking.amount
-          )}</p>
+        booking.amount
+      )}</p>
         </div>
 
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-1">Refund Type</label>
           <select id="refund-type" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500">
             <option value="full">Full Refund (${formatCurrency(
-              booking.amount
-            )})</option>
+        booking.amount
+      )})</option>
             <option value="partial">Partial Refund</option>
           </select>
         </div>
 
         <div id="partial-refund-container" style="display: none;">
           <label class="block text-sm font-medium text-gray-700 mb-1">Refund Amount (HKD)</label>
-          <input id="refund-amount" type="number" max="${
-            booking.amount
-          }" min="1" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500" placeholder="Enter amount">
+          <input id="refund-amount" type="number" max="${booking.amount
+      }" min="1" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500" placeholder="Enter amount">
         </div>
 
         <div>
@@ -1352,14 +1339,12 @@ export default {
           <p class="text-sm text-green-800 mb-2"><i class="fas fa-check-circle mr-2"></i>Refund successfully processed</p>
           <hr class="my-2 border-green-200">
           <p class="text-sm"><span class="font-medium">Amount:</span> ${formatCurrency(
-            refundData.amount
-          )}</p>
-          <p class="text-sm"><span class="font-medium">Type:</span> ${
-            refundData.type === "full" ? "Full Refund" : "Partial Refund"
-          }</p>
-          <p class="text-sm"><span class="font-medium">Reason:</span> ${
-            refundData.reason
-          }</p>
+      refundData.amount
+    )}</p>
+          <p class="text-sm"><span class="font-medium">Type:</span> ${refundData.type === "full" ? "Full Refund" : "Partial Refund"
+      }</p>
+          <p class="text-sm"><span class="font-medium">Reason:</span> ${refundData.reason
+      }</p>
         </div>
       </div>
     `;
@@ -1372,7 +1357,7 @@ export default {
       if (!detailedPerformance?.venue?.layout) {
         detailedPerformance = await performanceService.getById(performance.id);
       }
-    } catch (e) {}
+    } catch (e) { }
 
     const bookedSeatEntries = this.bookings
       .filter(
@@ -1406,12 +1391,10 @@ export default {
           ${this.renderSeatSelectionHeader(detailedPerformance)}
           <div class="mb-4 p-3 bg-indigo-50 rounded-lg">
             <p class="text-sm font-medium text-indigo-900">
-              Selected Seats (<span id="selected-count">${
-                selectedSeats.length
-              }</span>):
-              <span id="selected-seats-display" class="font-normal">${
-                selectedSeats.join(", ") || "None"
-              }</span>
+              Selected Seats (<span id="selected-count">${selectedSeats.length
+        }</span>):
+              <span id="selected-seats-display" class="font-normal">${selectedSeats.join(", ") || "None"
+        }</span>
             </p>
           </div>
           <div class="bg-white border border-gray-200 rounded-lg p-4 max-h-[70vh] overflow-y-auto">
@@ -1428,7 +1411,7 @@ export default {
         if (this._pz && this._pz.dispose) {
           try {
             this._pz.dispose();
-          } catch (e) {}
+          } catch (e) { }
         }
         setTimeout(() => {
           this._pz = initSeatMapPanzoom();
@@ -1477,7 +1460,7 @@ export default {
         $(document).off(".adminSeatSelect");
         try {
           if (this._pz && this._pz.dispose) this._pz.dispose();
-        } catch (e) {}
+        } catch (e) { }
       },
     });
 
@@ -1529,12 +1512,10 @@ export default {
   renderSeatSelectionHeader(performance) {
     return `
       <div class="bg-gray-50 rounded-lg p-4 mb-4">
-        <p class="text-sm mb-2"><span class="font-medium">Performance:</span> ${
-          performance?.title || "Unknown"
-        }</p>
-        <p class="text-sm"><span class="font-medium">Venue:</span> ${
-          performance?.venue || "N/A"
-        }</p>
+        <p class="text-sm mb-2"><span class="font-medium">Performance:</span> ${performance?.title || "Unknown"
+      }</p>
+        <p class="text-sm"><span class="font-medium">Venue:</span> ${performance?.venue || "N/A"
+      }</p>
       </div>
     `;
   },
@@ -1569,12 +1550,10 @@ export default {
     return `
       <div class="mb-4 p-3 bg-indigo-50 rounded-lg">
         <p class="text-sm font-medium text-indigo-900">
-          Selected Seats (<span id="selected-count">${
-            selectedSeats.length
-          }</span>):
-          <span id="selected-seats-display" class="font-normal">${
-            selectedSeats.join(", ") || "None"
-          }</span>
+          Selected Seats (<span id="selected-count">${selectedSeats.length
+      }</span>):
+          <span id="selected-seats-display" class="font-normal">${selectedSeats.join(", ") || "None"
+      }</span>
         </p>
       </div>
     `;
@@ -1880,15 +1859,12 @@ export default {
           <div class="bg-green-50 rounded-lg p-4">
             <p class="text-sm text-green-800 mb-2"><i class="fas fa-check-circle mr-2"></i>Email sent successfully</p>
             <hr class="my-2 border-green-200">
-            <p class="text-sm"><span class="font-medium">To:</span> ${
-              customer.email
-            }</p>
-            <p class="text-sm"><span class="font-medium">Template:</span> ${
-              templateTitles[emailData.template]
-            }</p>
-            <p class="text-sm"><span class="font-medium">Booking ID:</span> ${
-              booking.id
-            }</p>
+            <p class="text-sm"><span class="font-medium">To:</span> ${customer.email
+        }</p>
+            <p class="text-sm"><span class="font-medium">Template:</span> ${templateTitles[emailData.template]
+        }</p>
+            <p class="text-sm"><span class="font-medium">Booking ID:</span> ${booking.id
+        }</p>
           </div>
         </div>
       `,

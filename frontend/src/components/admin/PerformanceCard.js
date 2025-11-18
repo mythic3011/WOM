@@ -1,5 +1,5 @@
-import { performanceUtils } from "/src/utils/performanceUtils.js";
-import { getStatusBadge } from "/src/utils/status.js";
+import { performanceUtils } from "@utils/performanceUtils.js";
+import { getStatusBadge } from "@utils/status.js";
 import dayjs from "dayjs";
 
 export const PerformanceCard = {
@@ -20,17 +20,16 @@ export const PerformanceCard = {
     return `
       <div class="bg-white rounded-lg shadow-md border border-gray-200 overflow-hidden hover:shadow-lg transition-shadow">
         <div class="relative h-48 bg-gradient-to-br from-indigo-500 to-purple-600 overflow-hidden">
-          ${
-            performance.image
-              ? `
+          ${performance.image
+        ? `
             <img src="${performance.image}" alt="${performance.title}" class="w-full h-full object-cover">
           `
-              : `
+        : `
             <div class="absolute inset-0 flex items-center justify-center">
               <i class="fas fa-music text-white text-6xl opacity-30"></i>
             </div>
           `
-          }
+      }
           <div class="absolute top-3 right-3">
             ${getStatusBadge(status, "performance")}
           </div>

@@ -1,4 +1,4 @@
-import { TicketType } from "../models/index.js";
+import { TicketType } from "#models/index.js";
 
 export const getAllTicketTypes = async () => {
   const ticketTypes = await TicketType.findAll({

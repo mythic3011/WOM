@@ -1,14 +1,12 @@
-import { notify } from "/src/utils/ui/notification.js";
-import { getCurrentUser, logout } from "/src/utils/core/auth.js";
-import { phoneUtils } from "/src/utils/forms/phoneFormat.js";
-import { ResponseExtractor } from "/src/services/responseExtractor.js";
-import { Avatar } from "/src/components/Avatar.js";
-import { FormComponents } from "/src/components/FormComponents.js";
-import { SwalColors } from "/src/utils/colors.js";
-import { userAPI, handleApiError } from "/src/services/apiClient.js";
+import { notify } from "@utils/ui/notification.js";
+import { getCurrentUser, logout } from "@utils/core/auth.js";
+import { phoneUtils } from "@utils/forms/phoneFormat.js";
+import { ResponseExtractor, userAPI, handleApiError, userService } from "@services/index.js";
+import { Avatar } from "@components/common/Avatar.js";
+import { FormComponents } from "@components/FormComponents.js";
+import { SwalColors } from "@utils/colors.js";
 import Swal from "sweetalert2";
 import dayjs from "dayjs";
-import { userService } from "../../services/userService";
 
 export default {
   title: "Profile | User",
@@ -31,10 +29,10 @@ export default {
       <main class="container mx-auto px-4 py-8">
         <div class="max-w-4xl mx-auto">
           ${FormComponents.pageHeader({
-            title: "Profile Settings",
-            subtitle: "Manage your personal information and account settings",
-            icon: "fa-user-circle",
-          })}
+      title: "Profile Settings",
+      subtitle: "Manage your personal information and account settings",
+      icon: "fa-user-circle",
+    })}
 
           <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div class="lg:col-span-1">
@@ -42,82 +40,75 @@ export default {
                 <div class="text-center">
                   <div class="flex justify-center mb-4">
                     ${Avatar.render({
-                      src: fullUserData?.profileImage || user?.profileImage,
-                      name: user?.name || "User",
-                      size: "2xl",
-                      editable: true,
-                      userId: user?.id,
-                    })}
+      src: fullUserData?.profileImage || user?.profileImage,
+      name: user?.name || "User",
+      size: "2xl",
+      editable: true,
+      userId: user?.id,
+    })}
                   </div>
-                  <h3 class="mt-4 text-lg font-bold text-gray-900">${
-                    user?.name || "User"
-                  }</h3>
+                  <h3 class="mt-4 text-lg font-bold text-gray-900">${user?.name || "User"
+      }</h3>
                   <p class="text-sm text-gray-500">${user?.email || ""}</p>
                   <div class="mt-4 pt-4 border-t border-gray-200">
                     ${FormComponents.badge({
-                      text: user?.role === "admin" ? "Administrator" : "User",
-                      color: user?.role === "admin" ? "purple" : "blue",
-                      icon:
-                        user?.role === "admin" ? "fa-shield-alt" : "fa-user",
-                    })}
+        text: user?.role === "admin" ? "Administrator" : "User",
+        color: user?.role === "admin" ? "purple" : "blue",
+        icon:
+          user?.role === "admin" ? "fa-shield-alt" : "fa-user",
+      })}
                   </div>
                   <div class="mt-4 space-y-2 text-sm text-gray-600">
                     <div class="flex items-center justify-between">
                       <span class="text-gray-500">User ID:</span>
-                      <span class="font-mono font-semibold">#${
-                        fullUserData?.userId || user?.userId || ""
-                      }</span>
+                      <span class="font-mono font-semibold">#${fullUserData?.userId || user?.userId || ""
+      }</span>
                     </div>
                     <div class="flex items-center justify-between">
                       <span class="text-gray-500">Username:</span>
-                      <span class="font-mono font-medium">${
-                        fullUserData?.username || user?.username || ""
-                      }</span>
+                      <span class="font-mono font-medium">${fullUserData?.username || user?.username || ""
+      }</span>
                     </div>
-                    ${
-                      fullUserData?.gender
-                        ? `
+                    ${fullUserData?.gender
+        ? `
                       <div class="flex items-center justify-between">
                         <span class="text-gray-500">Gender:</span>
                         <span class="font-medium capitalize">${fullUserData.gender.replace(
-                          /_/g,
-                          " "
-                        )}</span>
+          /_/g,
+          " "
+        )}</span>
                       </div>
                     `
-                        : ""
-                    }
-                    ${
-                      fullUserData?.birthday
-                        ? `
+        : ""
+      }
+                    ${fullUserData?.birthday
+        ? `
                       <div class="flex items-center justify-between">
                         <span class="text-gray-500">Birthday:</span>
                         <span class="font-medium">${dayjs(
-                          fullUserData.birthday
-                        ).format("MMM D, YYYY")}</span>
+          fullUserData.birthday
+        ).format("MMM D, YYYY")}</span>
                       </div>
                     `
-                        : ""
-                    }
-                    ${
-                      fullUserData?.createdAt
-                        ? `
+        : ""
+      }
+                    ${fullUserData?.createdAt
+        ? `
                       <div class="flex items-center justify-between">
                         <span class="text-gray-500">Member since:</span>
                         <span class="font-medium">${dayjs(
-                          fullUserData.createdAt
-                        ).format("MMM YYYY")}</span>
+          fullUserData.createdAt
+        ).format("MMM YYYY")}</span>
                       </div>
                     `
-                        : ""
-                    }
+        : ""
+      }
                   </div>
 
                   <div class="mt-6 pt-4 border-t border-gray-200">
                     <div class="space-y-2">
-                      ${
-                        user?.role === "admin"
-                          ? `
+                      ${user?.role === "admin"
+        ? `
                         <a href="/admin/dashboard" data-link class="block w-full px-4 py-2 bg-indigo-100 text-indigo-700 rounded-lg hover:bg-indigo-200 transition-colors text-sm font-medium">
                           <i class="fas fa-tachometer-alt mr-2"></i>
                           Admin Dashboard
@@ -127,7 +118,7 @@ export default {
                           System Settings
                         </a>
                       `
-                          : `
+        : `
                         <a href="/user/dashboard" data-link class="block w-full px-4 py-2 bg-indigo-100 text-indigo-700 rounded-lg hover:bg-indigo-200 transition-colors text-sm font-medium">
                           <i class="fas fa-home mr-2"></i>
                           My Dashboard
@@ -141,7 +132,7 @@ export default {
                           Browse Shows
                         </a>
                       `
-                      }
+      }
                     </div>
                   </div>
                 </div>
@@ -161,15 +152,14 @@ export default {
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div>
                         ${FormComponents.input({
-                          id: "displayUserId",
-                          type: "text",
-                          label: "User ID",
-                          value: `#${
-                            fullUserData?.userId || user?.userId || ""
-                          }`,
-                          disabled: true,
-                          readonly: true,
-                        })}
+        id: "displayUserId",
+        type: "text",
+        label: "User ID",
+        value: `#${fullUserData?.userId || user?.userId || ""
+          }`,
+        disabled: true,
+        readonly: true,
+      })}
                         <p class="mt-1 text-xs text-gray-500">
                           <i class="fas fa-info-circle text-gray-400"></i>
                           Sequential user identifier
@@ -178,13 +168,13 @@ export default {
 
                       <div>
                         ${FormComponents.input({
-                          id: "username",
-                          type: "text",
-                          label: "Username",
-                          value: fullUserData?.username || user?.username || "",
-                          disabled: true,
-                          readonly: true,
-                        })}
+        id: "username",
+        type: "text",
+        label: "Username",
+        value: fullUserData?.username || user?.username || "",
+        disabled: true,
+        readonly: true,
+      })}
                         <p class="mt-1 text-xs text-gray-500">
                           <i class="fas fa-info-circle text-gray-400"></i>
                           Username cannot be changed
@@ -195,85 +185,85 @@ export default {
                     <div class="grid grid-cols-4 gap-4">
                       <div class="col-span-1">
                         ${FormComponents.select({
-                          id: "title",
-                          label: "Title",
-                          value: fullUserData?.title || "",
-                          options: [
-                            { value: "", label: "--" },
-                            { value: "Mr.", label: "Mr." },
-                            { value: "Mrs.", label: "Mrs." },
-                            { value: "Ms.", label: "Ms." },
-                            { value: "Miss", label: "Miss" },
-                            { value: "Dr.", label: "Dr." },
-                            { value: "Prof.", label: "Prof." },
-                          ],
-                        })}
+        id: "title",
+        label: "Title",
+        value: fullUserData?.title || "",
+        options: [
+          { value: "", label: "--" },
+          { value: "Mr.", label: "Mr." },
+          { value: "Mrs.", label: "Mrs." },
+          { value: "Ms.", label: "Ms." },
+          { value: "Miss", label: "Miss" },
+          { value: "Dr.", label: "Dr." },
+          { value: "Prof.", label: "Prof." },
+        ],
+      })}
                       </div>
                       <div class="col-span-3">
                         ${FormComponents.input({
-                          id: "name",
-                          type: "text",
-                          label: "Full Name",
-                          value: fullUserData?.name || user?.name || "",
-                          placeholder: "Enter your full name",
-                          required: true,
-                        })}
+        id: "name",
+        type: "text",
+        label: "Full Name",
+        value: fullUserData?.name || user?.name || "",
+        placeholder: "Enter your full name",
+        required: true,
+      })}
                       </div>
                     </div>
 
                     <div>
                       ${FormComponents.input({
-                        id: "email",
-                        type: "email",
-                        label: "Email Address",
-                        value: fullUserData?.email || user?.email || "",
-                        placeholder: "your.email@example.com",
-                        required: true,
-                      })}
+        id: "email",
+        type: "email",
+        label: "Email Address",
+        value: fullUserData?.email || user?.email || "",
+        placeholder: "your.email@example.com",
+        required: true,
+      })}
                     </div>
 
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div>
                         ${FormComponents.select({
-                          id: "gender",
-                          label: "Gender",
-                          value: fullUserData?.gender || "",
-                          options: [
-                            { value: "", label: "Select gender" },
-                            { value: "male", label: "Male" },
-                            { value: "female", label: "Female" },
-                            { value: "other", label: "Other" },
-                            {
-                              value: "prefer_not_to_say",
-                              label: "Prefer not to say",
-                            },
-                          ],
-                          required: true,
-                        })}
+        id: "gender",
+        label: "Gender",
+        value: fullUserData?.gender || "",
+        options: [
+          { value: "", label: "Select gender" },
+          { value: "male", label: "Male" },
+          { value: "female", label: "Female" },
+          { value: "other", label: "Other" },
+          {
+            value: "prefer_not_to_say",
+            label: "Prefer not to say",
+          },
+        ],
+        required: true,
+      })}
                       </div>
                       <div>
                         ${FormComponents.input({
-                          id: "birthday",
-                          type: "date",
-                          label: "Birthday",
-                          value: fullUserData?.birthday
-                            ? dayjs(fullUserData.birthday).format("YYYY-MM-DD")
-                            : "",
-                          required: true,
-                        })}
+        id: "birthday",
+        type: "date",
+        label: "Birthday",
+        value: fullUserData?.birthday
+          ? dayjs(fullUserData.birthday).format("YYYY-MM-DD")
+          : "",
+        required: true,
+      })}
                       </div>
                     </div>
 
                     <div>
                       ${FormComponents.input({
-                        id: "phone",
-                        type: "tel",
-                        label: "Phone Number (Hong Kong)",
-                        value: fullUserData?.phone
-                          ? phoneUtils.formatHKPhone(fullUserData.phone)
-                          : "",
-                        placeholder: "e.g., 9123 4567",
-                      })}
+        id: "phone",
+        type: "tel",
+        label: "Phone Number (Hong Kong)",
+        value: fullUserData?.phone
+          ? phoneUtils.formatHKPhone(fullUserData.phone)
+          : "",
+        placeholder: "e.g., 9123 4567",
+      })}
                       <p class="mt-1 text-xs text-gray-500">
                         <i class="fas fa-phone text-gray-400"></i>
                         8 digits, starts with 2-9 (optional)
@@ -291,28 +281,28 @@ export default {
                   </div>
                   <div class="p-6 space-y-4">
                     ${FormComponents.infoBox({
-                      title: "Password Security",
-                      message:
-                        "Leave the fields blank if you don't want to change your password",
-                      type: "info",
-                    })}
+        title: "Password Security",
+        message:
+          "Leave the fields blank if you don't want to change your password",
+        type: "info",
+      })}
 
                     <div>
                       ${FormComponents.input({
-                        id: "currentPassword",
-                        type: "password",
-                        label: "Current Password",
-                        placeholder: "Enter your current password",
-                      })}
+        id: "currentPassword",
+        type: "password",
+        label: "Current Password",
+        placeholder: "Enter your current password",
+      })}
                     </div>
 
                     <div>
                       ${FormComponents.input({
-                        id: "newPassword",
-                        type: "password",
-                        label: "New Password",
-                        placeholder: "Enter new password",
-                      })}
+        id: "newPassword",
+        type: "password",
+        label: "New Password",
+        placeholder: "Enter new password",
+      })}
                       <p class="mt-2 text-xs text-gray-500">
                         <i class="fas fa-shield-alt text-indigo-500"></i>
                         At least 8 characters with uppercase, lowercase, and numbers
@@ -321,32 +311,32 @@ export default {
 
                     <div>
                       ${FormComponents.input({
-                        id: "confirmPassword",
-                        type: "password",
-                        label: "Confirm New Password",
-                        placeholder: "Re-enter new password",
-                      })}
+        id: "confirmPassword",
+        type: "password",
+        label: "Confirm New Password",
+        placeholder: "Re-enter new password",
+      })}
                     </div>
                   </div>
                 </div>
 
                 <div class="flex flex-col sm:flex-row gap-3 mt-6">
                   ${FormComponents.button({
-                    type: "submit",
-                    text: "Save Changes",
-                    icon: "fa-save",
-                    color: "indigo",
-                    size: "lg",
-                    className: "flex-1",
-                  })}
+        type: "submit",
+        text: "Save Changes",
+        icon: "fa-save",
+        color: "indigo",
+        size: "lg",
+        className: "flex-1",
+      })}
                   ${FormComponents.button({
-                    id: "cancelBtn",
-                    type: "button",
-                    text: "Cancel",
-                    icon: "fa-times",
-                    color: "gray",
-                    size: "lg",
-                  })}
+        id: "cancelBtn",
+        type: "button",
+        text: "Cancel",
+        icon: "fa-times",
+        color: "gray",
+        size: "lg",
+      })}
                 </div>
               </form>
 
@@ -359,11 +349,11 @@ export default {
                 </div>
                 <div class="p-6">
                   ${FormComponents.infoBox({
-                    title: "Delete Account",
-                    message:
-                      "Once you delete your account, there is no going back. Please be certain.",
-                    type: "error",
-                  })}
+        title: "Delete Account",
+        message:
+          "Once you delete your account, there is no going back. Please be certain.",
+        type: "error",
+      })}
 
                   <div class="mt-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                     <div>

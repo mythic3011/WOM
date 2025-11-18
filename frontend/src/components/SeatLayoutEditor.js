@@ -1,7 +1,7 @@
 import {
   renderPreview,
   summarizeCapacity,
-} from "/src/utils/seatMapRenderer.js";
+} from "@utils/seatMapRenderer.js";
 
 export const SeatLayoutEditor = {
   render(layout = { sections: [] }) {
@@ -9,14 +9,14 @@ export const SeatLayoutEditor = {
       layout.sections && layout.sections.length
         ? layout.sections
         : [
-            {
-              name: "Section A",
-              rows: 5,
-              seatsPerRow: 8,
-              tier: "standard",
-              startRow: "A",
-            },
-          ];
+          {
+            name: "Section A",
+            rows: 5,
+            seatsPerRow: 8,
+            tier: "standard",
+            startRow: "A",
+          },
+        ];
     const cfg = { sections };
     const preview = renderPreview(cfg);
     const summary = summarizeCapacity(cfg);
@@ -55,40 +55,35 @@ export const SeatLayoutEditor = {
         <div class="grid grid-cols-6 gap-2 items-end">
           <div class="col-span-2">
             <label class="block text-xs text-gray-600">Name</label>
-            <input type="text" class="w-full border px-2 py-1 rounded text-sm section-name" value="${
-              s.name || "Section"
-            }">
+            <input type="text" class="w-full border px-2 py-1 rounded text-sm section-name" value="${s.name || "Section"
+      }">
           </div>
           <div>
             <label class="block text-xs text-gray-600">Rows</label>
-            <input type="number" min="1" max="200" class="w-full border px-2 py-1 rounded text-sm section-rows" value="${
-              s.rows || 1
-            }">
+            <input type="number" min="1" max="200" class="w-full border px-2 py-1 rounded text-sm section-rows" value="${s.rows || 1
+      }">
           </div>
           <div>
             <label class="block text-xs text-gray-600">Seats/Row</label>
-            <input type="number" min="1" max="200" class="w-full border px-2 py-1 rounded text-sm section-seats" value="${
-              s.seatsPerRow || 1
-            }">
+            <input type="number" min="1" max="200" class="w-full border px-2 py-1 rounded text-sm section-seats" value="${s.seatsPerRow || 1
+      }">
           </div>
           <div>
             <label class="block text-xs text-gray-600">Tier</label>
             <select class="w-full border px-2 py-1 rounded text-sm section-tier">
               ${["vip", "premium", "standard", "economy"]
-                .map(
-                  (t) =>
-                    `<option value="${t}" ${
-                      s.tier === t ? "selected" : ""
-                    }>${t}</option>`
-                )
-                .join("")}
+        .map(
+          (t) =>
+            `<option value="${t}" ${s.tier === t ? "selected" : ""
+            }>${t}</option>`
+        )
+        .join("")}
             </select>
           </div>
           <div>
             <label class="block text-xs text-gray-600">Start Row</label>
-            <input type="text" maxlength="3" class="w-full border px-2 py-1 rounded text-sm section-start" value="${
-              s.startRow || "A"
-            }">
+            <input type="text" maxlength="3" class="w-full border px-2 py-1 rounded text-sm section-start" value="${s.startRow || "A"
+      }">
           </div>
         </div>
         <div class="mt-2 flex justify-between">

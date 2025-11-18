@@ -1,14 +1,14 @@
 import express from "express";
-import * as performanceController from "../controllers/performanceController.js";
-import { validate } from "../middleware/validation.js";
-import { isAuthenticated, isAdmin, optionalAuth } from "../middleware/auth.js";
+import * as performanceController from "#controllers/performanceController.js";
+import { validate } from "#middleware/validation.js";
+import { isAuthenticated, isAdmin, optionalAuth } from "#middleware/auth.js";
 import {
   createPerformanceValidator,
   updatePerformanceValidator,
   getPerformanceValidator,
   deletePerformanceValidator,
   listPerformancesValidator,
-} from "../middleware/validators/performanceValidators.js";
+} from "#middleware/validators/performanceValidators.js";
 
 const router = express.Router();
 

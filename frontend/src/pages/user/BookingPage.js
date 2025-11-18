@@ -1,29 +1,29 @@
-import { performanceService } from "/src/services/performanceService.js";
-import { ticketTypeService } from "/src/services/ticketTypeService.js";
-import { bookingAPI, handleApiError } from "/src/services/apiClient.js";
-import { ResponseExtractor } from "/src/services/responseExtractor.js";
-import { FormComponents } from "/src/components/FormComponents.js";
+import { performanceService } from "@services/performanceService.js";
+import { ticketTypeService } from "@services/ticketTypeService.js";
+import { bookingAPI, handleApiError } from "@services/apiClient.js";
+import { ResponseExtractor } from "@services/responseExtractor.js";
+import { FormComponents } from "@components/FormComponents.js";
 import {
   BookingProgress,
   BookingSummaryCard,
-} from "/src/components/booking/index.js";
-import { createLoadingState } from "/src/components/LoadingState.js";
-import { notify } from "/src/utils/ui/notification.js";
-import { SwalColors } from "/src/utils/colors.js";
-import { ZonePricing } from "/src/utils/booking/zonePricing.js";
+} from "@components/booking/index.js";
+import { createLoadingState } from "@components/LoadingState.js";
+import { notify } from "@utils/ui/notification.js";
+import { SwalColors } from "@utils/colors.js";
+import { ZonePricing } from "@utils/booking/zonePricing.js";
 import {
   getTierColors,
   getTierLabel,
   getTierBadge,
-} from "/src/config/tierConfig.js";
-import { storage } from "/src/services/storageService.js";
-import { generateFullId, getDisplayLabel } from "/src/utils/seatIdHelper.js";
-import { SeatMap } from "/src/components/SeatMap.js";
-import { initSeatMapPanzoom } from "/src/utils/panzoomSeatMap.js";
-import { attachSeatTooltipListeners } from "/src/utils/booking/seatTooltip.js";
-import { bookingHelpers } from "/src/services/bookingHelpers.js";
-import { calculationService } from "/src/services/calculationService.js";
-import { ROUTES } from "/src/config/routes.js";
+} from "@config/tierConfig.js";
+import { storage } from "@services/storageService.js";
+import { generateFullId, getDisplayLabel } from "@utils/seatIdHelper.js";
+import { SeatMap } from "@components/SeatMap.js";
+import { initSeatMapPanzoom } from "@utils/panzoomSeatMap.js";
+import { attachSeatTooltipListeners } from "@utils/booking/seatTooltip.js";
+import { bookingHelpers } from "@services/bookingHelpers.js";
+import { calculationService } from "@utils/calculations.js";
+import { ROUTES } from "@config/routes.js";
 import Swal from "sweetalert2";
 import dayjs from "dayjs";
 import page from "page";
@@ -42,10 +42,10 @@ export default {
       <main class="container mx-auto px-4 py-8">
         <div class="max-w-7xl mx-auto">
           ${FormComponents.pageHeader({
-            title: "Book Your Seats",
-            subtitle: "Select your seats and complete your booking",
-            icon: "fa-ticket-alt",
-          })}
+      title: "Book Your Seats",
+      subtitle: "Select your seats and complete your booking",
+      icon: "fa-ticket-alt",
+    })}
 
           <div class="mb-6">
             <div id="progressStepsContainer" class="flex items-center justify-between">
@@ -292,8 +292,8 @@ export default {
 
     const selectedShowtime = this.selectedShowtimeId
       ? this.performanceData.showtimes?.find(
-          (st) => st.id === this.selectedShowtimeId
-        )
+        (st) => st.id === this.selectedShowtimeId
+      )
       : null;
     const pricingSections =
       selectedShowtime?.pricing?.sections ||
@@ -320,7 +320,7 @@ export default {
             ps.sectionCode &&
             section.sectionCode &&
             ps.sectionCode.toLowerCase() ===
-              String(section.sectionCode).toLowerCase();
+            String(section.sectionCode).toLowerCase();
           return byName || byTier || byCode;
         });
         if (pricing) {
@@ -370,16 +370,14 @@ export default {
                   Seat Map
                 </h2>
                 <p class="text-sm text-gray-600 mt-1">
-                  <i class="fas fa-building mr-1"></i>${
-                    venue?.name || this.performanceData.venueName || "Venue"
-                  }
+                  <i class="fas fa-building mr-1"></i>${venue?.name || this.performanceData.venueName || "Venue"
+      }
                 </p>
               </div>
               <div class="text-right">
                 <p class="text-xs text-gray-500">Selected</p>
-                <p class="text-2xl font-bold text-indigo-600">${
-                  this.selectedSeats.length
-                }</p>
+                <p class="text-2xl font-bold text-indigo-600">${this.selectedSeats.length
+      }</p>
               </div>
             </div>
 
@@ -446,21 +444,20 @@ export default {
           <div class="mb-3">
             <p class="text-xs text-gray-600 mb-1">Selected Seats</p>
             <p class="text-sm font-bold text-indigo-900 min-h-[20px]">
-              ${
-                this.selectedSeats.length > 0
-                  ? this.selectedSeats.map((s) => getDisplayLabel(s)).join(", ")
-                  : "Click on available seats to select"
-              }
+              ${this.selectedSeats.length > 0
+        ? this.selectedSeats.map((s) => getDisplayLabel(s)).join(", ")
+        : "Click on available seats to select"
+      }
             </p>
           </div>
           ${FormComponents.button({
-            id: "continueToTickets",
-            text: "Continue to Tickets",
-            icon: "fa-arrow-right",
-            color: "indigo",
-            fullWidth: true,
-            disabled: this.selectedSeats.length === 0,
-          })}
+        id: "continueToTickets",
+        text: "Continue to Tickets",
+        icon: "fa-arrow-right",
+        color: "indigo",
+        fullWidth: true,
+        disabled: this.selectedSeats.length === 0,
+      })}
         </div>
 
         <div class="mt-4 p-3 bg-blue-50 border border-blue-200 rounded text-xs text-blue-800">
@@ -512,20 +509,20 @@ export default {
           </h2>
 
           ${FormComponents.infoBox({
-            title: "No Ticket Types Available",
-            message:
-              "Please contact the administrator to configure ticket types.",
-            type: "warning",
-          })}
+        title: "No Ticket Types Available",
+        message:
+          "Please contact the administrator to configure ticket types.",
+        type: "warning",
+      })}
 
           <div class="mt-6 flex gap-3">
             ${FormComponents.button({
-              id: "backToSeats",
-              text: "Back to Seats",
-              icon: "fa-arrow-left",
-              color: "gray",
-              size: "lg",
-            })}
+        id: "backToSeats",
+        text: "Back to Seats",
+        icon: "fa-arrow-left",
+        color: "gray",
+        size: "lg",
+      })}
           </div>
         </div>
       `;
@@ -533,8 +530,8 @@ export default {
 
     const selectedShowtime = this.selectedShowtimeId
       ? this.performanceData.showtimes?.find(
-          (st) => st.id === this.selectedShowtimeId
-        )
+        (st) => st.id === this.selectedShowtimeId
+      )
       : null;
     const pricingSections =
       selectedShowtime?.pricing?.sections ||
@@ -553,20 +550,19 @@ export default {
         </h2>
 
         ${FormComponents.infoBox({
-          title: "Assign Tickets",
-          message:
-            "Select a ticket type for each seat. You can assign different types to different seats.",
-          type: "info",
-        })}
+      title: "Assign Tickets",
+      message:
+        "Select a ticket type for each seat. You can assign different types to different seats.",
+      type: "info",
+    })}
 
         <div class="mt-6 space-y-4">
           ${this.selectedSeats
-            .map((seat) => {
-              const assigned = this.seatTicketTypes[seat];
-              return `
-              <div class="border-2 ${
-                assigned ? "border-green-500 bg-green-50" : "border-gray-200"
-              } rounded-lg p-4">
+        .map((seat) => {
+          const assigned = this.seatTicketTypes[seat];
+          return `
+              <div class="border-2 ${assigned ? "border-green-500 bg-green-50" : "border-gray-200"
+            } rounded-lg p-4">
                 <div class="flex items-center justify-between mb-3">
                   <div class="flex items-center gap-3">
                     <div class="w-12 h-12 rounded-full bg-indigo-600 text-white flex items-center justify-center font-bold text-lg">
@@ -575,39 +571,34 @@ export default {
                     <div>
                       <p class="font-bold text-gray-900">Seat ${seat}</p>
                       ${(() => {
-                        const zone = ZonePricing.getSeatZone(
-                          seat,
-                          pricingSections
-                        );
-                        const zoneName = zone
-                          ? zone.tier.toUpperCase()
-                          : "STANDARD";
-                        const zoneColor =
-                          zone?.tier === "premium"
-                            ? "text-purple-600"
-                            : zone?.tier === "economy"
-                              ? "text-blue-600"
-                              : "text-green-600";
-                        return `<p class="text-xs ${zoneColor} font-semibold">${
-                          zone?.sectionName || "Unknown"
-                        } - ${zoneName}</p>`;
-                      })()}
-                      <p class="text-sm ${
-                        assigned ? "text-green-600" : "text-gray-500"
-                      }">
-                        ${
-                          assigned
-                            ? `${
-                                assigned.name
-                              } - HKD ${assigned.price.toLocaleString()}`
-                            : "No ticket assigned"
-                        }
+              const zone = ZonePricing.getSeatZone(
+                seat,
+                pricingSections
+              );
+              const zoneName = zone
+                ? zone.tier.toUpperCase()
+                : "STANDARD";
+              const zoneColor =
+                zone?.tier === "premium"
+                  ? "text-purple-600"
+                  : zone?.tier === "economy"
+                    ? "text-blue-600"
+                    : "text-green-600";
+              return `<p class="text-xs ${zoneColor} font-semibold">${zone?.sectionName || "Unknown"
+                } - ${zoneName}</p>`;
+            })()}
+                      <p class="text-sm ${assigned ? "text-green-600" : "text-gray-500"
+            }">
+                        ${assigned
+              ? `${assigned.name
+              } - HKD ${assigned.price.toLocaleString()}`
+              : "No ticket assigned"
+            }
                       </p>
                     </div>
                   </div>
-                  ${
-                    assigned
-                      ? `
+                  ${assigned
+              ? `
                     <div class="text-right">
                       <p class="text-2xl font-bold text-green-600">HKD ${assigned.price.toLocaleString()}</p>
                       <button class="change-ticket-btn text-xs text-indigo-600 hover:text-indigo-800 mt-1" data-seat="${seat}">
@@ -615,63 +606,58 @@ export default {
                       </button>
                     </div>
                   `
-                      : ""
-                  }
+              : ""
+            }
                 </div>
 
-                ${
-                  !assigned
-                    ? `
+                ${!assigned
+              ? `
                   <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
                     ${ZonePricing.getTicketTypesWithPrices(
-                      seat,
-                      ticketTypes,
-                      pricingSections
-                    )
-                      .map(
-                        (type) => `
+                seat,
+                ticketTypes,
+                pricingSections
+              )
+                .map(
+                  (type) => `
                       <button class="assign-ticket-btn text-left p-3 border-2 border-gray-200 rounded-lg hover:border-indigo-500 hover:bg-indigo-50 transition-all"
                               data-seat="${seat}"
                               data-ticket='${JSON.stringify(type)}'>
                         <div class="flex items-center justify-between">
                           <div>
-                            <p class="font-semibold text-gray-900 text-sm">${
-                              type.name
-                            }</p>
-                            ${
-                              type.description
-                                ? `<p class="text-xs text-gray-600 mt-0.5">${type.description}</p>`
-                                : ""
-                            }
-                            ${
-                              type.basePrice && type.price < type.basePrice
-                                ? `<p class="text-xs text-green-600 font-semibold mt-0.5">Save HKD ${(
-                                    type.basePrice - type.price
-                                  ).toLocaleString()}</p>`
-                                : ""
-                            }
+                            <p class="font-semibold text-gray-900 text-sm">${type.name
+                    }</p>
+                            ${type.description
+                      ? `<p class="text-xs text-gray-600 mt-0.5">${type.description}</p>`
+                      : ""
+                    }
+                            ${type.basePrice && type.price < type.basePrice
+                      ? `<p class="text-xs text-green-600 font-semibold mt-0.5">Save HKD ${(
+                        type.basePrice - type.price
+                      ).toLocaleString()}</p>`
+                      : ""
+                    }
                           </div>
                           <div class="text-right">
-                            ${
-                              type.basePrice && type.price < type.basePrice
-                                ? `<p class="text-xs text-gray-400 line-through">HKD ${type.basePrice.toLocaleString()}</p>`
-                                : ""
-                            }
+                            ${type.basePrice && type.price < type.basePrice
+                      ? `<p class="text-xs text-gray-400 line-through">HKD ${type.basePrice.toLocaleString()}</p>`
+                      : ""
+                    }
                             <p class="text-lg font-bold text-indigo-600">HKD ${type.price.toLocaleString()}</p>
                           </div>
                         </div>
                       </button>
                     `
-                      )
-                      .join("")}
+                )
+                .join("")}
                   </div>
                 `
-                    : ""
-                }
+              : ""
+            }
               </div>
             `;
-            })
-            .join("")}
+        })
+        .join("")}
         </div>
 
         <div class="mt-6 p-4 bg-indigo-600 text-white rounded-lg">
@@ -680,9 +666,8 @@ export default {
               <p class="text-sm opacity-90">Total Amount</p>
               <p class="text-2xl font-bold">HKD ${totalPrice.toLocaleString()}</p>
               <p class="text-xs opacity-75 mt-1">
-                ${Object.keys(this.seatTicketTypes).length} of ${
-                  this.selectedSeats.length
-                } seats assigned
+                ${Object.keys(this.seatTicketTypes).length} of ${this.selectedSeats.length
+      } seats assigned
               </p>
             </div>
             <i class="fas fa-receipt text-4xl opacity-20"></i>
@@ -691,21 +676,21 @@ export default {
 
         <div class="mt-6 flex gap-3">
           ${FormComponents.button({
-            id: "backToSeats",
-            text: "Back",
-            icon: "fa-arrow-left",
-            color: "gray",
-            size: "lg",
-          })}
+        id: "backToSeats",
+        text: "Back",
+        icon: "fa-arrow-left",
+        color: "gray",
+        size: "lg",
+      })}
           ${FormComponents.button({
-            id: "continueToReview",
-            text: "Continue to Review",
-            icon: "fa-arrow-right",
-            color: "indigo",
-            size: "lg",
-            className: "flex-1",
-            disabled: !allAssigned,
-          })}
+        id: "continueToReview",
+        text: "Continue to Review",
+        icon: "fa-arrow-right",
+        color: "indigo",
+        size: "lg",
+        className: "flex-1",
+        disabled: !allAssigned,
+      })}
         </div>
       </div>
     `;
@@ -728,27 +713,24 @@ export default {
             <div class="space-y-2 text-sm">
               <div class="flex justify-between">
                 <span class="text-gray-600">Title:</span>
-                <span class="font-medium text-gray-900">${
-                  this.performanceData.title
-                }</span>
+                <span class="font-medium text-gray-900">${this.performanceData.title
+      }</span>
               </div>
               <div class="flex justify-between">
                 <span class="text-gray-600">Date:</span>
                 <span class="font-medium text-gray-900">${dayjs(
-                  this.performanceData.date
-                ).format("MMM D, YYYY")}</span>
+        this.performanceData.date
+      ).format("MMM D, YYYY")}</span>
               </div>
               <div class="flex justify-between">
                 <span class="text-gray-600">Venue:</span>
-                <span class="font-medium text-gray-900">${
-                  this.performanceData.venue
-                }</span>
+                <span class="font-medium text-gray-900">${this.performanceData.venue
+      }</span>
               </div>
               <div class="flex justify-between">
                 <span class="text-gray-600">Conductor:</span>
-                <span class="font-medium text-gray-900">${
-                  this.performanceData.conductor
-                }</span>
+                <span class="font-medium text-gray-900">${this.performanceData.conductor
+      }</span>
               </div>
             </div>
           </div>
@@ -756,42 +738,37 @@ export default {
           <div class="bg-purple-50 border border-purple-200 rounded-lg p-4">
             <h3 class="font-semibold text-purple-900 mb-3 flex items-center justify-between">
               <span>Seat & Ticket Breakdown</span>
-              <span class="text-sm font-normal text-purple-700">${
-                this.selectedSeats.length
-              } seat${this.selectedSeats.length > 1 ? "s" : ""}</span>
+              <span class="text-sm font-normal text-purple-700">${this.selectedSeats.length
+      } seat${this.selectedSeats.length > 1 ? "s" : ""}</span>
             </h3>
             <div class="space-y-2">
               ${this.selectedSeats
-                .map((seat) => {
-                  const ticket = this.seatTicketTypes[seat];
-                  return `
+        .map((seat) => {
+          const ticket = this.seatTicketTypes[seat];
+          return `
                     <div class="flex items-center justify-between p-2 bg-white rounded-lg border border-purple-200">
                       <div class="flex items-center gap-3">
                         <span class="w-8 h-8 flex items-center justify-center bg-indigo-600 text-white rounded-full text-sm font-bold">${seat}</span>
                         <div>
-                          <p class="font-medium text-gray-900">${
-                            ticket.name
-                          }</p>
-                          ${
-                            ticket.description
-                              ? `<p class="text-xs text-gray-500">${ticket.description}</p>`
-                              : ""
-                          }
+                          <p class="font-medium text-gray-900">${ticket.name
+            }</p>
+                          ${ticket.description
+              ? `<p class="text-xs text-gray-500">${ticket.description}</p>`
+              : ""
+            }
                         </div>
                       </div>
-                      <span class="text-lg font-bold text-purple-600">$${
-                        ticket.price
-                      }</span>
+                      <span class="text-lg font-bold text-purple-600">$${ticket.price
+            }</span>
                     </div>
                   `;
-                })
-                .join("")}
+        })
+        .join("")}
             </div>
           </div>
 
-          ${
-            user
-              ? `
+          ${user
+        ? `
             <div class="bg-gray-50 border border-gray-200 rounded-lg p-4">
               <h3 class="font-semibold text-gray-900 mb-3">Your Information</h3>
               <div class="space-y-2 text-sm">
@@ -806,7 +783,7 @@ export default {
               </div>
             </div>
           `
-              : `
+        : `
             <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
               <h3 class="font-semibold text-yellow-900 mb-2 flex items-center">
                 <i class="fas fa-exclamation-triangle mr-2"></i>
@@ -817,30 +794,30 @@ export default {
               </p>
               <div class="space-y-3">
                 ${FormComponents.input({
-                  id: "guestName",
-                  type: "text",
-                  label: "Full Name",
-                  placeholder: "John Doe",
-                  required: true,
-                })}
+          id: "guestName",
+          type: "text",
+          label: "Full Name",
+          placeholder: "John Doe",
+          required: true,
+        })}
                 ${FormComponents.input({
-                  id: "guestEmail",
-                  type: "email",
-                  label: "Email Address",
-                  placeholder: "john@example.com",
-                  required: true,
-                })}
+          id: "guestEmail",
+          type: "email",
+          label: "Email Address",
+          placeholder: "john@example.com",
+          required: true,
+        })}
                 ${FormComponents.input({
-                  id: "guestPhone",
-                  type: "tel",
-                  label: "Phone Number",
-                  placeholder: "+852 1234 5678",
-                  required: true,
-                })}
+          id: "guestPhone",
+          type: "tel",
+          label: "Phone Number",
+          placeholder: "+852 1234 5678",
+          required: true,
+        })}
               </div>
             </div>
           `
-          }
+      }
 
           <div class="bg-indigo-600 text-white rounded-lg p-6">
             <div class="flex items-center justify-between">
@@ -848,9 +825,8 @@ export default {
                 <p class="text-indigo-100 text-sm">Total Amount</p>
                 <p class="text-4xl font-bold">$${totalPrice}</p>
                 <p class="text-indigo-100 text-xs mt-1">
-                  ${this.selectedSeats.length} seat${
-                    this.selectedSeats.length > 1 ? "s" : ""
-                  } with individual pricing
+                  ${this.selectedSeats.length} seat${this.selectedSeats.length > 1 ? "s" : ""
+      } with individual pricing
                 </p>
               </div>
               <i class="fas fa-dollar-sign text-6xl text-white opacity-20"></i>
@@ -860,20 +836,20 @@ export default {
 
         <div class="mt-6 flex gap-3">
           ${FormComponents.button({
-            id: "backToTickets",
-            text: "Back",
-            icon: "fa-arrow-left",
-            color: "gray",
-            size: "lg",
-          })}
+        id: "backToTickets",
+        text: "Back",
+        icon: "fa-arrow-left",
+        color: "gray",
+        size: "lg",
+      })}
           ${FormComponents.button({
-            id: "continueToPayment",
-            text: "Continue to Payment",
-            icon: "fa-arrow-right",
-            color: "indigo",
-            size: "lg",
-            className: "flex-1",
-          })}
+        id: "continueToPayment",
+        text: "Continue to Payment",
+        icon: "fa-arrow-right",
+        color: "indigo",
+        size: "lg",
+        className: "flex-1",
+      })}
         </div>
       </div>
     `;
@@ -890,11 +866,9 @@ export default {
             <div>
               <p class="text-sm font-medium opacity-90">Total Amount</p>
               <p class="text-4xl font-bold mt-1">$${totalPrice}</p>
-              <p class="text-sm opacity-75 mt-1">${
-                this.selectedSeats.length
-              } seat${this.selectedSeats.length > 1 ? "s" : ""} • ${
-                this.performanceData.title
-              }</p>
+              <p class="text-sm opacity-75 mt-1">${this.selectedSeats.length
+      } seat${this.selectedSeats.length > 1 ? "s" : ""} • ${this.performanceData.title
+      }</p>
             </div>
             <div class="text-right opacity-75">
               <i class="fas fa-shield-alt text-5xl"></i>
@@ -1172,7 +1146,7 @@ export default {
     if (this._pz && this._pz.dispose) {
       try {
         this._pz.dispose();
-      } catch (e) {}
+      } catch (e) { }
     }
     setTimeout(() => {
       this._pz = initSeatMapPanzoom();
@@ -1197,7 +1171,7 @@ export default {
 
     $(document)
       .off("wheel.seatzoom")
-      .on("wheel.seatzoom", function () {});
+      .on("wheel.seatzoom", function () { });
     $(document)
       .off("click", "#continueToTickets")
       .on("click", "#continueToTickets", async function () {
@@ -1650,8 +1624,8 @@ export default {
   renderZoneSummary() {
     const selectedShowtime = this.selectedShowtimeId
       ? this.performanceData.showtimes?.find(
-          (st) => st.id === this.selectedShowtimeId
-        )
+        (st) => st.id === this.selectedShowtimeId
+      )
       : null;
     const sections =
       selectedShowtime?.pricing?.sections ||
@@ -1661,13 +1635,10 @@ export default {
     const rows = ZonePricing.getZoneSummary(sections)
       .map((zone) => {
         const badge = getTierBadge(zone.tier);
-        return `<tr class="border-b border-gray-200 hover:bg-gray-100"><td class="py-2 px-3 font-medium text-gray-900">${
-          zone.sectionName
-        }</td><td class="py-2 px-3"><span class="px-2 py-1 rounded text-xs font-semibold ${badge}">${
-          zone.tierLabel
-        }</span></td><td class="py-2 px-3 text-gray-600">${
-          zone.rowsDisplay
-        }</td><td class="py-2 px-3 text-right font-bold text-gray-900">HKD ${zone.basePrice.toLocaleString()}</td></tr>`;
+        return `<tr class="border-b border-gray-200 hover:bg-gray-100"><td class="py-2 px-3 font-medium text-gray-900">${zone.sectionName
+          }</td><td class="py-2 px-3"><span class="px-2 py-1 rounded text-xs font-semibold ${badge}">${zone.tierLabel
+          }</span></td><td class="py-2 px-3 text-gray-600">${zone.rowsDisplay
+          }</td><td class="py-2 px-3 text-right font-bold text-gray-900">HKD ${zone.basePrice.toLocaleString()}</td></tr>`;
       })
       .join("");
     return `<div class="mt-6 bg-gray-50 rounded-lg p-4 border border-gray-200"><h3 class="text-lg font-semibold text-gray-900 mb-3"><i class="fas fa-tags mr-2"></i>Pricing Zones</h3><div class="overflow-x-auto"><table class="w-full text-sm"><thead><tr class="border-b border-gray-300"><th class="text-left py-2 px-3 text-gray-700 font-semibold">Section</th><th class="text-left py-2 px-3 text-gray-700 font-semibold">Zone</th><th class="text-left py-2 px-3 text-gray-700 font-semibold">Rows</th><th class="text-right py-2 px-3 text-gray-700 font-semibold">Base Price</th></tr></thead><tbody>${rows}</tbody></table></div><p class="text-xs text-gray-600 mt-3"><i class="fas fa-info-circle mr-1"></i>Final prices vary based on ticket type discounts.</p></div>`;

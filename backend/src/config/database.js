@@ -1,11 +1,9 @@
 import { Sequelize } from "sequelize";
-import dotenv from "dotenv";
+import env from "./env.js";
 import logger from "./logger.js";
 
-dotenv.config();
-
 const requiredEnvVars = ["DB_NAME", "DB_USER", "DB_PASSWORD", "DB_HOST"];
-const missingVars = requiredEnvVars.filter((varName) => !process.env[varName]);
+const missingVars = requiredEnvVars.filter((varName) => !env[varName]);
 
 if (missingVars.length > 0) {
   throw new Error(
@@ -14,17 +12,17 @@ if (missingVars.length > 0) {
 }
 
 const sequelize = new Sequelize(
-  process.env.DB_NAME,
-  process.env.DB_USER,
-  process.env.DB_PASSWORD,
+  env.DB_NAME,
+  env.DB_USER,
+  env.DB_PASSWORD,
   {
-    host: process.env.DB_HOST,
-    port: parseInt(process.env.DB_PORT) || 5432,
+    host: env.DB_HOST,
+    port: parseInt(env.DB_PORT) || 5432,
     dialect: "postgres",
     logging:
-      process.env.NODE_ENV === "development" ? (msg) => logger.debug(msg) : false,
+      env.NODE_ENV === "development" ? (msg) => logger.debug(msg) : false,
     pool: {
-      max: process.env.NODE_ENV === "production" ? 20 : 5,
+      max: env.NODE_ENV === "production" ? 20 : 5,
       min: 0,
       acquire: 30000,
       idle: 10000,

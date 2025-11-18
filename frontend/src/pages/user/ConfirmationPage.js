@@ -1,8 +1,8 @@
-import { FormComponents } from "/src/components/FormComponents.js";
-import { storage } from "/src/services/storageService.js";
-import { bookingService } from "/src/services/bookingService.js";
-import { performanceService } from "/src/services/performanceService.js";
-import { formatCurrency } from "/src/utils/utils.js";
+import { FormComponents } from "@components/FormComponents.js";
+import { storage } from "@services/storageService.js";
+import { bookingService } from "@services/bookingService.js";
+import { performanceService } from "@services/performanceService.js";
+import { formatCurrency } from "@utils/utils.js";
 import dayjs from "dayjs";
 
 export default {
@@ -117,9 +117,8 @@ export default {
                 </div>
                 <div>
                   <p class="text-xs text-gray-500">Seats</p>
-                  <p class="font-semibold text-gray-900">${seatCount} seat${
-                    seatCount !== 1 ? "s" : ""
-                  }</p>
+                  <p class="font-semibold text-gray-900">${seatCount} seat${seatCount !== 1 ? "s" : ""
+      }</p>
                 </div>
               </div>
             </div>
@@ -132,8 +131,8 @@ export default {
                 <div>
                   <p class="text-xs text-gray-500">Total Amount</p>
                   <p class="font-semibold text-gray-900">${formatCurrency(
-                    this.bookingData.amount
-                  )}</p>
+        this.bookingData.amount
+      )}</p>
                 </div>
               </div>
             </div>
@@ -151,21 +150,21 @@ export default {
 
           <div class="flex flex-col sm:flex-row gap-3 pt-4">
             ${FormComponents.button({
-              id: "viewBookings",
-              text: "View My Bookings",
-              icon: "fa-ticket-alt",
-              color: "indigo",
-              size: "lg",
-              fullWidth: true,
-            })}
+        id: "viewBookings",
+        text: "View My Bookings",
+        icon: "fa-ticket-alt",
+        color: "indigo",
+        size: "lg",
+        fullWidth: true,
+      })}
             ${FormComponents.button({
-              id: "browsePerformances",
-              text: "Browse More",
-              icon: "fa-music",
-              color: "gray",
-              size: "lg",
-              fullWidth: true,
-            })}
+        id: "browsePerformances",
+        text: "Browse More",
+        icon: "fa-music",
+        color: "gray",
+        size: "lg",
+        fullWidth: true,
+      })}
           </div>
         </div>
       </div>
@@ -200,21 +199,21 @@ export default {
 
           <div class="flex flex-col sm:flex-row gap-4">
             ${FormComponents.button({
-              id: "viewBookings",
-              text: "View My Bookings",
-              icon: "fa-ticket-alt",
-              color: "indigo",
-              size: "lg",
-              fullWidth: true,
-            })}
+      id: "viewBookings",
+      text: "View My Bookings",
+      icon: "fa-ticket-alt",
+      color: "indigo",
+      size: "lg",
+      fullWidth: true,
+    })}
             ${FormComponents.button({
-              id: "browsePerformances",
-              text: "Browse Performances",
-              icon: "fa-music",
-              color: "gray",
-              size: "lg",
-              fullWidth: true,
-            })}
+      id: "browsePerformances",
+      text: "Browse Performances",
+      icon: "fa-music",
+      color: "gray",
+      size: "lg",
+      fullWidth: true,
+    })}
           </div>
         </div>
       </div>

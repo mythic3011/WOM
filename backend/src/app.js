@@ -6,9 +6,9 @@ import cors from "cors";
 import helmet from "helmet";
 import morgan from "morgan";
 import compression from "compression";
-import dotenv from "dotenv";
 import { apiReference } from "@scalar/express-api-reference";
 
+import "./config/env.js";
 import { corsConfig } from "./config/cors.js";
 import { sessionConfig } from "./config/session.js";
 import { errorHandler, notFound } from "./middleware/errorHandler.js";
@@ -27,8 +27,6 @@ import venueRoutes from "./routes/venues.js";
 import ticketTypeRoutes from "./routes/ticketTypes.js";
 import statsRoutes from "./routes/stats.js";
 import devToolsRoutes from "./routes/devTools.js";
-
-dotenv.config();
 
 const app = express();
 

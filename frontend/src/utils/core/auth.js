@@ -1,7 +1,6 @@
-import { USER_ROLES } from "../../config/config.js";
-import { ROUTES } from "../../config/routes.js";
-import { authAPI } from "../../services/apiClient.js";
-import { storage } from "../../services/storageService.js";
+import { USER_ROLES } from "@config/config.js";
+import { ROUTES } from "@config/routes.js";
+import { authAPI, storage } from "@services/index.js";
 
 let currentUser = null;
 let sessionChecked = false;

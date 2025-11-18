@@ -1,4 +1,4 @@
-import { performanceHelpers } from "../services/performanceHelpers.js";
+import { performanceHelpers } from "@services/index.js";
 
 export const performanceUtils = {
   calculateAvailability(totalSeats, availableSeats) {
@@ -76,33 +76,30 @@ export const performanceUtils = {
       <div class="space-y-1">
         <div class="flex items-center justify-between text-xs">
           <span class="font-medium text-gray-600">Availability</span>
-          <span class="font-bold ${
-            info.availabilityPercent === 0
-              ? "text-red-600"
-              : info.availabilityPercent < 30
-                ? "text-orange-600"
-                : "text-green-600"
-          }">
+          <span class="font-bold ${info.availabilityPercent === 0
+        ? "text-red-600"
+        : info.availabilityPercent < 30
+          ? "text-orange-600"
+          : "text-green-600"
+      }">
             ${info.availableSeats}/${info.totalSeats} seats
           </span>
         </div>
         <div class="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
           <div
-            class="${
-              info.progressColor
-            } h-full rounded-full transition-all duration-300"
+            class="${info.progressColor
+      } h-full rounded-full transition-all duration-300"
             style="width: ${info.availabilityPercent}%"
           ></div>
         </div>
         <div class="flex items-center justify-between text-xs">
-          <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
-            info.color
-          }">
+          <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${info.color
+      }">
             ${info.label}
           </span>
           <span class="text-gray-500">${info.availabilityPercent.toFixed(
-            0
-          )}%</span>
+        0
+      )}%</span>
         </div>
       </div>
     `;

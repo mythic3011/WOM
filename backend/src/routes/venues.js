@@ -1,14 +1,14 @@
 import express from "express";
-import * as venueController from "../controllers/venueController.js";
-import { validate } from "../middleware/validation.js";
-import { isAuthenticated, isAdmin, optionalAuth } from "../middleware/auth.js";
+import * as venueController from "#controllers/venueController.js";
+import { validate } from "#middleware/validation.js";
+import { isAuthenticated, isAdmin, optionalAuth } from "#middleware/auth.js";
 import {
   createVenueValidator,
   updateVenueValidator,
   getVenueValidator,
   deleteVenueValidator,
   listVenuesValidator,
-} from "../middleware/validators/venueValidators.js";
+} from "#middleware/validators/venueValidators.js";
 
 const router = express.Router();
 

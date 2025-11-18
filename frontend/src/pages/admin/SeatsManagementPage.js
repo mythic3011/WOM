@@ -1,16 +1,16 @@
-import { performanceService } from "/src/services/performanceService.js";
-import { storage } from "/src/services/storageService.js";
-import { notify } from "/src/utils/ui/notification.js";
-import { createModal, openModal, closeModal } from "/src/components/Modal.js";
-import { createDebounceSearch } from "/src/utils/data/filters.js";
-import { seatUtils } from "/src/utils/booking/seatUtils.js";
-import { reportingUtils } from "/src/utils/reports/reporting.js";
-import { keyboard, registerGlobalShortcuts } from "/src/utils/ui/keyboard.js";
-import { seatMapGenerator } from "/src/utils/booking/seatMapGenerator.js";
-import { performanceOptimizer } from "/src/utils/performance.js";
-import { attachSeatTooltipListeners } from "/src/utils/booking/seatTooltip.js";
-import { initSeatMapPanzoom } from "/src/utils/panzoomSeatMap.js";
-import { seatHelpers } from "/src/services/seatHelpers.js";
+import { performanceService } from "@services/performanceService.js";
+import { storage } from "@services/storageService.js";
+import { notify } from "@utils/ui/notification.js";
+import { createModal, openModal, closeModal } from "@components/Modal.js";
+import { createDebounceSearch } from "@utils/data/filters.js";
+import { seatUtils } from "@utils/booking/seatUtils.js";
+import { reportingUtils } from "@utils/reports/reporting.js";
+import { keyboard, registerGlobalShortcuts } from "@utils/ui/keyboard.js";
+import { seatMapGenerator } from "@utils/booking/seatMapGenerator.js";
+import { performanceOptimizer } from "@utils/performance.js";
+import { attachSeatTooltipListeners } from "@utils/booking/seatTooltip.js";
+import { initSeatMapPanzoom } from "@utils/panzoomSeatMap.js";
+import { initializeSeatDetails, calculateStats } from "@utils/booking/seatUtils.js";
 import dayjs from "dayjs";
 import Swal from "sweetalert2";
 
@@ -231,8 +231,7 @@ export default {
             "MMM D, YYYY h:mm A"
           );
           $showtimeSelect.append(`
-            <option value="${index}">${dateTime} - ${
-              showtime.venueName || "Venue TBA"
+            <option value="${index}">${dateTime} - ${showtime.venueName || "Venue TBA"
             }</option>
           `);
         });
@@ -317,7 +316,6 @@ export default {
     $("#seatMapContainer").html(seatMapHTML);
     this.updateLegend();
 
-    // Initialize panzoom for better navigation
     setTimeout(() => {
       if (this.panzoomInstance) {
         this.panzoomInstance.dispose();
@@ -394,9 +392,8 @@ export default {
           <g class="seat-item" data-seat-id="${seatId}">
             <rect x="${seatX}" y="${rowY}" width="${seatSize}" height="${seatSize}"
               fill="${fillColor}" rx="4" stroke="#ffffff" stroke-width="2" />
-            <text x="${seatX + seatSize / 2}" y="${
-              rowY + seatSize / 2 + 4
-            }" fill="white"
+            <text x="${seatX + seatSize / 2}" y="${rowY + seatSize / 2 + 4
+          }" fill="white"
               text-anchor="middle" font-size="11" font-weight="bold">${seatId}</text>
           </g>
         `;
@@ -408,9 +405,8 @@ export default {
         <g id="content-layer">
           <rect x="${stagePadding}" y="${stagePadding}" width="${stageWidth}" height="${stageHeight}"
             fill="#374151" rx="5" class="stage" />
-          <text x="${svgWidth / 2}" y="${
-            stagePadding + stageHeight / 2 + 6
-          }" fill="white"
+          <text x="${svgWidth / 2}" y="${stagePadding + stageHeight / 2 + 6
+      }" fill="white"
             text-anchor="middle" font-size="16" font-weight="bold">STAGE</text>
           ${seatsHTML}
         </g>
@@ -419,7 +415,7 @@ export default {
   },
 
   initializeSeatDetails(rows, seatsPerRow) {
-    return seatHelpers.initializeSeatDetails(rows, seatsPerRow);
+    return initializeSeatDetails(rows, seatsPerRow);
   },
 
   updateStats() {
@@ -429,7 +425,7 @@ export default {
       seatsPerRow: 8,
     };
 
-    const stats = seatHelpers.calculateStats(seatDetails);
+    const stats = calculateStats(seatDetails);
     stats.total = layout.rows * layout.seatsPerRow;
 
     const seatTypes = this.getSeatTypes();
@@ -459,8 +455,8 @@ export default {
         <div class="flex justify-between text-sm">
           <span class="text-gray-600">${section.section}:</span>
           <span class="font-bold" style="color: ${this.getSectionColor(
-            index
-          )}">${count}</span>
+          index
+        )}">${count}</span>
         </div>
       `;
       })
@@ -552,14 +548,13 @@ export default {
               <select id="status-select" class="swal2-input w-full">
                 <option value="">- No Change -</option>
                 ${seatTypes
-                  .map(
-                    (type) => `
-                  <option value="${type.value}" data-section-index="${
-                    type.sectionIndex || ""
-                  }">${type.label}</option>
+          .map(
+            (type) => `
+                  <option value="${type.value}" data-section-index="${type.sectionIndex || ""
+              }">${type.label}</option>
                 `
-                  )
-                  .join("")}
+          )
+          .join("")}
               </select>
             </div>
             <div>
@@ -694,12 +689,10 @@ export default {
         seatsHTML += `
           <g class="interactive-seat cursor-pointer" data-seat-id="${seatId}">
             <rect x="${seatX}" y="${rowY}" width="${seatSize}" height="${seatSize}"
-              fill="${fillColor}" rx="4" stroke="${
-                isSelected ? "#ca8a04" : "#ffffff"
-              }" stroke-width="${isSelected ? "3" : "1"}" />
-            <text x="${seatX + seatSize / 2}" y="${
-              rowY + seatSize / 2 + 4
-            }" fill="white"
+              fill="${fillColor}" rx="4" stroke="${isSelected ? "#ca8a04" : "#ffffff"
+          }" stroke-width="${isSelected ? "3" : "1"}" />
+            <text x="${seatX + seatSize / 2}" y="${rowY + seatSize / 2 + 4
+          }" fill="white"
               text-anchor="middle" font-size="11" font-weight="bold">${seatId}</text>
           </g>
         `;
@@ -709,9 +702,8 @@ export default {
     return `
       <svg width="${svgWidth}" height="${svgHeight}" class="bg-white rounded shadow-sm mx-auto">
         <rect x="${stagePadding}" y="${stagePadding}" width="${stageWidth}" height="${stageHeight}" fill="#374151" rx="4" />
-        <text x="${svgWidth / 2}" y="${
-          stagePadding + stageHeight / 2 + 5
-        }" fill="white"
+        <text x="${svgWidth / 2}" y="${stagePadding + stageHeight / 2 + 5
+      }" fill="white"
           text-anchor="middle" font-size="14" font-weight="bold">STAGE</text>
         ${seatsHTML}
       </svg>
@@ -908,34 +900,34 @@ export default {
             </h4>
             <div class="grid grid-cols-6 gap-2 mb-3">
               ${rowLetters
-                .map(
-                  (letter) => `
+          .map(
+            (letter) => `
                 <button type="button" class="row-select-btn px-2 py-1 bg-gray-200 hover:bg-indigo-500 hover:text-white rounded text-sm transition-colors" data-row="${letter}">
                   Row ${letter}
                 </button>
               `
-                )
-                .join("")}
+          )
+          .join("")}
             </div>
             <div class="grid grid-cols-2 gap-2">
               <div>
                 <label class="block text-xs text-gray-700 mb-1">From Row</label>
                 <select id="rowRangeStart" class="w-full px-2 py-1 border border-gray-300 rounded text-sm">
                   ${rowLetters
-                    .map(
-                      (letter) => `<option value="${letter}">${letter}</option>`
-                    )
-                    .join("")}
+          .map(
+            (letter) => `<option value="${letter}">${letter}</option>`
+          )
+          .join("")}
                 </select>
               </div>
               <div>
                 <label class="block text-xs text-gray-700 mb-1">To Row</label>
                 <select id="rowRangeEnd" class="w-full px-2 py-1 border border-gray-300 rounded text-sm">
                   ${rowLetters
-                    .map(
-                      (letter) => `<option value="${letter}">${letter}</option>`
-                    )
-                    .join("")}
+          .map(
+            (letter) => `<option value="${letter}">${letter}</option>`
+          )
+          .join("")}
                 </select>
               </div>
             </div>

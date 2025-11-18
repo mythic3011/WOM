@@ -1,6 +1,5 @@
-import { createBadge } from "/src/components/Badge.js";
-import { bookingHelpers } from "../services/bookingHelpers.js";
-import { performanceHelpers } from "../services/performanceHelpers.js";
+import { createBadge } from "@components/common/Badge.js";
+import { bookingHelpers, performanceHelpers } from "@services/index.js";
 
 export const STATUS_CONFIGS = {
   performance: {

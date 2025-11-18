@@ -1,7 +1,7 @@
 import express from "express";
-import * as userController from "../controllers/userController.js";
-import { validate } from "../middleware/validation.js";
-import { isAuthenticated, isAdmin, isOwnerOrAdminByParam } from "../middleware/auth.js";
+import * as userController from "#controllers/userController.js";
+import { validate } from "#middleware/validation.js";
+import { isAuthenticated, isAdmin, isOwnerOrAdminByParam } from "#middleware/auth.js";
 import {
   createUserValidator,
   updateUserValidator,
@@ -9,7 +9,7 @@ import {
   deleteUserValidator,
   listUsersValidator,
   selfDeleteValidator,
-} from "../middleware/validators/userValidators.js";
+} from "#middleware/validators/userValidators.js";
 
 const router = express.Router();
 

@@ -1,5 +1,5 @@
-import { APP_CONFIG } from "../config/config.js";
-import { notify } from "../utils/ui/notification.js";
+import { APP_CONFIG } from "@config/config.js";
+import { notify } from "@utils/ui/notification.js";
 import { storage } from "./storageService.js";
 
 const API_BASE = APP_CONFIG.apiBaseUrl;

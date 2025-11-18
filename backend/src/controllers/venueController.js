@@ -1,4 +1,4 @@
-import * as venueService from "../services/venueService.js";
+import * as venueService from "#services/venueService.js";
 
 export const getAllVenues = async (req, res, next) => {
   try {

@@ -1,4 +1,4 @@
-import { SeatMap } from "/src/components/SeatMap.js";
+import { SeatMap } from "@components/SeatMap.js";
 
 export const SeatLayoutCustomizer = {
   createDialog(currentLayout) {
@@ -49,9 +49,8 @@ export const SeatLayoutCustomizer = {
               <i class="fas fa-eye text-indigo-600 mr-1"></i>Live Preview
             </h4>
             <div class="text-sm">
-              <span class="font-semibold text-indigo-600" id="preview-total">${
-                rows * seatsPerRow
-              }</span>
+              <span class="font-semibold text-indigo-600" id="preview-total">${rows * seatsPerRow
+      }</span>
               <span class="text-gray-600"> seats</span>
             </div>
           </div>
@@ -70,9 +69,8 @@ export const SeatLayoutCustomizer = {
           </div>
           <div class="bg-purple-50 p-3 rounded-lg">
             <div class="text-xs text-gray-600 mb-1">Total</div>
-            <div class="text-xl font-bold text-purple-600" id="display-total">${
-              rows * seatsPerRow
-            }</div>
+            <div class="text-xl font-bold text-purple-600" id="display-total">${rows * seatsPerRow
+      }</div>
           </div>
         </div>
 

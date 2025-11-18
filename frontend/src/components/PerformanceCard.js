@@ -1,6 +1,6 @@
 import dayjs from "dayjs";
-import { getStatusBadge } from "/src/utils/status.js";
-import { performanceUtils } from "/src/utils/performanceUtils.js";
+import { getStatusBadge } from "@utils/status.js";
+import { performanceUtils } from "@utils/performanceUtils.js";
 
 export const PerformanceCard = {
   getDateDisplay(performance) {
@@ -48,14 +48,12 @@ export const PerformanceCard = {
     if (dateInfo.single) {
       return `
         <div class="text-center">
-          <div class="text-2xl font-bold text-indigo-900">${
-            dateInfo.shortDate
-          }</div>
-          ${
-            dateInfo.time
-              ? `<div class="text-xs text-indigo-600 mt-1"><i class="fas fa-clock"></i> ${dateInfo.time}</div>`
-              : ""
-          }
+          <div class="text-2xl font-bold text-indigo-900">${dateInfo.shortDate
+        }</div>
+          ${dateInfo.time
+          ? `<div class="text-xs text-indigo-600 mt-1"><i class="fas fa-clock"></i> ${dateInfo.time}</div>`
+          : ""
+        }
         </div>
       `;
     }
@@ -63,24 +61,21 @@ export const PerformanceCard = {
     return `
       <div class="flex items-center gap-2">
         <div class="text-center">
-          <div class="text-2xl font-bold text-indigo-900">${
-            dateInfo.startShort
-          }</div>
+          <div class="text-2xl font-bold text-indigo-900">${dateInfo.startShort
+      }</div>
           <div class="text-xs text-indigo-600">Start</div>
         </div>
         <div class="text-xl text-indigo-400">
           <i class="fas fa-arrow-right"></i>
         </div>
         <div class="text-center">
-          <div class="text-2xl font-bold text-indigo-900">${
-            dateInfo.endShort
-          }</div>
+          <div class="text-2xl font-bold text-indigo-900">${dateInfo.endShort
+      }</div>
           <div class="text-xs text-indigo-600">End</div>
         </div>
       </div>
-      ${
-        dateInfo.showtimeCount > 1
-          ? `
+      ${dateInfo.showtimeCount > 1
+        ? `
       <div class="mt-2 pt-2 border-t border-indigo-300 text-center">
         <span class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-indigo-200 text-indigo-800 rounded-full text-xs font-bold">
           <i class="fas fa-calendar-check"></i>
@@ -88,7 +83,7 @@ export const PerformanceCard = {
         </span>
       </div>
       `
-          : ""
+        : ""
       }
     `;
   },
@@ -101,8 +96,7 @@ export const PerformanceCard = {
     const dateInfo = this.getDateDisplay(performance);
 
     return `
-      <div class="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-xl transition-all duration-300 cursor-pointer group transform hover:-translate-y-1" data-performance-id="${
-        performance.id
+      <div class="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-xl transition-all duration-300 cursor-pointer group transform hover:-translate-y-1" data-performance-id="${performance.id
       }">
         <div class="relative overflow-hidden bg-gray-100">
           <img
@@ -130,80 +124,71 @@ export const PerformanceCard = {
               <i class="fas fa-user-tie text-indigo-500"></i>
               <span class="font-medium">${performance.composer}</span>
             </p>
-            ${
-              performance.conductor
-                ? `
+            ${performance.conductor
+        ? `
             <p class="text-sm text-gray-700 flex items-center gap-2">
               <i class="fas fa-baton text-purple-500"></i>
               <span>${performance.conductor}</span>
             </p>
             `
-                : ""
-            }
+        : ""
+      }
             <p class="text-sm text-gray-700 flex items-center gap-2">
               <i class="fas fa-map-marker-alt text-indigo-500"></i>
-              <span>${
-                performance.venueName || performance.venue || "Venue TBA"
-              }</span>
+              <span>${performance.venueName || performance.venue || "Venue TBA"
+      }</span>
             </p>
-            ${
-              performance.venueAddress
-                ? `
+            ${performance.venueAddress
+        ? `
             <p class="text-xs text-gray-500 flex items-center gap-2 ml-6">
               <i class="fas fa-location-arrow text-gray-400"></i>
               <span class="line-clamp-1">${performance.venueAddress}</span>
             </p>
             `
-                : ""
-            }
+        : ""
+      }
             <p class="text-sm text-gray-700 flex items-center gap-2">
               <i class="fas fa-users text-blue-500"></i>
-              <span class="line-clamp-1">${
-                performance.orchestra || "Orchestra"
-              }</span>
+              <span class="line-clamp-1">${performance.orchestra || "Orchestra"
+      }</span>
             </p>
-            ${
-              performance.duration
-                ? `
+            ${performance.duration
+        ? `
             <p class="text-sm text-gray-700 flex items-center gap-2">
               <i class="fas fa-clock text-green-500"></i>
               <span>${performance.duration} mins</span>
             </p>
             `
-                : ""
-            }
-            ${
-              performance.category
-                ? `
+        : ""
+      }
+            ${performance.category
+        ? `
             <p class="text-xs text-gray-500 flex items-center gap-2">
               <i class="fas fa-tag text-gray-400"></i>
               <span class="uppercase tracking-wide font-semibold">${performance.category}</span>
             </p>
             `
-                : ""
-            }
+        : ""
+      }
           </div>
 
-          ${
-            performance.totalSeats && performance.availableSeats !== undefined
-              ? `
+          ${performance.totalSeats && performance.availableSeats !== undefined
+        ? `
           <div class="mb-4 bg-gray-50 rounded-lg p-3 border border-gray-200">
             ${performanceUtils.getSeatAvailabilityDisplay(performance)}
           </div>
           `
-              : ""
-          }
+        : ""
+      }
 
           <div class="flex items-center justify-between pt-4 border-t-2 border-gray-200">
             <div>
               <p class="text-xs text-gray-500 uppercase tracking-wide">From</p>
-              <p class="text-2xl font-bold text-indigo-600">HKD ${
-                performance.price || 200
-              }</p>
+              <p class="text-2xl font-bold text-indigo-600">HKD ${performance.price || 200
+      }</p>
             </div>
-            <a href="/performances/${
-              performance.id
-            }" data-link class="inline-flex items-center gap-2 px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-semibold shadow-md hover:shadow-lg">
+            <a href="/performances/${performance.id
+      }" data-link class="inline-flex items-center gap-2 px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-semibold shadow-md hover:shadow-lg">
               <span>View</span>
               <i class="fas fa-arrow-right group-hover:translate-x-1 transition-transform"></i>
             </a>
@@ -221,8 +206,7 @@ export const PerformanceCard = {
     const dateInfo = this.getDateDisplay(performance);
 
     return `
-      <div class="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-xl transition-all duration-300 cursor-pointer group" data-performance-id="${
-        performance.id
+      <div class="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-xl transition-all duration-300 cursor-pointer group" data-performance-id="${performance.id
       }">
         <div class="flex flex-col md:flex-row">
           <div class="md:w-64 flex-shrink-0 relative overflow-hidden bg-gray-100">
@@ -265,86 +249,77 @@ export const PerformanceCard = {
             </div>
 
             <p class="text-gray-700 mb-4 line-clamp-2">
-              ${
-                performance.description ||
-                "Experience world-class orchestral music"
-              }
+              ${performance.description ||
+      "Experience world-class orchestral music"
+      }
             </p>
 
             <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
-              ${
-                performance.duration
-                  ? `
+              ${performance.duration
+        ? `
               <div class="flex items-center gap-2 text-sm text-gray-600">
                 <i class="fas fa-clock text-green-500"></i>
                 <span>${performance.duration} mins</span>
               </div>
               `
-                  : ""
-              }
-              ${
-                performance.category
-                  ? `
+        : ""
+      }
+              ${performance.category
+        ? `
               <div class="flex items-center gap-2 text-sm text-gray-600">
                 <i class="fas fa-tag text-gray-400"></i>
                 <span class="uppercase tracking-wide font-semibold text-xs">${performance.category}</span>
               </div>
               `
-                  : ""
-              }
-              ${
-                performance.totalSeats &&
-                performance.availableSeats !== undefined
-                  ? `
+        : ""
+      }
+              ${performance.totalSeats &&
+        performance.availableSeats !== undefined
+        ? `
               <div class="flex items-center gap-2 text-sm text-gray-600">
                 <i class="fas fa-chair text-indigo-500"></i>
                 ${performanceUtils.getSeatAvailabilityBadge(performance)}
               </div>
               `
-                  : ""
-              }
+        : ""
+      }
             </div>
 
             <div class="flex flex-wrap items-center gap-4 mb-4">
               <div class="flex items-center gap-2 text-gray-600">
                 <i class="fas fa-map-marker-alt text-indigo-500"></i>
-                <span class="font-medium">${
-                  performance.venueName || performance.venue || "Venue TBA"
-                }</span>
+                <span class="font-medium">${performance.venueName || performance.venue || "Venue TBA"
+      }</span>
               </div>
-              ${
-                performance.venueAddress
-                  ? `
+              ${performance.venueAddress
+        ? `
               <div class="text-sm text-gray-500 flex items-center gap-2">
                 <i class="fas fa-location-arrow text-gray-400"></i>
                 <span class="line-clamp-1">${performance.venueAddress}</span>
               </div>
               `
-                  : ""
-              }
+        : ""
+      }
             </div>
 
-            ${
-              performance.totalSeats && performance.availableSeats !== undefined
-                ? `
+            ${performance.totalSeats && performance.availableSeats !== undefined
+        ? `
             <div class="mb-4 bg-gray-50 rounded-lg p-3 border border-gray-200">
               ${performanceUtils.getSeatAvailabilityDisplay(performance)}
             </div>
             `
-                : ""
-            }
+        : ""
+      }
 
             <div class="flex flex-wrap items-center gap-4">
               <div class="text-left">
                 <p class="text-xs text-gray-500 uppercase tracking-wide mb-1">From</p>
-                <p class="text-2xl font-bold text-indigo-600">HKD ${
-                  performance.price || 200
-                }</p>
+                <p class="text-2xl font-bold text-indigo-600">HKD ${performance.price || 200
+      }</p>
               </div>
               <div class="flex-1"></div>
-              <a href="/performances/${
-                performance.id
-              }" data-link class="inline-flex items-center gap-2 px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-semibold shadow-md hover:shadow-lg">
+              <a href="/performances/${performance.id
+      }" data-link class="inline-flex items-center gap-2 px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-semibold shadow-md hover:shadow-lg">
                 <span>View Details</span>
                 <i class="fas fa-arrow-right group-hover:translate-x-1 transition-transform"></i>
               </a>

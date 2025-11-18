@@ -1,5 +1,5 @@
 import { describe, it, expect } from "@jest/globals";
-import { validateLayoutSemantics } from "../services/venueService.js";
+import { validateLayoutSemantics } from "#services/venueService.js";
 
 function baseLayout() {
   return {

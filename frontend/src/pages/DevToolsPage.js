@@ -1,36 +1,36 @@
-import { storage } from "/src/services/storageService.js";
-import { statsService } from "/src/services/statsService.js";
-import { ticketTypeService } from "/src/services/ticketTypeService.js";
-import { FormComponents } from "/src/components/FormComponents.js";
-import { notify } from "/src/utils/ui/notification.js";
+import { storage } from "@services/storageService.js";
+import { statsService } from "@services/statsService.js";
+import { ticketTypeService } from "@services/ticketTypeService.js";
+import { FormComponents } from "@components/FormComponents.js";
+import { notify } from "@utils/ui/notification.js";
 import {
   StorageViewerCard,
   MockDataCard,
   QuickActionsCard,
-} from "/src/components/devtools/index.js";
-import { ROUTES, ROUTE_METADATA } from "/src/config/routes.js";
-import { APP_CONFIG } from "/src/config/config.js";
-import { SwalColors } from "/src/utils/colors.js";
+} from "@components/devtools/index.js";
+import { ROUTES, ROUTE_METADATA } from "@config/routes.js";
+import { APP_CONFIG } from "@config/config.js";
+import { SwalColors } from "@utils/colors.js";
 import Swal from "sweetalert2";
 import dayjs from "dayjs";
 import {
   MOCK_BOOKINGS,
   formatSeatsDisplay,
   getBookingStatusLabel,
-} from "/src/data/mockData.js";
-import { StorageManager } from "/src/utils/devTools/storageManager.js";
-import { ConsoleLogger } from "/src/utils/devTools/consoleLogger.js";
-import { DataExporter } from "/src/utils/devTools/dataExporter.js";
-import { PerformanceTester } from "/src/utils/devTools/performanceTester.js";
-import { StorageViewer } from "/src/utils/devTools/storageViewer.js";
-import { devToolsService } from "/src/services/devToolsService.js";
+} from "@/data/index.js";
+import { StorageManager } from "@utils/devTools/storageManager.js";
+import { ConsoleLogger } from "@utils/devTools/consoleLogger.js";
+import { DataExporter } from "@utils/devTools/dataExporter.js";
+import { PerformanceTester } from "@utils/devTools/performanceTester.js";
+import { StorageViewer } from "@utils/devTools/storageViewer.js";
+import { devToolsService } from "@services/devToolsService.js";
 import {
   UTILS_STRUCTURE,
   DOCUMENTATION_LINKS,
   HEALTH_CHECKS,
   NAVIGATION_SHORTCUTS,
   NAV_SHORTCUT_STYLES,
-} from "/src/utils/devTools/devToolsConfig.js";
+} from "@utils/devTools/devToolsConfig.js";
 
 export default {
   title: "Developer Tools | WOM",
@@ -56,17 +56,17 @@ export default {
       <main class="container mx-auto px-4 py-8">
         <div class="max-w-7xl mx-auto">
           ${FormComponents.pageHeader({
-            title: "Developer Tools",
-            subtitle: "Testing, debugging, and data management utilities",
-            icon: "fa-code",
-          })}
+      title: "Developer Tools",
+      subtitle: "Testing, debugging, and data management utilities",
+      icon: "fa-code",
+    })}
 
           ${FormComponents.infoBox({
-            title: "Development Environment Only",
-            message:
-              "These tools are for development and testing purposes. Do not use in production.",
-            type: "warning",
-          })}
+      title: "Development Environment Only",
+      message:
+        "These tools are for development and testing purposes. Do not use in production.",
+      type: "warning",
+    })}
 
           <div class="bg-white rounded-lg shadow-md border border-gray-200 p-6 mb-6">
             <h2 class="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
@@ -79,33 +79,33 @@ export default {
                 <p class="text-xs text-gray-600 mb-3">Generate all necessary mock data with one click</p>
                 <div class="grid grid-cols-4 gap-2">
                   ${FormComponents.button({
-                    id: "quickSetupMinimal",
-                    text: "Minimal",
-                    icon: "fa-bolt",
-                    color: "green",
-                    size: "sm",
-                  })}
+      id: "quickSetupMinimal",
+      text: "Minimal",
+      icon: "fa-bolt",
+      color: "green",
+      size: "sm",
+    })}
                   ${FormComponents.button({
-                    id: "quickSetupStandard",
-                    text: "Standard",
-                    icon: "fa-star",
-                    color: "blue",
-                    size: "sm",
-                  })}
+      id: "quickSetupStandard",
+      text: "Standard",
+      icon: "fa-star",
+      color: "blue",
+      size: "sm",
+    })}
                   ${FormComponents.button({
-                    id: "quickSetupFull",
-                    text: "Full",
-                    icon: "fa-crown",
-                    color: "purple",
-                    size: "sm",
-                  })}
+      id: "quickSetupFull",
+      text: "Full",
+      icon: "fa-crown",
+      color: "purple",
+      size: "sm",
+    })}
                   ${FormComponents.button({
-                    id: "quickSetupFaker",
-                    text: "Faker",
-                    icon: "fa-random",
-                    color: "orange",
-                    size: "sm",
-                  })}
+      id: "quickSetupFaker",
+      text: "Faker",
+      icon: "fa-random",
+      color: "orange",
+      size: "sm",
+    })}
                 </div>
                 <div class="mt-3 text-xs text-gray-500">
                   <div><strong>Minimal:</strong> 5 users, 3 performances (Static)</div>
@@ -128,19 +128,19 @@ export default {
                 <p class="text-xs text-gray-600 mb-2" id="relationshipInfo">Check data integrity and relationships</p>
                 <div class="grid grid-cols-2 gap-2">
                   ${FormComponents.button({
-                    id: "validateRelationships",
-                    text: "Validate Data",
-                    icon: "fa-check-circle",
-                    color: "green",
-                    size: "sm",
-                  })}
+      id: "validateRelationships",
+      text: "Validate Data",
+      icon: "fa-check-circle",
+      color: "green",
+      size: "sm",
+    })}
                   ${FormComponents.button({
-                    id: "viewRelationshipStats",
-                    text: "View Stats",
-                    icon: "fa-chart-bar",
-                    color: "blue",
-                    size: "sm",
-                  })}
+      id: "viewRelationshipStats",
+      text: "View Stats",
+      icon: "fa-chart-bar",
+      color: "blue",
+      size: "sm",
+    })}
                 </div>
               </div>
             </div>
@@ -160,58 +160,58 @@ export default {
                 <div class="space-y-2">
                   <div class="grid grid-cols-3 gap-2">
                   ${FormComponents.button({
-                    id: "viewStorage",
-                    text: "View Processed",
-                    icon: "fa-eye",
-                    color: "blue",
-                    size: "sm",
-                  })}
+      id: "viewStorage",
+      text: "View Processed",
+      icon: "fa-eye",
+      color: "blue",
+      size: "sm",
+    })}
                     ${FormComponents.button({
-                      id: "viewRawStorage",
-                      text: "View Raw",
-                      icon: "fa-file-code",
-                      color: "indigo",
-                      size: "sm",
-                    })}
+      id: "viewRawStorage",
+      text: "View Raw",
+      icon: "fa-file-code",
+      color: "indigo",
+      size: "sm",
+    })}
                     ${FormComponents.button({
-                      id: "analyzeStorage",
-                      text: "Analyze",
-                      icon: "fa-chart-bar",
-                      color: "purple",
-                      size: "sm",
-                    })}
+      id: "analyzeStorage",
+      text: "Analyze",
+      icon: "fa-chart-bar",
+      color: "purple",
+      size: "sm",
+    })}
                   </div>
                   <div class="grid grid-cols-2 gap-2">
                   ${FormComponents.button({
-                    id: "exportStorage",
-                    text: "Export Raw",
-                    icon: "fa-file-export",
-                    color: "green",
-                    size: "sm",
-                  })}
+      id: "exportStorage",
+      text: "Export Raw",
+      icon: "fa-file-export",
+      color: "green",
+      size: "sm",
+    })}
                     ${FormComponents.button({
-                      id: "exportProcessedStorage",
-                      text: "Export Processed",
-                      icon: "fa-file-download",
-                      color: "teal",
-                      size: "sm",
-                    })}
+      id: "exportProcessedStorage",
+      text: "Export Processed",
+      icon: "fa-file-download",
+      color: "teal",
+      size: "sm",
+    })}
                   </div>
                   <div class="grid grid-cols-2 gap-2">
                   ${FormComponents.button({
-                    id: "importStorage",
-                    text: "Import JSON",
-                    icon: "fa-upload",
-                    color: "yellow",
-                    size: "sm",
-                  })}
+      id: "importStorage",
+      text: "Import JSON",
+      icon: "fa-upload",
+      color: "yellow",
+      size: "sm",
+    })}
                   ${FormComponents.button({
-                    id: "clearStorage",
-                    text: "Clear All",
-                    icon: "fa-trash",
-                    color: "red",
-                    size: "sm",
-                  })}
+      id: "clearStorage",
+      text: "Clear All",
+      icon: "fa-trash",
+      color: "red",
+      size: "sm",
+    })}
                   </div>
                 </div>
               </div>
@@ -229,33 +229,33 @@ export default {
                 </div>
                 <div class="grid grid-cols-2 gap-2">
                   ${FormComponents.button({
-                    id: "createTestUsers",
-                    text: "Create Test Users",
-                    icon: "fa-user-plus",
-                    color: "indigo",
-                    size: "sm",
-                  })}
+      id: "createTestUsers",
+      text: "Create Test Users",
+      icon: "fa-user-plus",
+      color: "indigo",
+      size: "sm",
+    })}
                   ${FormComponents.button({
-                    id: "loginAsAdmin",
-                    text: "Login as Admin",
-                    icon: "fa-user-shield",
-                    color: "purple",
-                    size: "sm",
-                  })}
+      id: "loginAsAdmin",
+      text: "Login as Admin",
+      icon: "fa-user-shield",
+      color: "purple",
+      size: "sm",
+    })}
                   ${FormComponents.button({
-                    id: "loginAsUser",
-                    text: "Login as User",
-                    icon: "fa-user",
-                    color: "blue",
-                    size: "sm",
-                  })}
+      id: "loginAsUser",
+      text: "Login as User",
+      icon: "fa-user",
+      color: "blue",
+      size: "sm",
+    })}
                   ${FormComponents.button({
-                    id: "logoutUser",
-                    text: "Logout",
-                    icon: "fa-sign-out-alt",
-                    color: "gray",
-                    size: "sm",
-                  })}
+      id: "logoutUser",
+      text: "Logout",
+      icon: "fa-sign-out-alt",
+      color: "gray",
+      size: "sm",
+    })}
                 </div>
               </div>
             </div>
@@ -272,33 +272,33 @@ export default {
                 </div>
                 <div class="grid grid-cols-2 gap-2">
                   ${FormComponents.button({
-                    id: "createMockPerformances",
-                    text: "Generate Performances",
-                    icon: "fa-plus",
-                    color: "green",
-                    size: "sm",
-                  })}
+      id: "createMockPerformances",
+      text: "Generate Performances",
+      icon: "fa-plus",
+      color: "green",
+      size: "sm",
+    })}
                   ${FormComponents.button({
-                    id: "viewPerformances",
-                    text: "View All",
-                    icon: "fa-eye",
-                    color: "blue",
-                    size: "sm",
-                  })}
+      id: "viewPerformances",
+      text: "View All",
+      icon: "fa-eye",
+      color: "blue",
+      size: "sm",
+    })}
                   ${FormComponents.button({
-                    id: "clearPerformances",
-                    text: "Clear All",
-                    icon: "fa-trash",
-                    color: "red",
-                    size: "sm",
-                  })}
+      id: "clearPerformances",
+      text: "Clear All",
+      icon: "fa-trash",
+      color: "red",
+      size: "sm",
+    })}
                   ${FormComponents.button({
-                    id: "resetTicketTypes",
-                    text: "Reset Ticket Types",
-                    icon: "fa-ticket-alt",
-                    color: "yellow",
-                    size: "sm",
-                  })}
+      id: "resetTicketTypes",
+      text: "Reset Ticket Types",
+      icon: "fa-ticket-alt",
+      color: "yellow",
+      size: "sm",
+    })}
                 </div>
               </div>
             </div>
@@ -315,33 +315,33 @@ export default {
                 </div>
                 <div class="grid grid-cols-2 gap-2">
                   ${FormComponents.button({
-                    id: "createMockBookings",
-                    text: "Generate Bookings",
-                    icon: "fa-plus",
-                    color: "orange",
-                    size: "sm",
-                  })}
+      id: "createMockBookings",
+      text: "Generate Bookings",
+      icon: "fa-plus",
+      color: "orange",
+      size: "sm",
+    })}
                   ${FormComponents.button({
-                    id: "viewBookings",
-                    text: "View All",
-                    icon: "fa-eye",
-                    color: "blue",
-                    size: "sm",
-                  })}
+      id: "viewBookings",
+      text: "View All",
+      icon: "fa-eye",
+      color: "blue",
+      size: "sm",
+    })}
                   ${FormComponents.button({
-                    id: "clearBookings",
-                    text: "Clear All",
-                    icon: "fa-trash",
-                    color: "red",
-                    size: "sm",
-                  })}
+      id: "clearBookings",
+      text: "Clear All",
+      icon: "fa-trash",
+      color: "red",
+      size: "sm",
+    })}
                   ${FormComponents.button({
-                    id: "exportBookings",
-                    text: "Export CSV",
-                    icon: "fa-download",
-                    color: "green",
-                    size: "sm",
-                  })}
+      id: "exportBookings",
+      text: "Export CSV",
+      icon: "fa-download",
+      color: "green",
+      size: "sm",
+    })}
                 </div>
               </div>
             </div>
@@ -357,26 +357,26 @@ export default {
             </div>
             <div class="mt-3 flex gap-2">
               ${FormComponents.button({
-                id: "clearConsole",
-                text: "Clear Console",
-                icon: "fa-eraser",
-                color: "gray",
-                size: "sm",
-              })}
+      id: "clearConsole",
+      text: "Clear Console",
+      icon: "fa-eraser",
+      color: "gray",
+      size: "sm",
+    })}
               ${FormComponents.button({
-                id: "testNotifications",
-                text: "Test Notifications",
-                icon: "fa-bell",
-                color: "blue",
-                size: "sm",
-              })}
+      id: "testNotifications",
+      text: "Test Notifications",
+      icon: "fa-bell",
+      color: "blue",
+      size: "sm",
+    })}
               ${FormComponents.button({
-                id: "testModals",
-                text: "Test Modals",
-                icon: "fa-window-maximize",
-                color: "purple",
-                size: "sm",
-              })}
+      id: "testModals",
+      text: "Test Modals",
+      icon: "fa-window-maximize",
+      color: "purple",
+      size: "sm",
+    })}
             </div>
           </div>
 
@@ -393,33 +393,33 @@ export default {
                 </div>
                 <div class="grid grid-cols-2 gap-2">
                   ${FormComponents.button({
-                    id: "viewUtilsStructure",
-                    text: "View Utils",
-                    icon: "fa-folder-open",
-                    color: "teal",
-                    size: "sm",
-                  })}
+      id: "viewUtilsStructure",
+      text: "View Utils",
+      icon: "fa-folder-open",
+      color: "teal",
+      size: "sm",
+    })}
                   ${FormComponents.button({
-                    id: "viewRoutes",
-                    text: "View Routes",
-                    icon: "fa-route",
-                    color: "indigo",
-                    size: "sm",
-                  })}
+      id: "viewRoutes",
+      text: "View Routes",
+      icon: "fa-route",
+      color: "indigo",
+      size: "sm",
+    })}
                   ${FormComponents.button({
-                    id: "viewDocs",
-                    text: "Documentation",
-                    icon: "fa-book",
-                    color: "blue",
-                    size: "sm",
-                  })}
+      id: "viewDocs",
+      text: "Documentation",
+      icon: "fa-book",
+      color: "blue",
+      size: "sm",
+    })}
                   ${FormComponents.button({
-                    id: "checkHealth",
-                    text: "System Health",
-                    icon: "fa-heartbeat",
-                    color: "green",
-                    size: "sm",
-                  })}
+      id: "checkHealth",
+      text: "System Health",
+      icon: "fa-heartbeat",
+      color: "green",
+      size: "sm",
+    })}
                 </div>
               </div>
             </div>
@@ -436,33 +436,33 @@ export default {
                 </div>
                 <div class="grid grid-cols-2 gap-2">
                   ${FormComponents.button({
-                    id: "refreshMetrics",
-                    text: "Refresh",
-                    icon: "fa-sync",
-                    color: "pink",
-                    size: "sm",
-                  })}
+      id: "refreshMetrics",
+      text: "Refresh",
+      icon: "fa-sync",
+      color: "pink",
+      size: "sm",
+    })}
                   ${FormComponents.button({
-                    id: "clearCache",
-                    text: "Clear Cache",
-                    icon: "fa-broom",
-                    color: "yellow",
-                    size: "sm",
-                  })}
+      id: "clearCache",
+      text: "Clear Cache",
+      icon: "fa-broom",
+      color: "yellow",
+      size: "sm",
+    })}
                   ${FormComponents.button({
-                    id: "testPerformance",
-                    text: "Run Test",
-                    icon: "fa-tachometer-alt",
-                    color: "blue",
-                    size: "sm",
-                  })}
+      id: "testPerformance",
+      text: "Run Test",
+      icon: "fa-tachometer-alt",
+      color: "blue",
+      size: "sm",
+    })}
                   ${FormComponents.button({
-                    id: "viewLogs",
-                    text: "View Logs",
-                    icon: "fa-file-alt",
-                    color: "gray",
-                    size: "sm",
-                  })}
+      id: "viewLogs",
+      text: "View Logs",
+      icon: "fa-file-alt",
+      color: "gray",
+      size: "sm",
+    })}
                 </div>
               </div>
             </div>
@@ -551,8 +551,7 @@ export default {
     $("#performanceMetrics").html(`
       <div>Memory: ${memory}</div>
       <div>Routes: ${routes} registered</div>
-      <div>Utils: ${
-        Object.keys(UTILS_STRUCTURE).length
+      <div>Utils: ${Object.keys(UTILS_STRUCTURE).length
       } categories, ${totalUtilsFiles} files</div>
       <div>Frontend: v${APP_CONFIG.version}</div>
       <div>Backend: v${backendVersion} (${backendStatus})</div>
@@ -670,50 +669,43 @@ export default {
           <div class="flex items-center gap-2 mb-4 pb-4 border-b">
             ${statusIcon}
             <h3 class="font-bold text-lg">
-              ${
-                validation.isValid
-                  ? "All relationships are valid!"
-                  : "Some issues found"
-              }
+              ${validation.isValid
+          ? "All relationships are valid!"
+          : "Some issues found"
+        }
             </h3>
           </div>
           <div class="space-y-3">
             <div class="bg-gray-50 p-3 rounded">
               <div class="text-sm font-semibold mb-2">Overview</div>
               <div class="text-xs space-y-1">
-                <div>Total Bookings: <span class="font-mono">${
-                  validation.totalBookings
-                }</span></div>
-                <div>Valid Bookings: <span class="font-mono text-green-600">${
-                  validation.validBookings
-                }</span></div>
-                <div>Integrity Score: <span class="font-mono font-bold text-${
-                  validation.integrityScore === "100.00" ? "green" : "yellow"
-                }-600">${validation.integrityScore}%</span></div>
+                <div>Total Bookings: <span class="font-mono">${validation.totalBookings
+        }</span></div>
+                <div>Valid Bookings: <span class="font-mono text-green-600">${validation.validBookings
+        }</span></div>
+                <div>Integrity Score: <span class="font-mono font-bold text-${validation.integrityScore === "100.00" ? "green" : "yellow"
+        }-600">${validation.integrityScore}%</span></div>
               </div>
             </div>
-            ${
-              validation.invalidPerformanceLinks > 0 ||
-              validation.invalidUserLinks > 0
-                ? `
+            ${validation.invalidPerformanceLinks > 0 ||
+          validation.invalidUserLinks > 0
+          ? `
             <div class="bg-red-50 p-3 rounded">
               <div class="text-sm font-semibold text-red-700 mb-2">Issues Found</div>
               <div class="text-xs space-y-1 text-red-600">
-                ${
-                  validation.invalidPerformanceLinks > 0
-                    ? `<div>Invalid Performance Links: ${validation.invalidPerformanceLinks}</div>`
-                    : ""
-                }
-                ${
-                  validation.invalidUserLinks > 0
-                    ? `<div>Invalid User Links: ${validation.invalidUserLinks}</div>`
-                    : ""
-                }
+                ${validation.invalidPerformanceLinks > 0
+            ? `<div>Invalid Performance Links: ${validation.invalidPerformanceLinks}</div>`
+            : ""
+          }
+                ${validation.invalidUserLinks > 0
+            ? `<div>Invalid User Links: ${validation.invalidUserLinks}</div>`
+            : ""
+          }
               </div>
             </div>
             `
-                : ""
-            }
+          : ""
+        }
           </div>
         </div>
       `;
@@ -753,18 +745,14 @@ export default {
               <h3 class="font-bold">Users</h3>
             </div>
             <div class="text-sm space-y-1">
-              <div>Total: <span class="font-mono font-bold">${
-                stats.users.total
-              }</span></div>
-              <div>With Bookings: <span class="font-mono text-green-600">${
-                stats.users.withBookings
-              }</span></div>
-              <div>Without Bookings: <span class="font-mono text-gray-500">${
-                stats.users.withoutBookings
-              }</span></div>
-              <div>Avg Bookings/User: <span class="font-mono">${
-                stats.users.averageBookingsPerUser
-              }</span></div>
+              <div>Total: <span class="font-mono font-bold">${stats.users.total
+        }</span></div>
+              <div>With Bookings: <span class="font-mono text-green-600">${stats.users.withBookings
+        }</span></div>
+              <div>Without Bookings: <span class="font-mono text-gray-500">${stats.users.withoutBookings
+        }</span></div>
+              <div>Avg Bookings/User: <span class="font-mono">${stats.users.averageBookingsPerUser
+        }</span></div>
             </div>
           </div>
 
@@ -774,34 +762,26 @@ export default {
               <h3 class="font-bold">Performances</h3>
             </div>
             <div class="text-sm space-y-1">
-              <div>Total: <span class="font-mono font-bold">${
-                stats.performances.total
-              }</span></div>
-              <div>With Bookings: <span class="font-mono text-green-600">${
-                stats.performances.withBookings
-              }</span></div>
-              <div>Without Bookings: <span class="font-mono text-gray-500">${
-                stats.performances.withoutBookings
-              }</span></div>
-              <div>Avg Bookings/Performance: <span class="font-mono">${
-                stats.performances.averageBookingsPerPerformance
-              }</span></div>
+              <div>Total: <span class="font-mono font-bold">${stats.performances.total
+        }</span></div>
+              <div>With Bookings: <span class="font-mono text-green-600">${stats.performances.withBookings
+        }</span></div>
+              <div>Without Bookings: <span class="font-mono text-gray-500">${stats.performances.withoutBookings
+        }</span></div>
+              <div>Avg Bookings/Performance: <span class="font-mono">${stats.performances.averageBookingsPerPerformance
+        }</span></div>
             </div>
             <div class="mt-3 pt-3 border-t border-purple-200">
               <div class="text-xs font-semibold mb-2">By Status:</div>
               <div class="text-xs space-y-1">
-                <div><span class="inline-block w-24">Available:</span> <span class="font-mono text-green-600">${
-                  perfStatusCounts.available || 0
-                }</span></div>
-                <div><span class="inline-block w-24">Limited:</span> <span class="font-mono text-yellow-600">${
-                  perfStatusCounts.limited || 0
-                }</span></div>
-                <div><span class="inline-block w-24">Sold Out:</span> <span class="font-mono text-red-600">${
-                  perfStatusCounts.sold_out || 0
-                }</span></div>
-                <div><span class="inline-block w-24">Completed:</span> <span class="font-mono text-gray-600">${
-                  perfStatusCounts.completed || 0
-                }</span></div>
+                <div><span class="inline-block w-24">Available:</span> <span class="font-mono text-green-600">${perfStatusCounts.available || 0
+        }</span></div>
+                <div><span class="inline-block w-24">Limited:</span> <span class="font-mono text-yellow-600">${perfStatusCounts.limited || 0
+        }</span></div>
+                <div><span class="inline-block w-24">Sold Out:</span> <span class="font-mono text-red-600">${perfStatusCounts.sold_out || 0
+        }</span></div>
+                <div><span class="inline-block w-24">Completed:</span> <span class="font-mono text-gray-600">${perfStatusCounts.completed || 0
+        }</span></div>
               </div>
             </div>
           </div>
@@ -812,9 +792,8 @@ export default {
               <h3 class="font-bold">Bookings</h3>
             </div>
             <div class="text-sm space-y-1">
-              <div>Total: <span class="font-mono font-bold">${
-                stats.bookings.total
-              }</span></div>
+              <div>Total: <span class="font-mono font-bold">${stats.bookings.total
+        }</span></div>
             </div>
           </div>
         </div>
@@ -906,8 +885,8 @@ export default {
           <td class="py-2 pr-4 text-blue-400">${item.key}</td>
           <td class="py-2 pr-4 text-center">
             <span class="px-2 py-1 text-xs rounded ${this.getTypeColor(
-              item.type
-            )}">${item.type}</span>
+          item.type
+        )}">${item.type}</span>
           </td>
           <td class="py-2 text-right text-green-400">${item.sizeKB} KB</td>
         </tr>
@@ -1302,9 +1281,8 @@ export default {
       .map(
         ([category, files]) => `
       <div class="mb-3">
-        <h4 class="text-sm font-bold text-indigo-600 mb-1">${category}/ (${
-          files.length
-        } files)</h4>
+        <h4 class="text-sm font-bold text-indigo-600 mb-1">${category}/ (${files.length
+          } files)</h4>
         <div class="text-xs text-gray-600 pl-4">
           ${files.map((f) => `<div>├─ ${f}</div>`).join("")}
         </div>
@@ -1319,9 +1297,8 @@ export default {
         <div class="text-left bg-gray-900 text-green-400 p-4 rounded-lg overflow-auto max-h-96 font-mono text-xs">
           <div class="text-yellow-400 mb-3">frontend/src/utils/</div>
           ${html}
-          <div class="mt-3 text-blue-400">Total: ${totalFiles} utility files in ${
-            Object.keys(UTILS_STRUCTURE).length
-          } categories</div>
+          <div class="mt-3 text-blue-400">Total: ${totalFiles} utility files in ${Object.keys(UTILS_STRUCTURE).length
+        } categories</div>
         </div>
       `,
       width: 700,
@@ -1364,8 +1341,8 @@ export default {
         </thead>
         <tbody class="text-gray-300">
           ${routesList
-            .map(
-              (r) => `
+        .map(
+          (r) => `
             <tr class="border-b border-gray-700">
               <td class="p-2 text-yellow-400">${r.category}</td>
               <td class="p-2 text-blue-400">${r.path}</td>
@@ -1373,8 +1350,8 @@ export default {
               <td class="p-2 text-green-400">${r.roles}</td>
             </tr>
           `
-            )
-            .join("")}
+        )
+        .join("")}
         </tbody>
       </table>
     `;
@@ -1442,22 +1419,19 @@ export default {
         <div class="mb-4 pb-4 border-b border-gray-700">
           <h3 class="text-yellow-400 font-bold mb-2">Version Information</h3>
           <div class="text-sm space-y-2">
-            <div>Frontend Version: <span class="text-green-400">${
-              APP_CONFIG.version || "0.0.0"
-            }</span></div>
-            <div>Backend Version: <span class="${
-              backendInfo ? "text-green-400" : "text-red-400"
-            }">${backendInfo?.version || "Unknown"}</span></div>
-            <div>Backend Status: <span class="${
-              backendStatus ? "text-green-400" : "text-red-400"
-            }">${backendStatus ? "Connected ✓" : "Disconnected ✗"}</span></div>
+            <div>Frontend Version: <span class="text-green-400">${APP_CONFIG.version || "0.0.0"
+      }</span></div>
+            <div>Backend Version: <span class="${backendInfo ? "text-green-400" : "text-red-400"
+      }">${backendInfo?.version || "Unknown"}</span></div>
+            <div>Backend Status: <span class="${backendStatus ? "text-green-400" : "text-red-400"
+      }">${backendStatus ? "Connected ✓" : "Disconnected ✗"}</span></div>
           </div>
         </div>
         
         <h3 class="text-yellow-400 font-bold mb-2">System Health Checks</h3>
         ${checks
-          .map(
-            (check) => `
+        .map(
+          (check) => `
           <div class="flex justify-between items-center p-2 bg-gray-800 rounded mb-2">
             <span class="text-gray-300">${check.name}</span>
             <span class="${check.status ? "text-green-400" : "text-red-400"}">
@@ -1465,8 +1439,8 @@ export default {
             </span>
           </div>
         `
-          )
-          .join("")}
+        )
+        .join("")}
       </div>
     `;
 

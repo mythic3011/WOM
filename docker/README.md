@@ -1,13 +1,14 @@
 # Docker Configuration
 
-This directory contains all Docker-related configuration files for the WOM Booking System.
+Docker-related configuration files for the WOM Booking System.
 
 ## Files
 
-- `docker-compose.yml` - Development environment configuration
-- `docker-compose.prod.yml` - Production environment configuration
-- `pgadmin-servers.json` - Pre-configured pgAdmin server settings
-- `pgadmin-passfile.example` - Template for pgAdmin password file
+- `docker-compose.yml` - Development environment configuration (root directory)
+- `docker-compose.prod.yml` - Production environment configuration (root directory)
+- `pgadmin-servers.json` - Pre-configured pgAdmin server settings (root directory)
+- `pgadmin-passfile.example` - Template for pgAdmin password file (root directory)
+- `.env.example` - Environment variables template (this directory)
 
 ## Quick Start
 
@@ -16,19 +17,19 @@ This directory contains all Docker-related configuration files for the WOM Booki
 From project root:
 
 ```bash
-docker compose -f docker/docker-compose.yml up --build
+docker compose up --build
 ```
 
 Or with explicit env file:
 
 ```bash
-docker compose --env-file .env -f docker/docker-compose.yml up --build
+docker compose --env-file .env up --build
 ```
 
 ### Production
 
 ```bash
-docker compose -f docker/docker-compose.prod.yml up -d
+docker compose -f docker-compose.prod.yml up -d
 ```
 
 ## Services
@@ -69,10 +70,10 @@ All services are connected via the `orchestral_network` bridge network.
 Run from project root:
 
 ```bash
-docker compose -f docker/docker-compose.yml ps              # List running containers
-docker compose -f docker/docker-compose.yml logs -f         # Follow logs from all services
-docker compose -f docker/docker-compose.yml logs backend    # View backend logs
-docker compose -f docker/docker-compose.yml restart backend # Restart backend service
-docker compose -f docker/docker-compose.yml down            # Stop all services
-docker compose -f docker/docker-compose.yml down -v         # Stop and remove volumes
+docker compose ps              # List running containers
+docker compose logs -f         # Follow logs from all services
+docker compose logs backend    # View backend logs
+docker compose restart backend # Restart backend service
+docker compose down            # Stop all services
+docker compose down -v         # Stop and remove volumes
 ```

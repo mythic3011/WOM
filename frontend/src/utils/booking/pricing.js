@@ -2,7 +2,7 @@ import {
   PerformanceStatusColors,
   getPerformanceStatusClass,
   getPerformanceStatusLabel,
-} from "/src/utils/colors.js";
+} from "@utils/colors.js";
 
 export const TICKET_CATEGORIES = {
   VIP: {

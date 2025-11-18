@@ -1,4 +1,4 @@
-import * as userService from "../services/userService.js";
+import * as userService from "#services/userService.js";
 
 export const getAllUsers = async (req, res, next) => {
   try {
@@ -118,7 +118,7 @@ export const deleteSelf = async (req, res, next) => {
     await userService.verifyAndDeleteUser(userId, password);
 
     if (req.session) {
-      req.session.destroy(() => {});
+      req.session.destroy(() => { });
     }
 
     res.json({ success: true, message: "Account deleted successfully" });

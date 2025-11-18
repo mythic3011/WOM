@@ -1,5 +1,5 @@
 import Swal from "sweetalert2";
-import { SwalColors } from "/src/utils/colors.js";
+import { SwalColors } from "@utils/colors.js";
 
 export const dialogUtils = {
   async confirmDelete(itemName, itemType = "item") {
@@ -184,15 +184,13 @@ export const dialogUtils = {
       title,
       html: `
         <div class="space-y-3">
-          <p class="text-gray-700">${
-            steps[currentStep - 1] || "Processing..."
-          }</p>
+          <p class="text-gray-700">${steps[currentStep - 1] || "Processing..."
+        }</p>
           <div class="w-full bg-gray-200 rounded-full h-2.5">
             <div class="bg-indigo-600 h-2.5 rounded-full" style="width: ${percentage}%"></div>
           </div>
-          <p class="text-sm text-gray-500">Step ${currentStep} of ${
-            steps.length
-          }</p>
+          <p class="text-sm text-gray-500">Step ${currentStep} of ${steps.length
+        }</p>
         </div>
       `,
       allowOutsideClick: false,
@@ -230,41 +228,35 @@ export const dialogUtils = {
 
         switch (type) {
           case "textarea":
-            inputHTML = `<textarea id="${id}" class="swal2-textarea w-full" placeholder="${placeholder}" ${
-              required ? "required" : ""
-            }>${value}</textarea>`;
+            inputHTML = `<textarea id="${id}" class="swal2-textarea w-full" placeholder="${placeholder}" ${required ? "required" : ""
+              }>${value}</textarea>`;
             break;
           case "select":
             inputHTML = `
-              <select id="${id}" class="swal2-select w-full" ${
-                required ? "required" : ""
+              <select id="${id}" class="swal2-select w-full" ${required ? "required" : ""
               }>
                 <option value="">-- Select --</option>
                 ${selectOptions
-                  .map(
-                    (opt) =>
-                      `<option value="${opt.value}" ${
-                        opt.value === value ? "selected" : ""
-                      }>${opt.label}</option>`
-                  )
-                  .join("")}
+                .map(
+                  (opt) =>
+                    `<option value="${opt.value}" ${opt.value === value ? "selected" : ""
+                    }>${opt.label}</option>`
+                )
+                .join("")}
               </select>
             `;
             break;
           case "number":
-            inputHTML = `<input type="number" id="${id}" class="swal2-input w-full" placeholder="${placeholder}" value="${value}" ${
-              required ? "required" : ""
-            }>`;
+            inputHTML = `<input type="number" id="${id}" class="swal2-input w-full" placeholder="${placeholder}" value="${value}" ${required ? "required" : ""
+              }>`;
             break;
           case "date":
-            inputHTML = `<input type="date" id="${id}" class="swal2-input w-full text-black" value="${value}" ${
-              required ? "required" : ""
-            }>`;
+            inputHTML = `<input type="date" id="${id}" class="swal2-input w-full text-black" value="${value}" ${required ? "required" : ""
+              }>`;
             break;
           case "datetime-local":
-            inputHTML = `<input type="datetime-local" id="${id}" class="swal2-input w-full text-black" value="${value}" ${
-              required ? "required" : ""
-            }>`;
+            inputHTML = `<input type="datetime-local" id="${id}" class="swal2-input w-full text-black" value="${value}" ${required ? "required" : ""
+              }>`;
             break;
           case "checkbox":
             inputHTML = `
@@ -275,20 +267,17 @@ export const dialogUtils = {
             `;
             break;
           default:
-            inputHTML = `<input type="${type}" id="${id}" class="swal2-input w-full" placeholder="${placeholder}" value="${value}" ${
-              required ? "required" : ""
-            }>`;
+            inputHTML = `<input type="${type}" id="${id}" class="swal2-input w-full" placeholder="${placeholder}" value="${value}" ${required ? "required" : ""
+              }>`;
         }
 
         return `
           <div class="mb-4 text-left">
-            ${
-              type !== "checkbox"
-                ? `<label class="block text-sm font-medium text-gray-700 mb-2">${label}${
-                    required ? " *" : ""
-                  }</label>`
-                : ""
-            }
+            ${type !== "checkbox"
+            ? `<label class="block text-sm font-medium text-gray-700 mb-2">${label}${required ? " *" : ""
+            }</label>`
+            : ""
+          }
             ${inputHTML}
           </div>
         `;
@@ -350,23 +339,19 @@ export const dialogUtils = {
     const listHTML = items
       .map(
         (item, index) => `
-        <div class="flex items-center gap-3 p-2 hover:bg-gray-50 rounded ${
-          selectable ? "cursor-pointer" : ""
-        }" data-index="${index}">
-          ${
-            selectable
-              ? `<input type="${
-                  multiSelect ? "checkbox" : "radio"
-                }" name="listItem" value="${index}">`
-              : ""
+        <div class="flex items-center gap-3 p-2 hover:bg-gray-50 rounded ${selectable ? "cursor-pointer" : ""
+          }" data-index="${index}">
+          ${selectable
+            ? `<input type="${multiSelect ? "checkbox" : "radio"
+            }" name="listItem" value="${index}">`
+            : ""
           }
           <div class="flex-1">
             <div class="font-medium">${item.title || item.name || item}</div>
-            ${
-              item.description
-                ? `<div class="text-sm text-gray-500">${item.description}</div>`
-                : ""
-            }
+            ${item.description
+            ? `<div class="text-sm text-gray-500">${item.description}</div>`
+            : ""
+          }
           </div>
         </div>
       `

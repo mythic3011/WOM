@@ -1,10 +1,10 @@
-import sequelize, { syncDatabase } from "../config/database.js";
-import { User, Performance, Venue, TicketType } from "../models/index.js";
+import sequelize, { syncDatabase } from "#config/database.js";
+import { User, Performance, Venue, TicketType } from "#models/index.js";
 import { generateUsers } from "./data/users.js";
 import { venuesData } from "./data/venues.js";
 import { performancesData } from "./data/performances.js";
 import { ticketTypesData } from "./data/ticketTypes.js";
-import { buildSeatMapFromVenueLayout, countSeats } from "../utils/seatMapBuilder.js";
+import { buildSeatMapFromVenueLayout, countSeats } from "#utils/seatMapBuilder.js";
 
 const seedDatabase = async () => {
   try {

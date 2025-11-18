@@ -1,5 +1,5 @@
 import { DataTypes, Op } from "sequelize";
-import sequelize from "../config/database.js";
+import sequelize from "#config/database.js";
 import bcrypt from "bcryptjs";
 
 const User = sequelize.define(
@@ -123,7 +123,7 @@ const User = sequelize.define(
       },
       {
         unique: true,
-        fields: ["user_id"],
+        fields: ["userId"],
       },
     ],
   }

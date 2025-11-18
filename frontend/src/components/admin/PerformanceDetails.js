@@ -1,4 +1,4 @@
-import { getTierBadge } from "/src/config/tierConfig.js";
+import { getTierBadge } from "@config/tierConfig.js";
 import dayjs from "dayjs";
 
 export const PerformanceDetails = {
@@ -57,18 +57,18 @@ export const PerformanceDetails = {
         </h3>
         <div class="space-y-2">
           ${showtimes
-            .map((st) => {
-              const date = dayjs(st.dateTime || st.datetime).format("MMM D, YYYY");
-              const time = dayjs(st.dateTime || st.datetime).format("h:mm A");
-              const totalSeats = st.totalSeats || st.capacity || 0;
-              const availableSeats = st.availableSeats !== undefined ? st.availableSeats : totalSeats;
-              const bookedSeats = totalSeats - availableSeats;
-              const availability = totalSeats > 0 ? Math.round((availableSeats / totalSeats) * 100) : 0;
-              
-              const availabilityColor = availability > 50 ? 'text-green-600' : availability > 20 ? 'text-yellow-600' : 'text-red-600';
-              const availabilityBg = availability > 50 ? 'bg-green-100' : availability > 20 ? 'bg-yellow-100' : 'bg-red-100';
-              
-              return `
+        .map((st) => {
+          const date = dayjs(st.dateTime || st.datetime).format("MMM D, YYYY");
+          const time = dayjs(st.dateTime || st.datetime).format("h:mm A");
+          const totalSeats = st.totalSeats || st.capacity || 0;
+          const availableSeats = st.availableSeats !== undefined ? st.availableSeats : totalSeats;
+          const bookedSeats = totalSeats - availableSeats;
+          const availability = totalSeats > 0 ? Math.round((availableSeats / totalSeats) * 100) : 0;
+
+          const availabilityColor = availability > 50 ? 'text-green-600' : availability > 20 ? 'text-yellow-600' : 'text-red-600';
+          const availabilityBg = availability > 50 ? 'bg-green-100' : availability > 20 ? 'bg-yellow-100' : 'bg-red-100';
+
+          return `
               <div class="bg-gray-50 rounded p-3 text-sm">
                 <div class="flex items-center justify-between mb-2">
                   <div class="font-medium">${date} at ${time}</div>
@@ -83,8 +83,8 @@ export const PerformanceDetails = {
                 </div>
               </div>
             `;
-            })
-            .join("")}
+        })
+        .join("")}
         </div>
       </div>
     `;
@@ -93,7 +93,7 @@ export const PerformanceDetails = {
   getSectionName(ticketType) {
     if (ticketType.section) return ticketType.section;
     if (ticketType.name) return ticketType.name;
-    
+
     if (ticketType.tier) {
       const tierLabels = {
         vip: "VIP",
@@ -103,7 +103,7 @@ export const PerformanceDetails = {
       };
       return tierLabels[ticketType.tier.toLowerCase()] || ticketType.tier;
     }
-    
+
     return "General Admission";
   },
 
@@ -114,17 +114,17 @@ export const PerformanceDetails = {
       standard: "bg-green-100 text-green-800",
       economy: "bg-blue-100 text-blue-800",
     };
-    
+
     const tierLabels = {
       vip: "VIP",
       premium: "Premium",
       standard: "Standard",
       economy: "Economy",
     };
-    
+
     const color = tierColors[tier?.toLowerCase()] || tierColors.standard;
     const label = tierLabels[tier?.toLowerCase()] || tier || "Standard";
-    
+
     return `<span class="text-xs px-2 py-1 rounded font-medium ${color}">${label}</span>`;
   },
 
@@ -146,8 +146,8 @@ export const PerformanceDetails = {
         </h3>
         <div class="space-y-2">
           ${ticketTypes
-            .map(
-              (tt) => `
+        .map(
+          (tt) => `
             <div class="bg-gray-50 rounded p-3 flex items-center justify-between text-sm">
               <div class="flex items-center gap-2">
                 <span class="font-medium">${this.getSectionName(tt)}</span>
@@ -156,8 +156,8 @@ export const PerformanceDetails = {
               <div class="font-semibold text-gray-900">HKD $${tt.basePrice || tt.price || 0}</div>
             </div>
           `
-            )
-            .join("")}
+        )
+        .join("")}
         </div>
       </div>
     `;

@@ -1,19 +1,19 @@
-import { createEmptyState } from "/src/components/EmptyState.js";
-import { FormComponents } from "/src/components/FormComponents.js";
-import { BookingCard } from "/src/components/BookingCard.js";
-import { SwalColors } from "/src/utils/colors.js";
-import { bookingService } from "/src/services/bookingService.js";
-import { performanceService } from "/src/services/performanceService.js";
+import { createEmptyState } from "@components/EmptyState.js";
+import { FormComponents } from "@components/FormComponents.js";
+import { BookingCard } from "@components/BookingCard.js";
+import { SwalColors } from "@utils/colors.js";
+import { bookingService } from "@services/bookingService.js";
+import { performanceService } from "@services/performanceService.js";
 import dayjs from "dayjs";
 import Swal from "sweetalert2";
-import { notify } from "/src/utils/ui/notification.js";
-import { TicketGenerator } from "/src/utils/reports/ticketGenerator.js";
-import { InvoiceGenerator } from "/src/utils/reports/invoiceGenerator.js";
-import { getStatusConfig } from "/src/utils/status.js";
-import { handleApiError } from "/src/services/apiClient.js";
-import { getCurrentUser } from "/src/utils/core/auth.js";
-import { formatCurrency } from "/src/utils/utils.js";
-import { getDisplayLabel } from "/src/utils/seatIdHelper.js";
+import { notify } from "@utils/ui/notification.js";
+import { TicketGenerator } from "@utils/reports/ticketGenerator.js";
+import { InvoiceGenerator } from "@utils/reports/invoiceGenerator.js";
+import { getStatusConfig } from "@utils/status.js";
+import { handleApiError } from "@services/apiClient.js";
+import { getCurrentUser } from "@utils/core/auth.js";
+import { formatCurrency } from "@utils/utils.js";
+import { getDisplayLabel } from "@utils/seatIdHelper.js";
 
 export default {
   title: "My Bookings | User",
@@ -51,37 +51,37 @@ export default {
     return `
       <main class="container mx-auto px-4 py-8 max-w-7xl">
         ${FormComponents.pageHeader({
-          title: "My Bookings",
-          subtitle: "View and manage your performance bookings",
-          icon: "fa-ticket-alt",
-          actions: [
-            FormComponents.button({
-              id: "browsePerformances",
-              text: "Browse Performances",
-              icon: "fa-music",
-              color: "indigo",
-            }),
-          ],
-        })}
+      title: "My Bookings",
+      subtitle: "View and manage your performance bookings",
+      icon: "fa-ticket-alt",
+      actions: [
+        FormComponents.button({
+          id: "browsePerformances",
+          text: "Browse Performances",
+          icon: "fa-music",
+          color: "indigo",
+        }),
+      ],
+    })}
 
         ${this.renderStats()}
 
         ${FormComponents.filterBar({
-          searchId: "searchBookings",
-          searchPlaceholder: "Search by booking ID or performance...",
-          filters: [
-            {
-              id: "statusFilter",
-              options: [
-                { value: "all", label: "All Status" },
-                { value: "confirmed", label: "Confirmed" },
-                { value: "pending", label: "Pending" },
-                { value: "cancelled", label: "Cancelled" },
-              ],
-            },
+      searchId: "searchBookings",
+      searchPlaceholder: "Search by booking ID or performance...",
+      filters: [
+        {
+          id: "statusFilter",
+          options: [
+            { value: "all", label: "All Status" },
+            { value: "confirmed", label: "Confirmed" },
+            { value: "pending", label: "Pending" },
+            { value: "cancelled", label: "Cancelled" },
           ],
-          clearButtonId: "clearFilters",
-        })}
+        },
+      ],
+      clearButtonId: "clearFilters",
+    })}
 
         <div id="bookingsList"></div>
       </main>
@@ -261,26 +261,24 @@ export default {
     const bookingsHTML = `
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         ${this.filteredBookings
-          .map((booking) => {
-            const performance = this.performances.find(
-              (p) => String(p.id) === String(booking.performanceId)
+        .map((booking) => {
+          const performance = this.performances.find(
+            (p) => String(p.id) === String(booking.performanceId)
+          );
+          let showtime = null;
+          if (booking.showtimeId && performance?.showtimes) {
+            showtime = performance.showtimes.find(
+              (s) => String(s.id) === String(booking.showtimeId)
             );
-            let showtime = null;
-            if (booking.showtimeId && performance?.showtimes) {
-              showtime = performance.showtimes.find(
-                (s) => String(s.id) === String(booking.showtimeId)
-              );
-            }
-            return BookingCard.renderGrid(booking, performance, showtime);
-          })
-          .join("")}
+          }
+          return BookingCard.renderGrid(booking, performance, showtime);
+        })
+        .join("")}
       </div>
       <div class="mt-6 text-center text-sm text-gray-600">
-        <p>Showing <span class="font-semibold">${
-          this.filteredBookings.length
-        }</span> of <span class="font-semibold">${
-          this.bookings.length
-        }</span> bookings</p>
+        <p>Showing <span class="font-semibold">${this.filteredBookings.length
+      }</span> of <span class="font-semibold">${this.bookings.length
+      }</span> bookings</p>
       </div>
     `;
 
@@ -333,17 +331,16 @@ export default {
                 <p class="text-xs font-semibold uppercase tracking-wider opacity-90 mb-1">Booking ID</p>
                 <p class="text-lg font-mono font-bold">${booking.id}</p>
               </div>
-              <span class="px-3 py-1.5 rounded-lg text-xs font-bold ${
-                statusStyle.bg
-              } ${statusStyle.text} shadow-md">
+              <span class="px-3 py-1.5 rounded-lg text-xs font-bold ${statusStyle.bg
+        } ${statusStyle.text} shadow-md">
                 <i class="fas ${statusStyle.icon} mr-1"></i>${statusConfig.text}
               </span>
             </div>
             <div class="flex items-center gap-2 text-xs opacity-90">
               <i class="fas fa-calendar-check"></i>
               <span>Booked: ${dayjs(booking.date).format(
-                "MMM D, YYYY h:mm A"
-              )}</span>
+          "MMM D, YYYY h:mm A"
+        )}</span>
             </div>
           </div>
 
@@ -353,45 +350,40 @@ export default {
                 <i class="fas fa-music text-indigo-600"></i>
               </div>
               <div class="flex-1 min-w-0">
-                <h3 class="font-bold text-gray-900 text-base leading-tight mb-2">${
-                  performance?.title || "Unknown"
-                }</h3>
+                <h3 class="font-bold text-gray-900 text-base leading-tight mb-2">${performance?.title || "Unknown"
+        }</h3>
                 <div class="grid grid-cols-2 gap-x-3 gap-y-1.5 text-xs">
                   <div class="flex items-center gap-1.5 text-gray-600">
                     <i class="fas fa-calendar w-3"></i>
-                    <span class="truncate">${
-                      performanceDate
-                        ? dayjs(performanceDate).format("MMM D, YYYY")
-                        : "N/A"
-                    }</span>
+                    <span class="truncate">${performanceDate
+          ? dayjs(performanceDate).format("MMM D, YYYY")
+          : "N/A"
+        }</span>
                   </div>
                   <div class="flex items-center gap-1.5 text-gray-600">
                     <i class="fas fa-clock w-3"></i>
-                    <span>${
-                      performanceDate
-                        ? dayjs(performanceDate).format("h:mm A")
-                        : "N/A"
-                    }</span>
+                    <span>${performanceDate
+          ? dayjs(performanceDate).format("h:mm A")
+          : "N/A"
+        }</span>
                   </div>
                   <div class="flex items-center gap-1.5 text-gray-600 col-span-2">
                     <i class="fas fa-map-marker-alt w-3"></i>
-                    <span class="truncate">${
-                      performance?.venueName ||
-                      performance?.location ||
-                      performance?.venue ||
-                      "N/A"
-                    }</span>
+                    <span class="truncate">${performance?.venueName ||
+        performance?.location ||
+        performance?.venue ||
+        "N/A"
+        }</span>
                   </div>
-                  ${
-                    performance?.conductor
-                      ? `
+                  ${performance?.conductor
+          ? `
                   <div class="flex items-center gap-1.5 text-gray-600 col-span-2">
                     <i class="fas fa-user-tie w-3"></i>
                     <span class="truncate">${performance.conductor}</span>
                   </div>
                   `
-                      : ""
-                  }
+          : ""
+        }
                 </div>
               </div>
             </div>
@@ -402,100 +394,93 @@ export default {
               <i class="fas fa-couch text-purple-600"></i>
               <h3 class="font-semibold text-gray-900 text-sm">Seats & Tickets</h3>
               <span class="ml-auto text-xs font-bold text-purple-700 bg-purple-100 px-2 py-0.5 rounded-full">
-                ${booking.seats.length} seat${
-                  booking.seats.length > 1 ? "s" : ""
-                }
+                ${booking.seats.length} seat${booking.seats.length > 1 ? "s" : ""
+        }
               </span>
             </div>
             <div class="space-y-1.5 max-h-44 overflow-y-auto">
-              ${
-                booking.seatTicketTypes
-                  ? Object.entries(booking.seatTicketTypes)
-                      .map(([seatId, ticket]) => {
-                        const seatParts = seatId.split("-");
-                        const seatNumber =
-                          seatParts[seatParts.length - 1] || seatId;
-                        const section =
-                          seatParts.length >= 3 ? seatParts[2] : "";
-                        const tier = ticket.tier || ticket.category || "";
-                        return `
+              ${booking.seatTicketTypes
+          ? Object.entries(booking.seatTicketTypes)
+            .map(([seatId, ticket]) => {
+              const seatParts = seatId.split("-");
+              const seatNumber =
+                seatParts[seatParts.length - 1] || seatId;
+              const section =
+                seatParts.length >= 3 ? seatParts[2] : "";
+              const tier = ticket.tier || ticket.category || "";
+              return `
                 <div class="bg-white rounded-lg border border-purple-200 p-2 hover:border-purple-300 transition-colors">
                   <div class="flex items-start justify-between gap-2">
                     <div class="flex items-center gap-2">
                       <span class="px-2.5 py-1 bg-indigo-600 text-white rounded-lg font-bold text-xs min-w-[3rem] text-center">${seatNumber}</span>
                       <div class="flex flex-col gap-0.5">
-                        ${
-                          section
-                            ? `<span class="text-gray-700 font-medium text-xs">${section}</span>`
-                            : ""
-                        }
+                        ${section
+                  ? `<span class="text-gray-700 font-medium text-xs">${section}</span>`
+                  : ""
+                }
                         <div class="flex items-center gap-1.5">
-                          ${
-                            tier
-                              ? `<span class="px-1.5 py-0.5 bg-purple-100 text-purple-700 rounded text-[10px] font-semibold">${tier}</span>`
-                              : ""
-                          }
-                          <span class="text-gray-600 text-[10px]">${
-                            ticket.name
-                          }</span>
+                          ${tier
+                  ? `<span class="px-1.5 py-0.5 bg-purple-100 text-purple-700 rounded text-[10px] font-semibold">${tier}</span>`
+                  : ""
+                }
+                          <span class="text-gray-600 text-[10px]">${ticket.name
+                }</span>
                         </div>
                       </div>
                     </div>
                     <span class="font-bold text-gray-900 text-xs whitespace-nowrap">${formatCurrency(
-                      ticket.price
-                    )}</span>
+                  ticket.price
+                )}</span>
                   </div>
                 </div>
               `;
-                      })
-                      .join("")
-                  : booking.seats
-                      .map((seat) => {
-                        const seatId =
-                          typeof seat === "string"
-                            ? seat
-                            : seat.fullId || seat.seatId || seat;
-                        const seatParts =
-                          typeof seatId === "string" ? seatId.split("-") : [];
-                        const seatNumber =
-                          typeof seat === "string"
-                            ? seatParts[seatParts.length - 1] || seatId
-                            : seat.displayLabel ||
-                              seat.seatNumber ||
-                              seatParts[seatParts.length - 1] ||
-                              seatId;
-                        const section =
-                          typeof seat === "string"
-                            ? seatParts.length >= 3
-                              ? seatParts[2]
-                              : ""
-                            : seat.sectionName ||
-                              (seatParts.length >= 3 ? seatParts[2] : "");
-                        return `
+            })
+            .join("")
+          : booking.seats
+            .map((seat) => {
+              const seatId =
+                typeof seat === "string"
+                  ? seat
+                  : seat.fullId || seat.seatId || seat;
+              const seatParts =
+                typeof seatId === "string" ? seatId.split("-") : [];
+              const seatNumber =
+                typeof seat === "string"
+                  ? seatParts[seatParts.length - 1] || seatId
+                  : seat.displayLabel ||
+                  seat.seatNumber ||
+                  seatParts[seatParts.length - 1] ||
+                  seatId;
+              const section =
+                typeof seat === "string"
+                  ? seatParts.length >= 3
+                    ? seatParts[2]
+                    : ""
+                  : seat.sectionName ||
+                  (seatParts.length >= 3 ? seatParts[2] : "");
+              return `
                 <div class="bg-white rounded-lg border border-purple-200 p-2 hover:border-purple-300 transition-colors">
                   <div class="flex items-start justify-between gap-2">
                     <div class="flex items-center gap-2">
                       <span class="px-2.5 py-1 bg-indigo-600 text-white rounded-lg font-bold text-xs min-w-[3rem] text-center">${seatNumber}</span>
                       <div class="flex flex-col gap-0.5">
-                        ${
-                          section
-                            ? `<span class="text-gray-700 font-medium text-xs">${section}</span>`
-                            : ""
-                        }
-                        <span class="text-gray-600 text-[10px]">${
-                          booking.ticketType || "Standard"
-                        }</span>
+                        ${section
+                  ? `<span class="text-gray-700 font-medium text-xs">${section}</span>`
+                  : ""
+                }
+                        <span class="text-gray-600 text-[10px]">${booking.ticketType || "Standard"
+                }</span>
                       </div>
                     </div>
                     <span class="font-bold text-gray-900 text-xs whitespace-nowrap">${formatCurrency(
-                      booking.amount / booking.seats.length
-                    )}</span>
+                  booking.amount / booking.seats.length
+                )}</span>
                   </div>
                 </div>
               `;
-                      })
-                      .join("")
-              }
+            })
+            .join("")
+        }
             </div>
           </div>
 
@@ -504,8 +489,8 @@ export default {
               <div>
                 <p class="text-xs font-semibold text-green-700 uppercase tracking-wide mb-1">Total Amount</p>
                 <p class="text-2xl font-black text-green-700">${formatCurrency(
-                  booking.amount
-                )}</p>
+          booking.amount
+        )}</p>
               </div>
               <div class="w-12 h-12 bg-green-600 rounded-full flex items-center justify-center">
                 <i class="fas fa-check text-white text-xl"></i>
@@ -513,9 +498,8 @@ export default {
             </div>
           </div>
 
-          ${
-            booking.status === "confirmed"
-              ? `
+          ${booking.status === "confirmed"
+          ? `
             <div class="bg-indigo-50 rounded-lg p-2.5 border-l-4 border-indigo-600">
               <p class="text-xs text-indigo-900 flex items-start gap-2">
                 <i class="fas fa-info-circle mt-0.5 flex-shrink-0"></i>
@@ -523,12 +507,11 @@ export default {
               </p>
             </div>
           `
-              : ""
-          }
+          : ""
+        }
 
-          ${
-            booking.status === "confirmed"
-              ? `
+          ${booking.status === "confirmed"
+          ? `
           <div class="border-t border-gray-200 pt-3 mt-3">
             <p class="text-xs font-semibold text-gray-700 uppercase tracking-wide mb-2">
               <i class="fas fa-file-download mr-1"></i>Download Documents
@@ -543,8 +526,8 @@ export default {
             </div>
           </div>
           `
-              : ""
-          }
+          : ""
+        }
         </div>
       `,
       width: "550px",

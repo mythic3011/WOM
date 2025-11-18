@@ -1,9 +1,9 @@
 import dayjs from "dayjs";
-import { performanceService } from "/src/services/performanceService.js";
-import { renderEmptyState } from "/src/utils/data/table.js";
-import { createDebounceSearch } from "/src/utils/data/filters.js";
-import { PerformanceCard } from "/src/components/PerformanceCard.js";
-import { performanceUtils } from "/src/utils/performanceUtils.js";
+import { performanceService } from "@services/performanceService.js";
+import { renderEmptyState } from "@utils/data/table.js";
+import { createDebounceSearch } from "@utils/data/filters.js";
+import { PerformanceCard } from "@components/PerformanceCard.js";
+import { performanceUtils } from "@utils/performanceUtils.js";
 
 export default {
   title: "Performances | WOM",

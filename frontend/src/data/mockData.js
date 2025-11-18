@@ -101,7 +101,7 @@ export {
   formatBookingForDisplay,
 };
 
-export { ZonePricing } from "/src/utils/booking/zonePricing.js";
+export { ZonePricing } from "@utils/booking/zonePricing.js";
 
 export const MOCK_USERS_REFERENCE = MOCK_USERS_STATIC;
 export const MOCK_USERS = MOCK_USERS_REFERENCE;

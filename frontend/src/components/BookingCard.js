@@ -1,8 +1,8 @@
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
-import { createBadge } from "/src/components/Badge.js";
-import { statsService } from "/src/services/statsService.js";
-import { getDisplayLabel } from "/src/utils/seatIdHelper.js";
+import { createBadge } from "@components/common/Badge.js";
+import { statsService } from "@services/statsService.js";
+import { getDisplayLabel } from "@utils/seatIdHelper.js";
 
 dayjs.extend(relativeTime);
 
@@ -14,9 +14,8 @@ export const BookingCard = {
       <div class="border-l-4 border-indigo-600 bg-indigo-50 p-4 rounded-lg hover:shadow-md transition-shadow">
         <div class="flex items-start justify-between">
           <div class="flex-1">
-            <h3 class="font-bold text-gray-900 text-lg mb-1">${
-              booking.performanceTitle
-            }</h3>
+            <h3 class="font-bold text-gray-900 text-lg mb-1">${booking.performanceTitle
+      }</h3>
             <div class="space-y-1 text-sm text-gray-600">
               <p>
                 <i class="fas fa-calendar text-indigo-600 w-5"></i>
@@ -26,8 +25,8 @@ export const BookingCard = {
                 <i class="fas fa-clock text-indigo-600 w-5"></i>
                 ${dayjs(booking.performanceDate).format("h:mm A")}
                 <span class="text-gray-400">• ${dayjs(
-                  booking.performanceDate
-                ).fromNow()}</span>
+        booking.performanceDate
+      ).fromNow()}</span>
               </p>
               <p>
                 <i class="fas fa-map-marker-alt text-indigo-600 w-5"></i>
@@ -35,30 +34,28 @@ export const BookingCard = {
               </p>
               <p>
                 <i class="fas fa-chair text-indigo-600 w-5"></i>
-                ${
-                  Array.isArray(booking.seats)
-                    ? booking.seats
-                        .map((s) => {
-                          const seatId =
-                            typeof s === "string"
-                              ? s
-                              : s.fullId || s.seatId || s;
-                          return getDisplayLabel(seatId);
-                        })
-                        .join(", ")
-                    : getDisplayLabel(booking.seats)
-                }
+                ${Array.isArray(booking.seats)
+        ? booking.seats
+          .map((s) => {
+            const seatId =
+              typeof s === "string"
+                ? s
+                : s.fullId || s.seatId || s;
+            return getDisplayLabel(seatId);
+          })
+          .join(", ")
+        : getDisplayLabel(booking.seats)
+      }
               </p>
             </div>
           </div>
           <div class="text-right ml-4">
             ${statusBadge}
             <p class="text-2xl font-bold text-indigo-600 mt-2">${statsService.formatCurrency(
-              booking.amount
-            )}</p>
-            <p class="text-xs text-gray-500">${
-              booking.ticketType || "Standard"
-            }</p>
+        booking.amount
+      )}</p>
+            <p class="text-xs text-gray-500">${booking.ticketType || "Standard"
+      }</p>
           </div>
         </div>
         <div class="mt-3 flex gap-2">
@@ -127,26 +124,22 @@ export const BookingCard = {
     const seatCount = booking.seats?.length || 0;
 
     return `
-      <div class="group relative bg-white rounded-2xl shadow-lg border-2 ${
-        status.borderColor
-      } hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 overflow-hidden ${
-        isPast ? "opacity-60" : ""
+      <div class="group relative bg-white rounded-2xl shadow-lg border-2 ${status.borderColor
+      } hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 overflow-hidden ${isPast ? "opacity-60" : ""
       }">
-        ${
-          isPast
-            ? `<div class="absolute top-4 right-4 z-10 px-3 py-1 bg-gray-800/90 text-white text-xs font-bold rounded-full uppercase tracking-wider">
+        ${isPast
+        ? `<div class="absolute top-4 right-4 z-10 px-3 py-1 bg-gray-800/90 text-white text-xs font-bold rounded-full uppercase tracking-wider">
               <i class="fas fa-history mr-1"></i>Past Event
             </div>`
-            : isUpcoming
-              ? `<div class="absolute top-4 right-4 z-10 px-3 py-1 bg-indigo-600/90 text-white text-xs font-bold rounded-full uppercase tracking-wider animate-pulse">
+        : isUpcoming
+          ? `<div class="absolute top-4 right-4 z-10 px-3 py-1 bg-indigo-600/90 text-white text-xs font-bold rounded-full uppercase tracking-wider animate-pulse">
               <i class="fas fa-calendar-star mr-1"></i>Upcoming
             </div>`
-              : ""
-        }
+          : ""
+      }
 
-        <div class="relative bg-${
-          status.solidColor
-        } text-white p-6 pb-20 shadow-lg border-b-4 border-black/20">
+        <div class="relative bg-${status.solidColor
+      } text-white p-6 pb-20 shadow-lg border-b-4 border-black/20">
           <div class="relative z-10">
             <div class="flex items-start justify-between mb-4">
               <div class="flex items-center gap-3">
@@ -155,16 +148,14 @@ export const BookingCard = {
                 </div>
                 <div>
                   <p class="text-xs font-semibold opacity-90 uppercase tracking-wider mb-1">Booking ID</p>
-                  <p class="text-xl font-mono font-black">${
-                    booking.bookingReference || booking.id
-                  }</p>
+                  <p class="text-xl font-mono font-black">${booking.bookingReference || booking.id
+      }</p>
                 </div>
               </div>
             </div>
 
-            <div class="inline-flex items-center gap-2 px-4 py-2 bg-white/95 backdrop-blur-sm rounded-full ${
-              status.textColor
-            } shadow-lg">
+            <div class="inline-flex items-center gap-2 px-4 py-2 bg-white/95 backdrop-blur-sm rounded-full ${status.textColor
+      } shadow-lg">
               <i class="fas ${status.icon} ${status.iconColor}"></i>
               <span class="text-sm font-bold">${status.text}</span>
             </div>
@@ -174,28 +165,25 @@ export const BookingCard = {
         <div class="p-6 -mt-16 relative z-10">
           <div class="bg-white rounded-xl shadow-md p-5 mb-4 border border-gray-100">
             <h3 class="text-xl font-bold text-gray-900 mb-3 line-clamp-2 leading-tight">
-              <i class="fas fa-music text-indigo-600 mr-2"></i>${
-                performance?.title || "Unknown Performance"
-              }
+              <i class="fas fa-music text-indigo-600 mr-2"></i>${performance?.title || "Unknown Performance"
+      }
             </h3>
 
             <div class="grid grid-cols-2 gap-3 text-sm">
               <div class="flex items-center gap-2 text-gray-600">
                 <i class="fas fa-calendar-alt w-4"></i>
-                <span>${
-                  performanceDate
-                    ? dayjs(performanceDate).format("MMM D, YYYY")
-                    : "N/A"
-                }</span>
+                <span>${performanceDate
+        ? dayjs(performanceDate).format("MMM D, YYYY")
+        : "N/A"
+      }</span>
               </div>
               <div class="flex items-center gap-2 text-gray-600">
                 <i class="fas fa-map-marker-alt w-4"></i>
-                <span>${
-                  performance?.venueName ||
-                  performance?.location ||
-                  performance?.venue ||
-                  "N/A"
-                }</span>
+                <span>${performance?.venueName ||
+      performance?.location ||
+      performance?.venue ||
+      "N/A"
+      }</span>
               </div>
               <div class="flex items-center gap-2 text-gray-600">
                 <i class="fas fa-chair w-4"></i>
@@ -203,86 +191,76 @@ export const BookingCard = {
               </div>
               <div class="flex items-center gap-2 text-gray-600">
                 <i class="fas fa-clock w-4"></i>
-                <span>${
-                  performanceDate
-                    ? dayjs(performanceDate).format("h:mm A")
-                    : "N/A"
-                }</span>
+                <span>${performanceDate
+        ? dayjs(performanceDate).format("h:mm A")
+        : "N/A"
+      }</span>
               </div>
             </div>
 
-            ${
-              booking.seats && booking.seats.length > 0
-                ? `
+            ${booking.seats && booking.seats.length > 0
+        ? `
               <div class="mt-4 pt-3 border-t border-gray-100">
                 <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
                   <i class="fas fa-couch mr-1"></i>Seats
                 </p>
                 <div class="flex flex-wrap gap-1.5">
                   ${booking.seats
-                    .slice(0, 6)
-                    .map((seat) => {
-                      const seatId =
-                        typeof seat === "string"
-                          ? seat
-                          : seat.fullId || seat.seatId || seat;
-                      return `
+          .slice(0, 6)
+          .map((seat) => {
+            const seatId =
+              typeof seat === "string"
+                ? seat
+                : seat.fullId || seat.seatId || seat;
+            return `
                     <span class="inline-flex items-center px-2.5 py-1 bg-indigo-100 text-indigo-700 rounded text-xs font-medium">
                       ${getDisplayLabel(seatId)}
                     </span>
                   `;
-                    })
-                    .join("")}
-                  ${
-                    seatCount > 6
-                      ? `<span class="inline-flex items-center px-2.5 py-1 bg-gray-100 text-gray-600 rounded text-xs font-medium">+${
-                          seatCount - 6
-                        } more</span>`
-                      : ""
-                  }
+          })
+          .join("")}
+                  ${seatCount > 6
+          ? `<span class="inline-flex items-center px-2.5 py-1 bg-gray-100 text-gray-600 rounded text-xs font-medium">+${seatCount - 6
+          } more</span>`
+          : ""
+        }
                 </div>
               </div>
             `
-                : ""
-            }
+        : ""
+      }
           </div>
 
-          <div class="${status.bgColor} rounded-xl p-4 mb-4 border ${
-            status.borderColor
-          }">
+          <div class="${status.bgColor} rounded-xl p-4 mb-4 border ${status.borderColor
+      }">
             <div class="flex items-center justify-between">
               <div>
-                <p class="text-xs font-semibold ${
-                  status.textColor
-                } uppercase tracking-wide mb-1">Total Amount</p>
-                <p class="text-2xl font-bold ${
-                  status.textColor
-                }">${statsService.formatCurrency(booking.amount)}</p>
+                <p class="text-xs font-semibold ${status.textColor
+      } uppercase tracking-wide mb-1">Total Amount</p>
+                <p class="text-2xl font-bold ${status.textColor
+      }">${statsService.formatCurrency(booking.amount)}</p>
               </div>
               <div class="text-right">
                 <p class="text-xs text-gray-500 mb-1">Booked</p>
                 <p class="text-sm font-semibold text-gray-700">${dayjs(
-                  booking.bookingDate || booking.date
-                ).format("MMM D")}</p>
+        booking.bookingDate || booking.date
+      ).format("MMM D")}</p>
               </div>
             </div>
           </div>
 
           <div class="space-y-2">
-            <button class="view-booking-btn w-full px-4 py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-semibold shadow-md hover:shadow-lg text-sm" data-id="${
-              booking.id
-            }">
+            <button class="view-booking-btn w-full px-4 py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-semibold shadow-md hover:shadow-lg text-sm" data-id="${booking.id
+      }">
               <i class="fas fa-eye mr-2"></i>View Details
             </button>
             <div class="grid grid-cols-2 gap-2">
-              <button class="download-ticket-btn px-3 py-2 bg-white border-2 border-gray-200 text-gray-700 rounded-lg hover:border-indigo-600 hover:text-indigo-600 transition-colors font-medium text-xs" data-id="${
-                booking.id
-              }">
+              <button class="download-ticket-btn px-3 py-2 bg-white border-2 border-gray-200 text-gray-700 rounded-lg hover:border-indigo-600 hover:text-indigo-600 transition-colors font-medium text-xs" data-id="${booking.id
+      }">
                 <i class="fas fa-ticket-alt mr-1"></i>E-Ticket
               </button>
-              <button class="download-invoice-btn px-3 py-2 bg-white border-2 border-gray-200 text-gray-700 rounded-lg hover:border-emerald-600 hover:text-emerald-600 transition-colors font-medium text-xs" data-id="${
-                booking.id
-              }">
+              <button class="download-invoice-btn px-3 py-2 bg-white border-2 border-gray-200 text-gray-700 rounded-lg hover:border-emerald-600 hover:text-emerald-600 transition-colors font-medium text-xs" data-id="${booking.id
+      }">
                 <i class="fas fa-file-invoice mr-1"></i>Invoice
               </button>
             </div>
@@ -300,9 +278,8 @@ export const BookingCard = {
         <div class="flex flex-col md:flex-row md:items-start md:justify-between gap-4 mb-4">
           <div class="flex-1">
             <div class="flex items-start justify-between mb-2">
-              <h3 class="text-2xl font-bold text-gray-900">${
-                booking.performanceTitle
-              }</h3>
+              <h3 class="text-2xl font-bold text-gray-900">${booking.performanceTitle
+      }</h3>
               ${statusBadge}
             </div>
 
@@ -310,8 +287,8 @@ export const BookingCard = {
               <div class="flex items-center gap-2">
                 <i class="fas fa-calendar text-indigo-600 w-5"></i>
                 <span>${dayjs(booking.performanceDate).format(
-                  "dddd, MMMM D, YYYY"
-                )}</span>
+        "dddd, MMMM D, YYYY"
+      )}</span>
               </div>
               <div class="flex items-center gap-2">
                 <i class="fas fa-clock text-indigo-600 w-5"></i>
@@ -343,9 +320,8 @@ export const BookingCard = {
           <div>
             <p class="text-sm text-gray-600">Total Amount</p>
             <p class="text-3xl font-bold text-indigo-600">$${booking.amount}</p>
-            <p class="text-sm text-gray-500">${
-              booking.ticketType || "Standard Ticket"
-            }</p>
+            <p class="text-sm text-gray-500">${booking.ticketType || "Standard Ticket"
+      }</p>
           </div>
           <div class="flex gap-2">
             <button class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors">

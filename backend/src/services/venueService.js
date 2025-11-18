@@ -1,5 +1,5 @@
-import { Venue, Performance } from "../models/index.js";
-import { ValidationError } from "../utils/errors.js";
+import { Venue, Performance } from "#models/index.js";
+import { ValidationError } from "#utils/errors.js";
 import { Op } from "sequelize";
 
 export const getAllVenues = async (filters = {}) => {

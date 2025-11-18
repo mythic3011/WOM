@@ -1,6 +1,6 @@
-import { User, Performance, Booking, Venue } from "../models/index.js";
+import { User, Performance, Booking, Venue } from "#models/index.js";
 import { Op } from "sequelize";
-import sequelize from "../config/database.js";
+import sequelize from "#config/database.js";
 
 export const getDashboardStats = async () => {
   const totalUsers = await User.count();

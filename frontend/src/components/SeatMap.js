@@ -1,5 +1,5 @@
-import { seatMapGenerator } from "/src/utils/booking/seatMapGenerator.js";
-import { getSectionColor, getSeatStatusColor } from "/src/utils/colors.js";
+import { seatMapGenerator } from "@utils/booking/seatMapGenerator.js";
+import { getSectionColor, getSeatStatusColor } from "@utils/colors.js";
 
 export const SeatMap = {
   generateFromLayout(
@@ -106,18 +106,18 @@ export const SeatMap = {
     return `
       <div class="flex flex-wrap gap-3 justify-center text-xs">
         ${legendItems
-          .map((item) => {
-            const colorStyle = item.useInlineStyle
-              ? `style="background-color: ${item.color}"`
-              : `class="${item.colorClass}"`;
-            return `
+        .map((item) => {
+          const colorStyle = item.useInlineStyle
+            ? `style="background-color: ${item.color}"`
+            : `class="${item.colorClass}"`;
+          return `
             <div class="flex items-center gap-1">
               <div class="w-4 h-4 rounded" ${colorStyle}></div>
               <span class="text-gray-700">${item.label}</span>
             </div>
           `;
-          })
-          .join("")}
+        })
+        .join("")}
       </div>
     `;
   },

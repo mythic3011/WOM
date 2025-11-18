@@ -1,4 +1,4 @@
-import { calculationService } from "./calculationService.js";
+import { calculationService } from "@utils/calculations.js";
 import dayjs from "dayjs";
 
 export const bookingHelpers = {

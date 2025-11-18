@@ -1,5 +1,5 @@
-import { USER_ROLES } from "../config/constants.js";
-import { UnauthorizedError, ForbiddenError } from "../utils/errors.js";
+import { USER_ROLES } from "#config/constants.js";
+import { UnauthorizedError, ForbiddenError } from "#utils/errors.js";
 
 export const isAuthenticated = (req, res, next) => {
   if (req.session && req.session.userId) {

@@ -1,4 +1,4 @@
-import { seatHelpers } from "../services/seatHelpers.js";
+import { parseSeatId, getSeatDisplayLabel } from "./booking/seatUtils.js";
 
 function slugify(text) {
   return (text || "")
@@ -17,9 +17,9 @@ export function generateFullId(sectionName, rowLabel, seatNumber) {
 }
 
 export function parseFullId(fullId) {
-  return seatHelpers.parseSeatId(fullId);
+  return parseSeatId(fullId);
 }
 
 export function getDisplayLabel(fullId) {
-  return seatHelpers.getSeatDisplayLabel(fullId);
+  return getSeatDisplayLabel(fullId);
 }

@@ -1,6 +1,6 @@
 import { storage } from "./storageService.js";
-import { hashPassword } from "/src/utils/core/crypto.js";
-import { generateUUID } from "/src/utils/utils.js";
+import { hashPassword } from "@utils/core/crypto.js";
+import { generateUUID } from "@utils/utils.js";
 import { bookingAPI, handleApiError, userAPI } from "./apiClient.js";
 import { ResponseExtractor } from "./responseExtractor.js";
 
@@ -140,7 +140,7 @@ export const userService = {
         return { success: false, error: "Account is suspended" };
       }
 
-      const { verifyPassword } = await import("/src/utils/core/crypto.js");
+      const { verifyPassword } = await import("@utils/core/crypto.js");
       const isValid = await verifyPassword(password, user.password);
 
       if (!isValid) {

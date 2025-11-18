@@ -1,4 +1,4 @@
-import { APP_CONFIG } from "/src/config/config.js";
+import { APP_CONFIG } from "@config/config.js";
 
 const HEALTH_CHECK_INTERVAL = 30000;
 const HEALTH_ENDPOINT = `${APP_CONFIG.apiBaseUrl}/health`;
@@ -132,8 +132,7 @@ export const healthCheck = {
 
       console.log(
         `%cDatabase: ${dbStatus}`,
-        `color: ${
-          dbStatus === "healthy" ? "#10b981" : "#ef4444"
+        `color: ${dbStatus === "healthy" ? "#10b981" : "#ef4444"
         }; font-weight: bold;`
       );
 
@@ -188,13 +187,11 @@ export const healthCheck = {
       if (status.data.services) {
         console.group("Services");
         console.log(
-          `API: ${status.data.services.api === "healthy" ? "[OK]" : "[FAIL]"} ${
-            status.data.services.api
+          `API: ${status.data.services.api === "healthy" ? "[OK]" : "[FAIL]"} ${status.data.services.api
           }`
         );
         console.log(
-          `Database: ${
-            status.data.services.database === "healthy" ? "[OK]" : "[FAIL]"
+          `Database: ${status.data.services.database === "healthy" ? "[OK]" : "[FAIL]"
           } ${status.data.services.database}`
         );
         console.groupEnd();

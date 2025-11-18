@@ -5,8 +5,8 @@ import {
   generateMockBookings,
   clearAllData,
   getSystemStats,
-} from "../controllers/devToolsController.js";
-import { isAuthenticated, isAdmin } from "../middleware/auth.js";
+} from "#controllers/devToolsController.js";
+import { isAuthenticated, isAdmin } from "#middleware/auth.js";
 
 const router = express.Router();
 

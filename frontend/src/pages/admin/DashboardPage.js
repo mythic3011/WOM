@@ -1,11 +1,9 @@
-import { renderStatsGrid } from "/src/components/StatsCard.js";
-import { createCard } from "/src/components/Card.js";
-import { getCurrentUser } from "/src/utils/core/auth.js";
-import { statsAPI, handleApiError } from "/src/services/apiClient.js";
-import { formatCurrency, formatNumber } from "/src/utils/utils.js";
+import { renderStatsGrid } from "@components/StatsCard.js";
+import { createCard } from "@components/common/Card.js";
+import { getCurrentUser } from "@utils/core/auth.js";
+import { statsAPI, handleApiError, ResponseExtractor, statsService } from "@services/index.js";
+import { formatCurrency, formatNumber } from "@utils/utils.js";
 import dayjs from "dayjs";
-import { ResponseExtractor } from "../../services/responseExtractor";
-import { statsService } from "../../services/statsService.js";
 
 export default {
   title: "Admin Dashboard | WOM",
@@ -36,15 +34,14 @@ export default {
 
       recentActivity = statsData.recentBookings
         ? statsData.recentBookings.slice(0, 5).map((booking) => ({
-            description: `New booking for ${
-              booking.performance?.title || "Performance"
+          description: `New booking for ${booking.performance?.title || "Performance"
             }`,
-            date: booking.bookingDate,
-            status: booking.status,
-            amount: booking.totalAmount || 0,
-            color: booking.status === "confirmed" ? "green" : "yellow",
-            icon: "fa-ticket-alt",
-          }))
+          date: booking.bookingDate,
+          status: booking.status,
+          amount: booking.totalAmount || 0,
+          color: booking.status === "confirmed" ? "green" : "yellow",
+          icon: "fa-ticket-alt",
+        }))
         : [];
 
       stats = [
@@ -177,34 +174,27 @@ export default {
       title: "Recent Activity",
       body: `
         <div class="space-y-3">
-          ${
-            recentActivity.length > 0
-              ? recentActivity
-                  .map(
-                    (activity) => `
-            <div class="flex items-center gap-3 p-3 bg-${
-              activity.color
-            }-50 rounded-lg border border-${
-              activity.color
-            }-100 hover:shadow-md transition-shadow">
-              <div class="w-10 h-10 bg-${
-                activity.color
-              }-100 rounded-full flex items-center justify-center flex-shrink-0">
+          ${recentActivity.length > 0
+          ? recentActivity
+            .map(
+              (activity) => `
+            <div class="flex items-center gap-3 p-3 bg-${activity.color
+                }-50 rounded-lg border border-${activity.color
+                }-100 hover:shadow-md transition-shadow">
+              <div class="w-10 h-10 bg-${activity.color
+                }-100 rounded-full flex items-center justify-center flex-shrink-0">
                 <i class="fas ${activity.icon} text-${activity.color}-600"></i>
               </div>
               <div class="flex-1 min-w-0">
-                <p class="text-sm font-medium text-gray-900 truncate">${
-                  activity.description
+                <p class="text-sm font-medium text-gray-900 truncate">${activity.description
                 }</p>
                 <div class="flex items-center gap-2 mt-0.5">
                   <p class="text-xs text-gray-500">${dayjs(
-                    activity.date
-                  ).format("MMM D, YYYY")}</p>
-                  <span class="text-xs px-2 py-0.5 bg-${
-                    activity.color
-                  }-100 text-${activity.color}-700 rounded-full font-medium">${
-                    activity.status
-                  }</span>
+                  activity.date
+                ).format("MMM D, YYYY")}</p>
+                  <span class="text-xs px-2 py-0.5 bg-${activity.color
+                }-100 text-${activity.color}-700 rounded-full font-medium">${activity.status
+                }</span>
                 </div>
               </div>
               <div class="text-right">
@@ -214,9 +204,9 @@ export default {
               </div>
             </div>
           `
-                  )
-                  .join("")
-              : `
+            )
+            .join("")
+          : `
             <div class="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
               <div class="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">
                 <i class="fas fa-inbox text-gray-400"></i>
@@ -227,7 +217,7 @@ export default {
               </div>
             </div>
           `
-          }
+        }
         </div>
       `,
     });
@@ -237,8 +227,8 @@ export default {
       body: `
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
           ${quickActions
-            .map(
-              (action) => `
+          .map(
+            (action) => `
             <a
               href="${action.href}"
               data-link
@@ -253,8 +243,8 @@ export default {
               </div>
             </a>
           `
-            )
-            .join("")}
+          )
+          .join("")}
         </div>
       `,
     });

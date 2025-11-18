@@ -1,6 +1,6 @@
-import { venueAPI } from "/src/services/apiClient.js";
-import { DEFAULT_VENUE_TEMPLATES } from "/src/data/defaultTemplates.js";
-import { ResponseExtractor } from "/src/services/responseExtractor.js";
+import { venueAPI } from "@services/apiClient.js";
+import { DEFAULT_VENUE_TEMPLATES } from "@/data/index.js";
+import { ResponseExtractor } from "@services/responseExtractor.js";
 
 export class VenueModel {
   constructor() {

@@ -1,5 +1,5 @@
 import { DataTypes, Op } from "sequelize";
-import sequelize from "../config/database.js";
+import sequelize from "#config/database.js";
 import dayjs from "dayjs";
 
 const Performance = sequelize.define(
@@ -177,7 +177,7 @@ const Performance = sequelize.define(
     },
     indexes: [
       {
-        fields: ["venue_id"],
+        fields: ["venueId"],
       },
       {
         fields: ["status"],

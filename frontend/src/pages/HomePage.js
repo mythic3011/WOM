@@ -1,7 +1,7 @@
-import { statsService } from "/src/services/statsService.js";
-import { FormComponents } from "/src/components/FormComponents.js";
-import { PerformanceCard } from "/src/components/PerformanceCard.js";
-import { createLoadingState } from "/src/components/LoadingState.js";
+import { statsService } from "@services/statsService.js";
+import { FormComponents } from "@components/FormComponents.js";
+import { PerformanceCard } from "@components/PerformanceCard.js";
+import { createLoadingState } from "@components/LoadingState.js";
 import dayjs from "dayjs";
 
 export default {

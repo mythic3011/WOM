@@ -1,4 +1,4 @@
-import * as statsService from "../services/statsService.js";
+import * as statsService from "#services/statsService.js";
 
 export const getDashboardStats = async (req, res, next) => {
   try {

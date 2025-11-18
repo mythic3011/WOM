@@ -1,4 +1,4 @@
-import * as ticketTypeService from "../services/ticketTypeService.js";
+import * as ticketTypeService from "#services/ticketTypeService.js";
 
 export const getAllTicketTypes = async (req, res, next) => {
   try {

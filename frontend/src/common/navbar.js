@@ -1,11 +1,11 @@
-import { storage } from "/src/services/storageService.js";
-import { navigate } from "/src/utils/core/navigation.js";
-import { ROUTES, getRouteMetadata } from "/src/config/routes.js";
-import { getCurrentUser } from "/src/utils/core/auth.js";
-import { logout } from "/src/utils/core/auth.js";
+import { storage } from "@services/storageService.js";
+import { navigate } from "@utils/core/navigation.js";
+import { ROUTES, getRouteMetadata } from "@config/routes.js";
+import { getCurrentUser } from "@utils/core/auth.js";
+import { logout } from "@utils/core/auth.js";
 import dayjs from "dayjs";
 import Swal from "sweetalert2";
-import { SwalColors } from "/src/utils/colors.js";
+import { SwalColors } from "@utils/colors.js";
 
 const NAVBAR_CONFIG = {
   height: "h-16",
@@ -274,11 +274,10 @@ async function handleLogout() {
           <i class="fas fa-sign-out-alt text-red-600 text-3xl"></i>
         </div>
         <p class="text-gray-700 text-base">Are you sure you want to logout?</p>
-        ${
-          userData?.name
-            ? `<p class="text-gray-500 text-sm mt-2">Logging out <strong>${userData.name}</strong></p>`
-            : ""
-        }
+        ${userData?.name
+        ? `<p class="text-gray-500 text-sm mt-2">Logging out <strong>${userData.name}</strong></p>`
+        : ""
+      }
       </div>
     `,
     showCancelButton: true,
@@ -598,11 +597,10 @@ function renderNotifications(role) {
       id="notificationsBtn"
     >
       <i class="fas fa-bell"></i>
-      ${
-        notificationCount > 0
-          ? `<span class="absolute top-0 right-0 -mt-1 -mr-1 bg-red-500 text-xs rounded-full h-4 w-4 flex items-center justify-center">${notificationCount}</span>`
-          : ""
-      }
+      ${notificationCount > 0
+      ? `<span class="absolute top-0 right-0 -mt-1 -mr-1 bg-red-500 text-xs rounded-full h-4 w-4 flex items-center justify-center">${notificationCount}</span>`
+      : ""
+    }
     </button>
     <div
       id="notificationsDropdown"
@@ -611,17 +609,16 @@ function renderNotifications(role) {
       <div class="px-4 py-2 border-b border-gray-100">
         <div class="text-sm font-semibold text-gray-700">
           Notifications
-          ${
-            role === "guest"
-              ? '<span class="text-xs text-gray-500 ml-2">(Login to see your notifications)</span>'
-              : ""
-          }
+          ${role === "guest"
+      ? '<span class="text-xs text-gray-500 ml-2">(Login to see your notifications)</span>'
+      : ""
+    }
         </div>
       </div>
       <div class="max-h-96 overflow-y-auto">
         ${notifications
-          .map(
-            (notif) => `
+      .map(
+        (notif) => `
           <a
             href="${notif.link}" data-link
             class="block px-4 py-3 hover:bg-gray-50 border-b border-gray-100 transition-colors"
@@ -644,17 +641,16 @@ function renderNotifications(role) {
             </div>
           </a>
         `
-          )
-          .join("")}
+      )
+      .join("")}
       </div>
       <div class="px-4 py-2 text-center border-t border-gray-100">
-        ${
-          role === "guest"
-            ? '<a href="/login" data-link class="text-sm text-indigo-600 hover:text-indigo-800">Login to view all</a>'
-            : role === "admin"
-              ? '<a href="/admin/dashboard" data-link class="text-sm text-indigo-600 hover:text-indigo-800">View Dashboard</a>'
-              : '<a href="/user/dashboard" data-link class="text-sm text-indigo-600 hover:text-indigo-800">View all notifications</a>'
-        }
+        ${role === "guest"
+      ? '<a href="/login" data-link class="text-sm text-indigo-600 hover:text-indigo-800">Login to view all</a>'
+      : role === "admin"
+        ? '<a href="/admin/dashboard" data-link class="text-sm text-indigo-600 hover:text-indigo-800">View Dashboard</a>'
+        : '<a href="/user/dashboard" data-link class="text-sm text-indigo-600 hover:text-indigo-800">View all notifications</a>'
+    }
       </div>
     </div>
   `;

@@ -1,5 +1,5 @@
 import { PerformanceWizard } from "./PerformanceWizard.js";
-import { notify } from "/src/utils/ui/notification.js";
+import { notify } from "@utils/ui/notification.js";
 import Swal from "sweetalert2";
 
 export class PerformanceWizardHandler {

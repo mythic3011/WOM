@@ -1,5 +1,5 @@
-import { User } from "../models/index.js";
-import { hashPassword, comparePassword } from "../utils/hash.js";
+import { User } from "#models/index.js";
+import { hashPassword, comparePassword } from "#utils/hash.js";
 import { Op } from "sequelize";
 
 export const getAllUsers = async (filters = {}) => {

@@ -1,4 +1,4 @@
-import { FormComponents } from "/src/components/FormComponents.js";
+import { FormComponents } from "@components/FormComponents.js";
 
 export const SeatSelectionStep = {
   render(zoneSummary, selectedSeats) {
@@ -79,13 +79,13 @@ export const SeatSelectionStep = {
 
         <div class="mt-6 flex justify-end">
           ${FormComponents.button({
-            id: "continueToTickets",
-            text: "Continue to Ticket Selection",
-            icon: "fa-arrow-right",
-            color: "indigo",
-            fullWidth: true,
-            disabled: selectedSeats.length === 0,
-          })}
+      id: "continueToTickets",
+      text: "Continue to Ticket Selection",
+      icon: "fa-arrow-right",
+      color: "indigo",
+      fullWidth: true,
+      disabled: selectedSeats.length === 0,
+    })}
         </div>
       </div>
     `;

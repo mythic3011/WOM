@@ -1,54 +1,39 @@
-import { getStatusBadge } from "/src/utils/status.js";
-import { createDebounceSearch } from "/src/utils/data/filters.js";
-import { performanceUtils } from "/src/utils/performanceUtils.js";
-import { createModal, openModal, closeModal } from "/src/components/Modal.js";
-import { ResponseExtractor } from "/src/services/responseExtractor.js";
+import { getStatusBadge } from "@utils/status.js";
+import { createDebounceSearch } from "@utils/data/filters.js";
+import { performanceUtils } from "@utils/performanceUtils.js";
+import { ResponseExtractor, ticketTypeService, templateService, venueService, performanceAPI, venueAPI, handleApiError, storage } from "@services/index.js";
 import {
-  PerformanceDetails,
-  ShowtimeManager,
-  PerformanceWizardHandler,
-  openQuickEdit,
-  ShowtimeAvailabilityBadge,
-} from "/src/components/admin/index.js";
-import { getTierBadge } from "/src/config/tierConfig.js";
-import { getDisplayLabel } from "/src/utils/seatIdHelper.js";
-import {
+  createModal,
+  openModal,
+  closeModal,
   initImageUpload,
   getImageDataURL,
-} from "/src/components/ImageUpload.js";
-import { notify } from "/src/utils/ui/notification.js";
-import { SYSTEM_TICKET_TYPE_IDS } from "/src/data/mockData.js";
-import { ticketTypeService } from "/src/services/ticketTypeService.js";
-import { templateService } from "/src/services/templateService.js";
-import { venueService } from "/src/services/venueService.js";
-import { showtimeManager } from "/src/utils/booking/showtimeManager.js";
-import { seatHelpers } from "/src/services/seatHelpers.js";
-import {
-  performanceAPI,
-  venueAPI,
-  handleApiError,
-} from "/src/services/apiClient.js";
-import {
   createTemplateSelector,
   initTemplateSelector,
-} from "/src/components/TemplateSelector.js";
-import {
   createZoneEditor,
   showZoneEditorDialog,
-} from "/src/components/ZoneEditor.js";
-import { attachSeatTooltipListeners } from "/src/utils/booking/seatTooltip.js";
+  SeatMap,
+  SeatLayoutCustomizer,
+  PerformanceFormSections,
+  FormComponents,
+  admin,
+} from "@components/index.js";
+import { getTierBadge } from "@config/tierConfig.js";
+import { getDisplayLabel } from "@utils/seatIdHelper.js";
+import { notify } from "@utils/ui/notification.js";
+import { SYSTEM_TICKET_TYPE_IDS } from "@/data/index.js";
+import { showtimeManager } from "@utils/booking/showtimeManager.js";
+import { initializeSeatDetails } from "@utils/booking/seatUtils.js";
+import { attachSeatTooltipListeners } from "@utils/booking/seatTooltip.js";
 import {
   getSectionColor,
   getSeatStatusColor,
   SwalColors,
-} from "/src/utils/colors.js";
-import { SeatMap } from "/src/components/SeatMap.js";
-import { SeatLayoutCustomizer } from "/src/components/SeatLayoutCustomizer.js";
-import { PerformanceFormSections } from "/src/components/PerformanceFormSections.js";
-import { FormComponents } from "/src/components/FormComponents.js";
+} from "@utils/colors.js";
 import dayjs from "dayjs";
 import Swal from "sweetalert2";
-import { storage } from "../../services/storageService.js";
+
+const { PerformanceDetails, ShowtimeManager, PerformanceWizardHandler, openQuickEdit, ShowtimeAvailabilityBadge } = admin;
 
 const DEFAULT_SEAT_LAYOUT = {
   rows: 5,
@@ -218,7 +203,7 @@ export default {
           </div>
         </div>
 
-        <div class="bg-white rounded-lg shadow-md overflow-hidden">
+        <div class="bg-white rounded-lg shadow-md overflow-x-auto overflow-y-visible">
           <table class="min-w-full divide-y divide-gray-200">
             <thead class="bg-gray-50">
               <tr>
@@ -334,7 +319,7 @@ export default {
         <td class="px-6 py-4">${dateDisplay}</td>
         <td class="px-6 py-4">${availabilityDisplay}</td>
           <td class="px-6 py-4">${statusBadge}</td>
-          <td class="px-6 py-4">
+          <td class="px-6 py-4 relative overflow-visible">
           <div class="flex items-center gap-2">
             ${this.renderPerformanceActions(perf, showtimeCount)}
             </div>
@@ -358,11 +343,11 @@ export default {
       if (showtimeCount === 1) {
         return `
           <div class="text-sm font-medium text-gray-900">${firstShowtime.format(
-            "MMM D, YYYY"
-          )}</div>
+          "MMM D, YYYY"
+        )}</div>
           <div class="text-xs text-gray-500">${firstShowtime.format(
-            "h:mm A"
-          )}</div>
+          "h:mm A"
+        )}</div>
         `;
       }
 
@@ -372,12 +357,12 @@ export default {
       return `
         <div class="flex items-center gap-2 mb-1">
           <span class="text-sm font-medium text-gray-900">${firstShowtime.format(
-            "MMM D"
-          )}</span>
+        "MMM D"
+      )}</span>
           <i class="fas fa-arrow-right text-xs text-gray-400"></i>
           <span class="text-sm font-medium text-gray-900">${lastShowtime.format(
-            "MMM D, YYYY"
-          )}</span>
+        "MMM D, YYYY"
+      )}</span>
         </div>
         <div class="inline-flex items-center gap-1.5 px-2 py-0.5 bg-indigo-100 text-indigo-700 rounded-full text-xs font-semibold">
           <i class="fas fa-calendar-day"></i>
@@ -389,8 +374,8 @@ export default {
     if (perf.date) {
       return `
         <div class="text-sm text-gray-900">${dayjs(perf.date).format(
-          "MMM D, YYYY"
-        )}</div>
+        "MMM D, YYYY"
+      )}</div>
         <div class="text-xs text-gray-500">No showtimes set</div>
       `;
     }
@@ -402,13 +387,13 @@ export default {
     return `
       <div class="relative inline-block group">
         <button
-          class="inline-flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-lg transition-all text-sm font-medium shadow-sm hover:shadow group-hover:border-indigo-300"
-          onclick="event.stopPropagation(); this.nextElementSibling.classList.toggle('hidden')"
+          class="action-dropdown-btn inline-flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-lg transition-all text-sm font-medium shadow-sm hover:shadow group-hover:border-indigo-300"
+          data-perf-id="${perf.id}"
         >
           <span>Actions</span>
           <i class="fas fa-chevron-down text-xs transition-transform group-hover:rotate-180"></i>
         </button>
-        <div class="hidden absolute right-0 mt-1 w-64 bg-white rounded-xl shadow-2xl border border-gray-200 overflow-hidden z-30">
+        <div class="hidden w-64 bg-white rounded-xl shadow-2xl border border-gray-200 overflow-hidden z-[9999]">
           <div class="py-1">
             <div class="px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide border-b border-gray-100 bg-gray-50">
               Quick Actions
@@ -499,6 +484,40 @@ export default {
   },
 
   setupEventListeners() {
+    $(document).on('click', '.action-dropdown-btn', (e) => {
+      e.stopPropagation();
+      const $btn = $(e.currentTarget);
+      const $dropdown = $btn.next();
+      const rect = $btn[0].getBoundingClientRect();
+
+      $('.action-dropdown-btn').not($btn).next().addClass('hidden');
+
+      $dropdown.css({
+        position: 'fixed',
+        top: (rect.bottom + 4) + 'px',
+        right: (window.innerWidth - rect.right) + 'px'
+      }).toggleClass('hidden');
+
+      if (!$dropdown.hasClass('hidden')) {
+        const closeDropdown = (e) => {
+          if (!$(e.target).closest('.group').length) {
+            $dropdown.addClass('hidden');
+            $(document).off('click', closeDropdown);
+            $(document).off('scroll', closeOnScroll);
+          }
+        };
+        const closeOnScroll = () => {
+          $dropdown.addClass('hidden');
+          $(document).off('click', closeDropdown);
+          $(document).off('scroll', closeOnScroll);
+        };
+        setTimeout(() => {
+          $(document).on('click', closeDropdown);
+          $(document).on('scroll', closeOnScroll);
+        }, 0);
+      }
+    });
+
     const debouncedFilter = createDebounceSearch(
       () => this.filterPerformances(),
       300
@@ -512,12 +531,6 @@ export default {
     $("#clearFilters").on("click", () => this.clearFilters());
     $("#quickCreateBtn").on("click", () => this.openQuickCreate());
     $("#addPerformanceBtn").on("click", () => this.openPerformanceForm());
-
-    $(document).on("click", function (e) {
-      if (!$(e.target).closest(".relative.inline-block").length) {
-        $(".relative.inline-block > div").addClass("hidden");
-      }
-    });
   },
 
   filterPerformances() {
@@ -960,10 +973,10 @@ export default {
           pricing:
             pricingType !== "none"
               ? {
-                  type: pricingType,
-                  value: pricingValue,
-                  modifier: pricingModifier,
-                }
+                type: pricingType,
+                value: pricingValue,
+                modifier: pricingModifier,
+              }
               : null,
         };
       },
@@ -982,9 +995,8 @@ export default {
         this.renderShowtimes();
 
         const pricingMsg = newType.pricing
-          ? ` with ${
-              newType.pricing.modifier === "discount" ? "discount" : "markup"
-            } auto-calculated`
+          ? ` with ${newType.pricing.modifier === "discount" ? "discount" : "markup"
+          } auto-calculated`
           : "";
         notify.success(
           `Ticket type "${newType.name}" added successfully${pricingMsg}!`
@@ -1153,8 +1165,7 @@ export default {
         this.renderSeatPlanSVG(this.showtimes[showtimeIndex], showtimeIndex)
       );
       notify.success(
-        `Seat layout updated! ${result.value.rows} rows × ${
-          result.value.seatsPerRow
+        `Seat layout updated! ${result.value.rows} rows × ${result.value.seatsPerRow
         } seats = ${result.value.rows * result.value.seatsPerRow} total seats`
       );
     }
@@ -1215,20 +1226,19 @@ export default {
                     <option value="blocked">Blocked</option>
                     <option value="reserved">Reserved</option>
                   </optgroup>
-                  ${
-                    sections.length > 0
-                      ? `
+                  ${sections.length > 0
+          ? `
                   <optgroup label="Pricing Sections">
                     ${sections
-                      .map(
-                        (s, idx) =>
-                          `<option value="section-${idx}" data-section-index="${idx}">${s.section} (${s.sectionCode})</option>`
-                      )
-                      .join("")}
+            .map(
+              (s, idx) =>
+                `<option value="section-${idx}" data-section-index="${idx}">${s.section} (${s.sectionCode})</option>`
+            )
+            .join("")}
                   </optgroup>
                   `
-                      : ""
-                  }
+          : ""
+        }
                 </select>
               </div>
 
@@ -1402,7 +1412,7 @@ export default {
   },
 
   initializeSeatDetails(rows, seatsPerRow) {
-    return seatHelpers.initializeSeatDetails(rows, seatsPerRow);
+    return initializeSeatDetails(rows, seatsPerRow);
   },
 
   getSeatColorForShowtime(seatDetail, showtime) {
@@ -1509,8 +1519,8 @@ export default {
           <div class="flex justify-between items-start mb-3">
             <div class="flex items-center gap-3 flex-1">
               <div class="w-10 h-10 rounded-lg ${getTierBadge(
-                section.tier
-              )} flex items-center justify-center font-bold">
+        section.tier
+      )} flex items-center justify-center font-bold">
                 ${String.fromCharCode(65 + sectionIndex)}
               </div>
               <div class="flex-1">
@@ -1536,11 +1546,10 @@ export default {
                 data-showtime="${showtimeIndex}" 
                 data-section="${sectionIndex}">
                 ${TIER_OPTIONS.map(
-                  (tier) =>
-                    `<option value="${tier}" ${
-                      section.tier === tier ? "selected" : ""
-                    }>${tier.charAt(0).toUpperCase() + tier.slice(1)}</option>`
-                ).join("")}
+        (tier) =>
+          `<option value="${tier}" ${section.tier === tier ? "selected" : ""
+          }>${tier.charAt(0).toUpperCase() + tier.slice(1)}</option>`
+      ).join("")}
               </select>
             </div>
             <div>
@@ -1559,12 +1568,11 @@ export default {
             </div>
           </div>
 
-        <div class="bg-gray-50 rounded-lg p-3 mt-3">${
-            sectionIndex === 0 &&
-            this.ticketTypes.some(
-              (t) => t.id && SYSTEM_TICKET_TYPE_IDS.includes(t.id)
-            )
-              ? `
+        <div class="bg-gray-50 rounded-lg p-3 mt-3">${sectionIndex === 0 &&
+          this.ticketTypes.some(
+            (t) => t.id && SYSTEM_TICKET_TYPE_IDS.includes(t.id)
+          )
+          ? `
             <div class="bg-blue-50 border border-blue-200 rounded-lg p-2.5 mb-3 flex items-start gap-2">
               <i class="fas fa-info-circle text-blue-600 mt-0.5 text-sm"></i>
               <div class="flex-1">
@@ -1574,8 +1582,8 @@ export default {
               </div>
             </div>
           `
-              : ""
-          }
+          : ""
+        }
           <div class="text-xs font-semibold text-gray-600 mb-3 flex items-center justify-between">
             <div class="flex items-center">
               <i class="fas fa-dollar-sign text-green-600 mr-1"></i>
@@ -1588,18 +1596,16 @@ export default {
           </div>
           <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
             ${this.ticketTypes
-              .map(
-                (type) => `
+          .map(
+            (type) => `
               <div class="bg-white rounded-lg p-2 border border-gray-200 hover:border-indigo-300 transition-colors">
-                <label class="block text-xs font-medium text-gray-700 mb-1 truncate" title="${
-                  type.name
-                }">
+                <label class="block text-xs font-medium text-gray-700 mb-1 truncate" title="${type.name
+              }">
                   ${type.name}
-                  ${
-                    !SYSTEM_TICKET_TYPE_IDS.includes(type.id)
-                      ? '<i class="fas fa-star text-yellow-500 text-[8px] ml-1" title="Custom type"></i>'
-                      : ""
-                  }
+                  ${!SYSTEM_TICKET_TYPE_IDS.includes(type.id)
+                ? '<i class="fas fa-star text-yellow-500 text-[8px] ml-1" title="Custom type"></i>'
+                : ""
+              }
                 </label>
                 <div class="relative">
                   <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">$</span>
@@ -1615,13 +1621,13 @@ export default {
                 </div>
               </div>
             `
-              )
-              .join("")}
+          )
+          .join("")}
           </div>
         </div>
       </div>
     `;
-      })
+    })
       .join("");
 
     return html;
@@ -1880,9 +1886,9 @@ export default {
         <div>
           <p class="text-xs text-gray-500 uppercase font-semibold">Status</p>
           ${getStatusBadge(
-            performance.ticketingInfo?.status || "upcoming",
-            "performance"
-          )}
+      performance.ticketingInfo?.status || "upcoming",
+      "performance"
+    )}
         </div>
       </div>
     `;
@@ -1938,13 +1944,12 @@ export default {
         (st) => `
         <div class="py-2 px-3 bg-gray-50 rounded-lg">
           <div class="font-semibold text-gray-900">${this.formatShowtimeDate(
-            st,
-            "MMM D, YYYY"
-          )} ${this.formatShowtimeTime(st)}</div>
-          ${
-            st.available !== undefined
-              ? `<div class="text-sm text-gray-600">${st.available} seats available</div>`
-              : ""
+          st,
+          "MMM D, YYYY"
+        )} ${this.formatShowtimeTime(st)}</div>
+          ${st.available !== undefined
+            ? `<div class="text-sm text-gray-600">${st.available} seats available</div>`
+            : ""
           }
         </div>
       `
@@ -1963,21 +1968,19 @@ export default {
   renderTicketTypeCard(tt) {
     const tierBadge = tt.tier
       ? `<span class="ml-2 text-xs px-2 py-0.5 rounded-full ${getTierBadge(
-          tt.tier
-        )}">${tt.tier.charAt(0).toUpperCase() + tt.tier.slice(1)}</span>`
+        tt.tier
+      )}">${tt.tier.charAt(0).toUpperCase() + tt.tier.slice(1)}</span>`
       : "";
 
     return `
       <div class="flex justify-between items-center py-2 px-3 bg-gray-50 rounded-lg">
         <div>
-          <span class="font-medium text-gray-900">${
-            tt.sectionName || tt.name || tt.section || "Unnamed Section"
-          }</span>
+          <span class="font-medium text-gray-900">${tt.sectionName || tt.name || tt.section || "Unnamed Section"
+      }</span>
           ${tierBadge}
         </div>
-        <span class="text-indigo-600 font-semibold">HKD ${
-          tt.basePrice || tt.price || "N/A"
-        }</span>
+        <span class="text-indigo-600 font-semibold">HKD ${tt.basePrice || tt.price || "N/A"
+      }</span>
       </div>
     `;
   },
@@ -2029,9 +2032,8 @@ export default {
       <div class="text-left">
         <div class="bg-gray-50 rounded-lg p-4 mb-4">
           <h3 class="font-semibold text-gray-900 mb-1">${performance.title}</h3>
-          <p class="text-sm text-gray-600">${performance.composer} • ${
-            performance.conductor
-          }</p>
+          <p class="text-sm text-gray-600">${performance.composer} • ${performance.conductor
+      }</p>
         </div>
 
         <div class="mb-3 flex items-center justify-between">
@@ -2040,14 +2042,13 @@ export default {
           </h4>
           <div class="text-xs text-gray-500">
             ${this.formatShowtimeDate(showtimes[0], "MMM YYYY")}
-            ${
-              showtimes.length > 1
-                ? ` - ${this.formatShowtimeDate(
-                    showtimes[showtimes.length - 1],
-                    "MMM YYYY"
-                  )}`
-                : ""
-            }
+            ${showtimes.length > 1
+        ? ` - ${this.formatShowtimeDate(
+          showtimes[showtimes.length - 1],
+          "MMM YYYY"
+        )}`
+        : ""
+      }
           </div>
         </div>
 
@@ -2127,9 +2128,8 @@ export default {
           </div>
         </div>
         <div class="text-right">
-          <div class="text-2xl font-bold text-indigo-600">${
-            stats.occupancyPercent
-          }%</div>
+          <div class="text-2xl font-bold text-indigo-600">${stats.occupancyPercent
+      }%</div>
           <div class="text-xs text-gray-500">Occupied</div>
         </div>
       </div>
@@ -2193,9 +2193,9 @@ export default {
           title: `${performance.title} (Copy)`,
           showtimes: performance.showtimes
             ? performance.showtimes.map((st) => {
-                const { id, ...stData } = st;
-                return stData;
-              })
+              const { id, ...stData } = st;
+              return stData;
+            })
             : [],
         };
 
@@ -2241,9 +2241,8 @@ export default {
     return `
       <div class="text-left space-y-4">
         <div class="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-lg p-4">
-          <h3 class="font-bold text-lg text-gray-900 mb-1">${
-            performance.title
-          }</h3>
+          <h3 class="font-bold text-lg text-gray-900 mb-1">${performance.title
+      }</h3>
           <div class="text-sm text-gray-700">${performance.composer}</div>
         </div>
 
@@ -2251,12 +2250,12 @@ export default {
           <div>
             <p class="text-xs text-gray-500 uppercase font-semibold mb-1">Date & Time</p>
             <p class="text-sm font-medium text-gray-900">${this.formatShowtimeDate(
-              showtime,
-              "ddd, MMM D, YYYY"
-            )}</p>
+        showtime,
+        "ddd, MMM D, YYYY"
+      )}</p>
             <p class="text-sm text-gray-600">${this.formatShowtimeTime(
-              showtime
-            )}</p>
+        showtime
+      )}</p>
           </div>
           <div>
             <p class="text-xs text-gray-500 uppercase font-semibold mb-1">Venue</p>
@@ -2264,23 +2263,21 @@ export default {
           </div>
         </div>
 
-        ${
-          sections.length > 0
-            ? `
+        ${sections.length > 0
+        ? `
           <div>
             <p class="text-xs text-gray-500 uppercase font-semibold mb-2">Pricing Sections</p>
             <div class="space-y-2">${sectionsHtml}</div>
           </div>
         `
-            : ""
-        }
+        : ""
+      }
 
         <div class="bg-blue-50 border border-blue-200 rounded-lg p-3">
           <p class="text-sm text-blue-800">
             <i class="fas fa-id-badge mr-1"></i>
-            Showtime ID: <code class="bg-blue-100 px-2 py-0.5 rounded text-xs font-mono">${
-              showtime.id
-            }</code>
+            Showtime ID: <code class="bg-blue-100 px-2 py-0.5 rounded text-xs font-mono">${showtime.id
+      }</code>
           </p>
         </div>
       </div>
@@ -2293,19 +2290,16 @@ export default {
         (section) => `
         <div class="flex items-center justify-between py-2 px-3 bg-gray-50 rounded-lg">
           <div class="flex items-center gap-2">
-            <span class="font-medium text-gray-900">${
-              section.sectionName || section.name
-            }</span>
-            ${
+            <span class="font-medium text-gray-900">${section.sectionName || section.name
+          }</span>
+            ${section.tier
+            ? `<span class="text-xs px-2 py-0.5 rounded-full ${getTierBadge(
               section.tier
-                ? `<span class="text-xs px-2 py-0.5 rounded-full ${getTierBadge(
-                    section.tier
-                  )}">${section.tier}</span>`
-                : ""
-            }
+            )}">${section.tier}</span>`
+            : ""
+          }
           </div>
-          <span class="font-semibold text-indigo-600">HKD ${
-            section.basePrice || section.price
+          <span class="font-semibold text-indigo-600">HKD ${section.basePrice || section.price
           }</span>
         </div>
       `
@@ -2324,17 +2318,15 @@ export default {
     const bookingsHtml =
       bookings.length > 0
         ? bookings
-            .map(
-              (booking) => `
+          .map(
+            (booking) => `
           <div class="border border-gray-200 rounded-lg p-3 hover:border-indigo-300 transition-colors">
             <div class="flex items-start justify-between mb-2">
               <div class="flex-1">
-                <div class="font-semibold text-gray-900">${
-                  booking.customerInfo?.name || "Guest"
-                }</div>
-                <div class="text-xs text-gray-500">${
-                  booking.customerInfo?.email || "N/A"
-                }</div>
+                <div class="font-semibold text-gray-900">${booking.customerInfo?.name || "Guest"
+              }</div>
+                <div class="text-xs text-gray-500">${booking.customerInfo?.email || "N/A"
+              }</div>
               </div>
               <div class="text-right">
                 ${getStatusBadge(booking.status, "booking")}
@@ -2344,9 +2336,8 @@ export default {
             <div class="flex items-center gap-4 text-xs text-gray-600">
               <span class="flex items-center gap-1">
                 <i class="fas fa-ticket-alt text-indigo-600"></i>
-                ${booking.seats?.length || 0} seat${
-                  booking.seats?.length !== 1 ? "s" : ""
-                }
+                ${booking.seats?.length || 0} seat${booking.seats?.length !== 1 ? "s" : ""
+              }
               </span>
               <span class="flex items-center gap-1">
                 <i class="fas fa-dollar-sign text-green-600"></i>
@@ -2358,31 +2349,30 @@ export default {
               </span>
             </div>
 
-            ${
-              booking.seats?.length > 0
+            ${booking.seats?.length > 0
                 ? `
               <div class="mt-2 pt-2 border-t border-gray-100">
                 <div class="flex flex-wrap gap-1">
                   ${booking.seats
-                    .map((seat) => {
-                      const seatId =
-                        typeof seat === "string"
-                          ? seat
-                          : seat.fullId || seat.seatId || seat;
-                      return `<span class="px-2 py-0.5 bg-indigo-50 text-indigo-700 rounded text-xs font-mono">${getDisplayLabel(
-                        seatId
-                      )}</span>`;
-                    })
-                    .join("")}
+                  .map((seat) => {
+                    const seatId =
+                      typeof seat === "string"
+                        ? seat
+                        : seat.fullId || seat.seatId || seat;
+                    return `<span class="px-2 py-0.5 bg-indigo-50 text-indigo-700 rounded text-xs font-mono">${getDisplayLabel(
+                      seatId
+                    )}</span>`;
+                  })
+                  .join("")}
                 </div>
               </div>
             `
                 : ""
-            }
+              }
           </div>
         `
-            )
-            .join("")
+          )
+          .join("")
         : '<div class="text-center py-8 text-gray-500"><i class="fas fa-inbox text-3xl mb-2"></i><p>No bookings for this showtime yet</p></div>';
 
     const totalRevenue = bookings
@@ -2517,12 +2507,10 @@ export default {
           <div class="bg-gray-50 rounded-lg p-3">
             <div class="text-sm text-gray-700">
               <div>Rows: <span class="font-semibold">${layout.rows}</span></div>
-              <div>Seats per row: <span class="font-semibold">${
-                layout.seatsPerRow
-              }</span></div>
-              <div>Total seats: <span class="font-semibold">${
-                layout.rows * layout.seatsPerRow
-              }</span></div>
+              <div>Seats per row: <span class="font-semibold">${layout.seatsPerRow
+        }</span></div>
+              <div>Total seats: <span class="font-semibold">${layout.rows * layout.seatsPerRow
+        }</span></div>
             </div>
           </div>
         </div>
@@ -2535,9 +2523,9 @@ export default {
         const tagsStr = $("#templateTags").val().trim();
         const tags = tagsStr
           ? tagsStr
-              .split(",")
-              .map((t) => t.trim())
-              .filter((t) => t)
+            .split(",")
+            .map((t) => t.trim())
+            .filter((t) => t)
           : [];
 
         if (!name) {
@@ -2602,12 +2590,10 @@ export default {
             <i class="fas fa-building mr-2"></i>${venue.name}
           </h4>
           <div class="text-sm text-blue-800">
-            <div>Total capacity: <span class="font-semibold">${
-              venue.capacity || venueService.calculateCapacity(venue.layout)
-            }</span> seats</div>
-            <div>Sections: <span class="font-semibold">${
-              venue.layout.sections.length
-            }</span></div>
+            <div>Total capacity: <span class="font-semibold">${venue.capacity || venueService.calculateCapacity(venue.layout)
+      }</span> seats</div>
+            <div>Sections: <span class="font-semibold">${venue.layout.sections.length
+      }</span></div>
           </div>
         </div>
 
@@ -2615,22 +2601,20 @@ export default {
           <h4 class="font-semibold text-gray-900 mb-2">Sections:</h4>
           <div class="space-y-2">
             ${venue.layout.sections
-              .map(
-                (section) => `
+        .map(
+          (section) => `
               <div class="bg-gray-50 rounded p-3 text-sm">
                 <div class="font-semibold text-gray-900">${section.name}</div>
                 <div class="text-gray-600">
-                  ${section.rows} rows × ${section.seatsPerRow} seats = ${
-                    section.rows * section.seatsPerRow
-                  } total
-                  <span class="ml-2 px-2 py-1 bg-indigo-100 text-indigo-800 rounded-full text-xs">${
-                    section.tier
-                  }</span>
+                  ${section.rows} rows × ${section.seatsPerRow} seats = ${section.rows * section.seatsPerRow
+            } total
+                  <span class="ml-2 px-2 py-1 bg-indigo-100 text-indigo-800 rounded-full text-xs">${section.tier
+            }</span>
                 </div>
               </div>
             `
-              )
-              .join("")}
+        )
+        .join("")}
           </div>
         </div>
 
@@ -2738,9 +2722,9 @@ export default {
                 showtime.pricingZones.length === 0
                   ? '<p class="text-gray-500 text-sm">No zones defined. Click "Add Zone" to create your first pricing zone.</p>'
                   : showtime.pricingZones
-                      .map((zone, index) => {
-                        const colorClass = zone.color.replace("#", "");
-                        return `
+                    .map((zone, index) => {
+                      const colorClass = zone.color.replace("#", "");
+                      return `
                   <div class="zone-item border border-gray-300 rounded-lg p-4" data-zone-index="${index}">
                     <div class="flex items-center justify-between mb-2">
                       <div class="flex items-center gap-3">
@@ -2759,8 +2743,8 @@ export default {
                     </button>
                   </div>
                 `;
-                      })
-                      .join("")
+                    })
+                    .join("")
               );
             }
           );

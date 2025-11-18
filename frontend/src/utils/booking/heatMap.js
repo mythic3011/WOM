@@ -1,4 +1,4 @@
-import { SeatStatusColors, StageColor } from "/src/utils/colors.js";
+import { SeatStatusColors, StageColor } from "@utils/colors.js";
 
 export class HeatMapGenerator {
   constructor(options = {}) {
@@ -280,13 +280,12 @@ export class HeatMapGenerator {
               class="transition-all hover:stroke-width-2">
               <title>${seatId}: ${(score * 100).toFixed(1)}%</title>
             </rect>
-            <text x="${seatX + seatSize / 2}" y="${
-          rowY + seatSize / 2 + 4
-        }" fill="rgb(255, 255, 255)" 
+            <text x="${seatX + seatSize / 2}" y="${rowY + seatSize / 2 + 4
+          }" fill="rgb(255, 255, 255)" 
               text-anchor="middle" font-size="${Math.min(
-                seatSize * 0.3,
-                12
-              )}" font-weight="bold">${seatId}</text>
+            seatSize * 0.3,
+            12
+          )}" font-weight="bold">${seatId}</text>
           </g>
         `;
       }
@@ -298,13 +297,11 @@ export class HeatMapGenerator {
       <div class="heat-map-container">
         <h3 class="text-lg font-semibold text-gray-900 mb-4">${title}</h3>
         <svg width="${svgWidth}" height="${svgHeight + 60}" class="bg-white rounded shadow-lg mx-auto">
-          <rect x="${stagePadding}" y="${stagePadding}" width="${
-      seatsPerRow * (seatSize + seatGap)
-    }" height="${stageHeight}" 
+          <rect x="${stagePadding}" y="${stagePadding}" width="${seatsPerRow * (seatSize + seatGap)
+      }" height="${stageHeight}" 
             fill="${StageColor}" rx="4" />
-          <text x="${svgWidth / 2}" y="${
-      stagePadding + stageHeight / 2 + 5
-    }" fill="rgb(255, 255, 255)" 
+          <text x="${svgWidth / 2}" y="${stagePadding + stageHeight / 2 + 5
+      }" fill="rgb(255, 255, 255)" 
             text-anchor="middle" font-size="16" font-weight="bold">STAGE</text>
           ${seatsHTML}
           ${legendHTML}
@@ -340,8 +337,8 @@ export class HeatMapGenerator {
       legendHTML += `
         <text x="${x}" y="${legendY + 35}" fill="rgb(107, 114, 128)" 
           text-anchor="middle" font-size="10">${(item.value * 100).toFixed(
-            0
-          )}%</text>
+        0
+      )}%</text>
       `;
     });
 
@@ -356,22 +353,20 @@ export const heatMapUtils = {
       <div class="heat-map-controls mb-4">
         <div class="flex gap-2">
           ${modes
-            .map(
-              (mode) => `
+        .map(
+          (mode) => `
             <button id="heat-${mode}" 
-              class="heat-mode-btn px-4 py-2 rounded-lg border transition-colors ${
-                mode === "availability"
-                  ? "bg-indigo-600 text-white border-indigo-600"
-                  : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
-              }" 
+              class="heat-mode-btn px-4 py-2 rounded-lg border transition-colors ${mode === "availability"
+              ? "bg-indigo-600 text-white border-indigo-600"
+              : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
+            }" 
               data-mode="${mode}">
-              <i class="fas fa-fire mr-2"></i>${
-                mode.charAt(0).toUpperCase() + mode.slice(1)
-              }
+              <i class="fas fa-fire mr-2"></i>${mode.charAt(0).toUpperCase() + mode.slice(1)
+            }
             </button>
           `
-            )
-            .join("")}
+        )
+        .join("")}
         </div>
       </div>
       <div id="${containerId}" class="heat-map-display"></div>

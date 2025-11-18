@@ -10,7 +10,7 @@ services:
     ports:
       - "${DB_PORT:-5432}:5432"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - ./docker/postgres-data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres}"]
       interval: 10s
@@ -21,7 +21,7 @@ services:
 
   backend:
     build:
-      context: ../backend
+      context: ./backend
       dockerfile: Dockerfile.dev
     container_name: orchestral_backend
     restart: unless-stopped
@@ -41,7 +41,7 @@ services:
       postgres:
         condition: service_healthy
     volumes:
-      - ../backend:/app
+      - ./backend:/app
       - /app/node_modules
     command: npm run dev
     healthcheck:
@@ -63,7 +63,7 @@ services:
 
   frontend:
     build:
-      context: ../frontend
+      context: ./frontend
       dockerfile: Dockerfile
     container_name: orchestral_frontend
     restart: unless-stopped
@@ -73,7 +73,7 @@ services:
       VITE_API_URL: ${VITE_API_URL:-http://backend:3000/api}
       VITE_BACKEND_URL: http://backend:3000
     volumes:
-      - ../frontend:/app
+      - ./frontend:/app
     command: sh -c "rm -rf node_modules package-lock.json && npm install && npm run dev -- --host 0.0.0.0"
     depends_on:
       backend:
@@ -93,8 +93,8 @@ services:
       PGADMIN_CONFIG_SERVER_MODE: 'False'
       PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED: 'False'
     volumes:
-      - pgadmin_data:/var/lib/pgadmin
-      - ./pgadmin-servers.json:/var/lib/pgadmin/servers.json:ro
+      - ./docker/pgadmin-data:/var/lib/pgadmin
+      - ./pgadmin-servers.json:/pgadmin4/servers.json:ro
     depends_on:
       postgres:
         condition: service_healthy
@@ -104,7 +104,3 @@ services:
 networks:
   orchestral_network:
     driver: bridge
-
-volumes:
-  postgres_data:
-  pgadmin_data:

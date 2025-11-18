@@ -1,6 +1,6 @@
-import { User } from "../models/index.js";
-import { hashPassword, comparePassword } from "../utils/hash.js";
-import { ConflictError, UnauthorizedError, NotFoundError } from "../utils/errors.js";
+import { User } from "#models/index.js";
+import { hashPassword, comparePassword } from "#utils/hash.js";
+import { ConflictError, UnauthorizedError, NotFoundError } from "#utils/errors.js";
 
 export const register = async (userData) => {
   const { email, username, password, name, phone, role = "user" } = userData;

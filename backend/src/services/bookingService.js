@@ -1,13 +1,13 @@
-import { Booking, Performance, User, Venue } from "../models/index.js";
+import { Booking, Performance, User, Venue } from "#models/index.js";
 import { Op } from "sequelize";
 import dayjs from "dayjs";
-import { NotFoundError, BadRequestError } from "../utils/errors.js";
-import sequelize from "../config/database.js";
+import { NotFoundError, BadRequestError } from "#utils/errors.js";
+import sequelize from "#config/database.js";
 import {
   getPerformanceAvailability,
   updatePerformanceAvailability,
 } from "./performanceService.js";
-import { resolveSeatId } from "../utils/seatMapBuilder.js";
+import { resolveSeatId } from "#utils/seatMapBuilder.js";
 
 const generateBookingReference = () => {
   const timestamp = Date.now().toString(36).toUpperCase();

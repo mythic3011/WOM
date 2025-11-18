@@ -1,4 +1,5 @@
-import { notify } from "/src/utils/ui/notification.js";
+import { notify } from "@utils/ui/notification.js";
+import { fileHandler } from "@utils/core/fileHandler.js";
 
 export function createImageUpload({
   id = "imageUpload",
@@ -27,15 +28,14 @@ export function createImageUpload({
         ${label}${required ? ' <span class="text-red-500">*</span>' : ""}
       </label>
       <div class="flex items-center space-x-4">
-        ${
-          preview
-            ? `
+        ${preview
+      ? `
           <div id="${previewId}" class="flex-shrink-0">
             ${defaultPreview}
           </div>
         `
-            : ""
-        }
+      : ""
+    }
         <div class="flex-1">
           <input
             type="file"
@@ -51,71 +51,126 @@ export function createImageUpload({
   `;
 }
 
+/**
+ * Initialize image upload with validation, preview, and optional auto-upload
+ * @param {string} inputId - ID of the file input element
+ * @param {string} previewId - ID of the preview container element
+ * @param {Object} options - Configuration options
+ * @param {number} options.maxSize - Maximum file size in MB (default: 5)
+ * @param {string} options.shape - CSS class for preview shape (default: 'rounded-full')
+ * @param {Function} options.onImageSelect - Callback when image is selected (dataURL, file)
+ * @param {string} options.previewSize - Tailwind size class for preview (default: '24')
+ * @param {string} options.uploadEndpoint - Optional API endpoint for auto-upload
+ * @param {Function} options.onUploadComplete - Callback when upload completes (response)
+ * @param {Function} options.onUploadProgress - Callback for upload progress (percent, loaded, total)
+ * @param {Array<string>} options.allowedTypes - Allowed file types (default: ['image/*'])
+ */
 export function initImageUpload(inputId, previewId, options = {}) {
   const {
     maxSize = 5,
     shape = "rounded-full",
     onImageSelect = null,
     previewSize = "24",
+    uploadEndpoint = null,
+    onUploadComplete = null,
+    onUploadProgress = null,
+    allowedTypes = ["image/*"],
   } = options;
 
-  $(`#${inputId}`).on("change", function (e) {
+  $(`#${inputId}`).on("change", async function (e) {
     const file = e.target.files[0];
     if (!file) return;
 
-    if (file.size > maxSize * 1024 * 1024) {
-      notify.warning(`Image size must be less than ${maxSize}MB`);
+    // Validate using centralized fileHandler
+    if (!fileHandler.validateFile(file, { maxSize, allowedTypes })) {
       e.target.value = "";
       return;
     }
 
-    if (!file.type.startsWith("image/")) {
-      notify.warning("Please select a valid image file");
-      e.target.value = "";
-      return;
-    }
+    try {
+      // Read and preview using fileHandler
+      const dataURL = await fileHandler.readAsDataURL(file);
 
-    const reader = new FileReader();
-    reader.onload = function (event) {
+      // Update preview if previewId provided
       if (previewId) {
         $(`#${previewId}`).html(
-          `<img src="${event.target.result}" class="h-${previewSize} w-${previewSize} ${shape} object-cover" />`
+          `<img src="${dataURL}" class="h-${previewSize} w-${previewSize} ${shape} object-cover" />`
         );
       }
 
+      // Callback with data
       if (onImageSelect) {
-        onImageSelect(event.target.result, file);
+        onImageSelect(dataURL, file);
       }
-    };
-    reader.onerror = function () {
-      notify.error("Failed to read image file");
+
+      // Optional: Auto-upload to server
+      if (uploadEndpoint) {
+        const result = await fileHandler.upload(file, uploadEndpoint, {
+          maxSize,
+          allowedTypes,
+          onProgress: onUploadProgress || ((percent, loaded, total) => {
+            console.log(`Upload progress: ${percent.toFixed(2)}%`);
+          }),
+        });
+
+        if (result.success) {
+          notify.success("Image uploaded successfully");
+          if (onUploadComplete) {
+            onUploadComplete(result.data);
+          }
+        } else {
+          notify.error(`Upload failed: ${result.error}`);
+        }
+      }
+    } catch (error) {
+      notify.error("Failed to process image");
+      console.error("Image upload error:", error);
       e.target.value = "";
-    };
-    reader.readAsDataURL(file);
+    }
   });
 }
 
+/**
+ * Get the selected image file from input
+ * @param {string} inputId - ID of the file input element
+ * @returns {File|null} Selected file or null if none selected
+ */
 export function getImageFile(inputId) {
-  const fileInput = document.getElementById(inputId);
-  return fileInput && fileInput.files.length > 0 ? fileInput.files[0] : null;
+  const $fileInput = $(`#${inputId}`);
+  if ($fileInput.length && $fileInput[0].files.length > 0) {
+    return $fileInput[0].files[0];
+  }
+  return null;
 }
 
+/**
+ * Get the selected image as a data URL
+ * @param {string} inputId - ID of the file input element
+ * @returns {Promise<string|null>} Data URL of the image or null if none selected
+ */
 export async function getImageDataURL(inputId) {
   const file = getImageFile(inputId);
   if (!file) return null;
 
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = (e) => resolve(e.target.result);
-    reader.onerror = (e) => reject(e);
-    reader.readAsDataURL(file);
-  });
+  try {
+    return await fileHandler.readAsDataURL(file);
+  } catch (error) {
+    console.error("Failed to read image as data URL:", error);
+    notify.error("Failed to read image file");
+    return null;
+  }
 }
 
+/**
+ * Clear the image upload input and reset preview
+ * @param {string} inputId - ID of the file input element
+ * @param {string} previewId - ID of the preview container element
+ * @param {string} defaultPreview - Optional HTML for default preview
+ */
 export function clearImageUpload(inputId, previewId, defaultPreview = null) {
-  const fileInput = document.getElementById(inputId);
-  if (fileInput) {
-    fileInput.value = "";
+  const $fileInput = $(`#${inputId}`);
+  if ($fileInput.length) {
+    $fileInput.val("");
   }
 
   if (previewId) {

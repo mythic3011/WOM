@@ -1,16 +1,21 @@
-import { User, Performance, Venue, TicketType } from "../models/index.js";
+import { User, Performance, Venue, TicketType } from "#models/index.js";
 import { generateUsers } from "./data/users.js";
 import { venuesData } from "./data/venues.js";
 import { performancesData } from "./data/performances.js";
 import { ticketTypesData } from "./data/ticketTypes.js";
-import { buildSeatMapFromVenueLayout, countSeats } from "../utils/seatMapBuilder.js";
-import logger from "../config/logger.js";
-import config from "../config/environment.js";
+import { buildSeatMapFromVenueLayout, countSeats } from "#utils/seatMapBuilder.js";
+import logger from "#config/logger.js";
+import config from "#config/environment.js";
 
 const isDatabaseEmpty = async () => {
   try {
-    const userCount = await User.count();
-    return userCount === 0;
+    const [userCount, ticketTypeCount, venueCount, performanceCount] = await Promise.all([
+      User.count(),
+      TicketType.count(),
+      Venue.count(),
+      Performance.count(),
+    ]);
+    return userCount === 0 && ticketTypeCount === 0 && venueCount === 0 && performanceCount === 0;
   } catch (error) {
     logger.error("Error checking database:", error);
     return true;

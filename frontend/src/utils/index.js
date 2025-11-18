@@ -41,6 +41,7 @@ export {
   goBack,
   redirect,
 } from "./core/navigation.js";
+export { fileHandler } from "./core/fileHandler.js";
 
 export {
   animate,
@@ -74,14 +75,6 @@ export {
   onTap,
 } from "./ui/touchGestures.js";
 export { scrollbarUtils, initializeScrollbars } from "./ui/scrollbar.js";
-
-export {
-  validateEmail,
-  validatePhone,
-  validateRequired,
-  validateLength,
-  validateNumber,
-} from "./data/validation.js";
 
 export { phoneUtils } from "./forms/phoneFormat.js";
 
@@ -117,3 +110,10 @@ export {
   generateBookingReport,
   generateRevenueReport,
 } from "./reports/reporting.js";
+
+export * as api from "./api/index.js";
+export * as data from "./data/index.js";
+export * as forms from "./forms/index.js";
+export * as table from "./table/index.js";
+
+export { calculationService } from "./calculations.js";

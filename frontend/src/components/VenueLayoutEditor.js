@@ -1,4 +1,4 @@
-import { SeatNumberingSystem } from "/src/utils/SeatNumberingSystem.js";
+import { SeatNumberingSystem } from "@utils/SeatNumberingSystem.js";
 
 export const VenueLayoutEditor = {
   create(layoutConfig = null, sectionIndex = 0) {
@@ -40,26 +40,24 @@ export const VenueLayoutEditor = {
             <label class="block text-sm font-medium text-gray-700 mb-2">Section</label>
             <select id="section-selector" class="border rounded-md px-3 py-2 text-sm focus:ring-indigo-500 focus:border-indigo-500">
               ${config.sections
-                .map(
-                  (s, idx) =>
-                    `<option value="${idx}" ${
-                      idx === currentIndex ? "selected" : ""
-                    }>${s.name}</option>`
-                )
-                .join("")}
+        .map(
+          (s, idx) =>
+            `<option value="${idx}" ${idx === currentIndex ? "selected" : ""
+            }>${s.name}</option>`
+        )
+        .join("")}
             </select>
           </div>
           <div class="flex gap-2">
             <button type="button" id="add-section-btn" class="px-4 py-2 bg-indigo-600 text-white text-sm rounded-md hover:bg-indigo-700">
               <i class="fas fa-plus mr-1"></i>Add Section
             </button>
-            ${
-              config.sections.length > 1
-                ? `<button type="button" id="remove-section-btn" class="px-4 py-2 bg-red-600 text-white text-sm rounded-md hover:bg-red-700">
+            ${config.sections.length > 1
+        ? `<button type="button" id="remove-section-btn" class="px-4 py-2 bg-red-600 text-white text-sm rounded-md hover:bg-red-700">
               <i class="fas fa-trash mr-1"></i>Remove
             </button>`
-                : ""
-            }
+        : ""
+      }
           </div>
         </div>
       </div>
@@ -94,18 +92,17 @@ export const VenueLayoutEditor = {
         </div>
 
         <div id="aisles-list" class="space-y-3">
-          ${
-            aisles.length === 0
-              ? `<div class="text-center text-gray-500 py-8">
+          ${aisles.length === 0
+        ? `<div class="text-center text-gray-500 py-8">
               <i class="fas fa-th-large text-4xl mb-2"></i>
               <p>No aisles configured. Click "Add Aisle" to start.</p>
             </div>`
-              : aisles
-                  .map((aisle, idx) =>
-                    this.createAisleItem(aisle, idx, section)
-                  )
-                  .join("")
-          }
+        : aisles
+          .map((aisle, idx) =>
+            this.createAisleItem(aisle, idx, section)
+          )
+          .join("")
+      }
         </div>
       </div>
     `;
@@ -117,52 +114,43 @@ export const VenueLayoutEditor = {
     const isInvalid = aisle.position >= maxPosition;
 
     return `
-      <div class="border rounded-lg p-4 ${
-        isInvalid ? "border-red-300 bg-red-50" : "border-gray-200"
+      <div class="border rounded-lg p-4 ${isInvalid ? "border-red-300 bg-red-50" : "border-gray-200"
       }" data-aisle-index="${index}">
         <div class="grid grid-cols-5 gap-3 items-center">
           <div>
             <label class="block text-xs font-medium text-gray-700 mb-1">Type</label>
             <select class="aisle-type border rounded-md px-2 py-1 text-sm w-full focus:ring-indigo-500 focus:border-indigo-500">
-              <option value="vertical" ${
-                aisle.type === "vertical" ? "selected" : ""
-              }>Vertical</option>
-              <option value="horizontal" ${
-                aisle.type === "horizontal" ? "selected" : ""
-              }>Horizontal</option>
+              <option value="vertical" ${aisle.type === "vertical" ? "selected" : ""
+      }>Vertical</option>
+              <option value="horizontal" ${aisle.type === "horizontal" ? "selected" : ""
+      }>Horizontal</option>
             </select>
           </div>
           <div>
             <label class="block text-xs font-medium text-gray-700 mb-1">Mode</label>
-            <input type="text" class="aisle-mode border rounded-md px-2 py-1 text-sm w-full bg-gray-100" value="${
-              aisle.mode
-            }" readonly>
+            <input type="text" class="aisle-mode border rounded-md px-2 py-1 text-sm w-full bg-gray-100" value="${aisle.mode
+      }" readonly>
           </div>
           <div>
             <label class="block text-xs font-medium text-gray-700 mb-1">Position</label>
-            <input type="number" class="aisle-position border rounded-md px-2 py-1 text-sm w-full focus:ring-indigo-500 focus:border-indigo-500 ${
-              isInvalid ? "border-red-500" : ""
-            }" value="${aisle.position}" min="0" max="${maxPosition - 1}">
-            ${
-              isInvalid
-                ? `<p class="text-xs text-red-600 mt-1">Max: ${
-                    maxPosition - 1
-                  }</p>`
-                : ""
-            }
+            <input type="number" class="aisle-position border rounded-md px-2 py-1 text-sm w-full focus:ring-indigo-500 focus:border-indigo-500 ${isInvalid ? "border-red-500" : ""
+      }" value="${aisle.position}" min="0" max="${maxPosition - 1}">
+            ${isInvalid
+        ? `<p class="text-xs text-red-600 mt-1">Max: ${maxPosition - 1
+        }</p>`
+        : ""
+      }
           </div>
           <div>
             <label class="block text-xs font-medium text-gray-700 mb-1">Width</label>
-            <input type="number" class="aisle-width border rounded-md px-2 py-1 text-sm w-full focus:ring-indigo-500 focus:border-indigo-500" value="${
-              aisle.width
-            }" min="0.5" max="10" step="0.5">
+            <input type="number" class="aisle-width border rounded-md px-2 py-1 text-sm w-full focus:ring-indigo-500 focus:border-indigo-500" value="${aisle.width
+      }" min="0.5" max="10" step="0.5">
           </div>
           <div>
             <label class="block text-xs font-medium text-gray-700 mb-1">Label</label>
             <div class="flex gap-1">
-              <input type="text" class="aisle-label border rounded-md px-2 py-1 text-sm flex-1 focus:ring-indigo-500 focus:border-indigo-500" value="${
-                aisle.label || ""
-              }" maxlength="8">
+              <input type="text" class="aisle-label border rounded-md px-2 py-1 text-sm flex-1 focus:ring-indigo-500 focus:border-indigo-500" value="${aisle.label || ""
+      }" maxlength="8">
               <button type="button" class="remove-aisle-btn px-2 py-1 bg-red-500 text-white text-xs rounded hover:bg-red-600">
                 <i class="fas fa-trash"></i>
               </button>
@@ -191,34 +179,29 @@ export const VenueLayoutEditor = {
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-2">Direction</label>
             <select id="global-direction" class="border rounded-md px-3 py-2 text-sm w-full focus:ring-indigo-500 focus:border-indigo-500">
-              <option value="L_TO_R" ${
-                numbering.globalDirection === "L_TO_R" ? "selected" : ""
-              }>Left to Right</option>
-              <option value="R_TO_L" ${
-                numbering.globalDirection === "R_TO_L" ? "selected" : ""
-              }>Right to Left</option>
+              <option value="L_TO_R" ${numbering.globalDirection === "L_TO_R" ? "selected" : ""
+      }>Left to Right</option>
+              <option value="R_TO_L" ${numbering.globalDirection === "R_TO_L" ? "selected" : ""
+      }>Right to Left</option>
             </select>
           </div>
 
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-2">Start Number</label>
-            <input type="number" id="start-number" class="border rounded-md px-3 py-2 text-sm w-full focus:ring-indigo-500 focus:border-indigo-500" value="${
-              numbering.startNumber
-            }" min="1" max="500">
+            <input type="number" id="start-number" class="border rounded-md px-3 py-2 text-sm w-full focus:ring-indigo-500 focus:border-indigo-500" value="${numbering.startNumber
+      }" min="1" max="500">
           </div>
 
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-2">Prefix</label>
-            <input type="text" id="seat-prefix" class="border rounded-md px-3 py-2 text-sm w-full focus:ring-indigo-500 focus:border-indigo-500" value="${
-              numbering.prefix || ""
-            }" maxlength="5" placeholder="e.g., S">
+            <input type="text" id="seat-prefix" class="border rounded-md px-3 py-2 text-sm w-full focus:ring-indigo-500 focus:border-indigo-500" value="${numbering.prefix || ""
+      }" maxlength="5" placeholder="e.g., S">
           </div>
 
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-2">Suffix</label>
-            <input type="text" id="seat-suffix" class="border rounded-md px-3 py-2 text-sm w-full focus:ring-indigo-500 focus:border-indigo-500" value="${
-              numbering.suffix || ""
-            }" maxlength="5" placeholder="e.g., -A">
+            <input type="text" id="seat-suffix" class="border rounded-md px-3 py-2 text-sm w-full focus:ring-indigo-500 focus:border-indigo-500" value="${numbering.suffix || ""
+      }" maxlength="5" placeholder="e.g., -A">
           </div>
         </div>
 
@@ -226,14 +209,14 @@ export const VenueLayoutEditor = {
           <label class="block text-sm font-medium text-gray-700 mb-2">Skip Numbers (e.g., 13, 14)</label>
           <div id="skip-numbers-container" class="flex flex-wrap gap-2 bg-gray-50 p-2 rounded-md min-h-16">
             ${numbering.skipNumbers
-              .map(
-                (num) =>
-                  `<span class="inline-flex items-center bg-indigo-100 text-indigo-700 text-xs font-medium px-2 py-1 rounded">
+        .map(
+          (num) =>
+            `<span class="inline-flex items-center bg-indigo-100 text-indigo-700 text-xs font-medium px-2 py-1 rounded">
                 ${num}
                 <button type="button" class="ml-1 text-indigo-500 hover:text-indigo-700" onclick="this.parentElement.remove()">×</button>
               </span>`
-              )
-              .join("")}
+        )
+        .join("")}
           </div>
           <div class="flex gap-2 mt-2">
             <input type="number" id="skip-number-input" class="border rounded-md px-3 py-2 text-sm flex-1 focus:ring-indigo-500 focus:border-indigo-500" placeholder="Enter number to skip" min="1" max="500">
@@ -245,19 +228,18 @@ export const VenueLayoutEditor = {
           <label class="block text-sm font-medium text-gray-700 mb-2">Skip Seat Indices (0-based)</label>
           <div id="skip-indices-container" class="flex flex-wrap gap-2 bg-gray-50 p-2 rounded-md min-h-16">
             ${numbering.skipSeatIndices
-              .map(
-                (idx) =>
-                  `<span class="inline-flex items-center bg-amber-100 text-amber-700 text-xs font-medium px-2 py-1 rounded">
+        .map(
+          (idx) =>
+            `<span class="inline-flex items-center bg-amber-100 text-amber-700 text-xs font-medium px-2 py-1 rounded">
                 ${idx}
                 <button type="button" class="ml-1 text-amber-500 hover:text-amber-700" onclick="this.parentElement.remove()">×</button>
               </span>`
-              )
-              .join("")}
+        )
+        .join("")}
           </div>
           <div class="flex gap-2 mt-2">
-            <input type="number" id="skip-index-input" class="border rounded-md px-3 py-2 text-sm flex-1 focus:ring-indigo-500 focus:border-indigo-500" placeholder="Enter index to skip" min="0" max="${
-              section.seatsPerRow - 1
-            }">
+            <input type="number" id="skip-index-input" class="border rounded-md px-3 py-2 text-sm flex-1 focus:ring-indigo-500 focus:border-indigo-500" placeholder="Enter index to skip" min="0" max="${section.seatsPerRow - 1
+      }">
             <button type="button" id="add-skip-index-btn" class="px-4 py-2 bg-amber-600 text-white text-sm rounded-md hover:bg-amber-700">Add</button>
           </div>
         </div>
@@ -285,26 +267,24 @@ export const VenueLayoutEditor = {
             <h3 class="text-sm font-semibold mb-3">Rows</h3>
             <div id="row-list" class="space-y-1 max-h-96 overflow-auto">
               ${allRowLabels
-                .map((label) => {
-                  const hasOverride = rowsConfig.some(
-                    (r) => r.rowLabel === label
-                  );
-                  return `
-                  <button type="button" class="row-item w-full text-left px-3 py-2 text-sm rounded hover:bg-gray-100 ${
-                    hasOverride
-                      ? "bg-indigo-50 border-l-4 border-indigo-600"
-                      : ""
-                  }" data-row-label="${label}">
+        .map((label) => {
+          const hasOverride = rowsConfig.some(
+            (r) => r.rowLabel === label
+          );
+          return `
+                  <button type="button" class="row-item w-full text-left px-3 py-2 text-sm rounded hover:bg-gray-100 ${hasOverride
+              ? "bg-indigo-50 border-l-4 border-indigo-600"
+              : ""
+            }" data-row-label="${label}">
                     ${label}
-                    ${
-                      hasOverride
-                        ? '<i class="fas fa-cog text-indigo-600 float-right"></i>'
-                        : ""
-                    }
+                    ${hasOverride
+              ? '<i class="fas fa-cog text-indigo-600 float-right"></i>'
+              : ""
+            }
                   </button>
                 `;
-                })
-                .join("")}
+        })
+        .join("")}
             </div>
           </div>
 
@@ -340,13 +320,12 @@ export const VenueLayoutEditor = {
       <div class="space-y-4">
         <div class="flex items-center justify-between">
           <h3 class="text-lg font-semibold">Row ${rowLabel} Override</h3>
-          ${
-            override
-              ? `<button type="button" id="remove-override-btn" class="px-3 py-2 bg-red-600 text-white text-sm rounded-md hover:bg-red-700">
+          ${override
+        ? `<button type="button" id="remove-override-btn" class="px-3 py-2 bg-red-600 text-white text-sm rounded-md hover:bg-red-700">
             <i class="fas fa-trash mr-1"></i>Remove Override
           </button>`
-              : ""
-          }
+        : ""
+      }
         </div>
 
         <div class="bg-gray-50 p-4 rounded-lg space-y-3">
@@ -355,31 +334,26 @@ export const VenueLayoutEditor = {
             <div>
               <label class="block text-xs font-medium text-gray-700 mb-1">Direction</label>
               <select class="row-direction border rounded-md px-2 py-1 text-sm w-full">
-                <option value="L_TO_R" ${
-                  config.direction === "L_TO_R" ? "selected" : ""
-                }>Left to Right</option>
-                <option value="R_TO_L" ${
-                  config.direction === "R_TO_L" ? "selected" : ""
-                }>Right to Left</option>
+                <option value="L_TO_R" ${config.direction === "L_TO_R" ? "selected" : ""
+      }>Left to Right</option>
+                <option value="R_TO_L" ${config.direction === "R_TO_L" ? "selected" : ""
+      }>Right to Left</option>
               </select>
             </div>
             <div>
               <label class="block text-xs font-medium text-gray-700 mb-1">Start Number</label>
-              <input type="number" class="row-start-number border rounded-md px-2 py-1 text-sm w-full" value="${
-                config.startNumber
-              }" min="1" max="500">
+              <input type="number" class="row-start-number border rounded-md px-2 py-1 text-sm w-full" value="${config.startNumber
+      }" min="1" max="500">
             </div>
             <div>
               <label class="block text-xs font-medium text-gray-700 mb-1">Prefix</label>
-              <input type="text" class="row-prefix border rounded-md px-2 py-1 text-sm w-full" value="${
-                config.prefix || ""
-              }" maxlength="5">
+              <input type="text" class="row-prefix border rounded-md px-2 py-1 text-sm w-full" value="${config.prefix || ""
+      }" maxlength="5">
             </div>
             <div>
               <label class="block text-xs font-medium text-gray-700 mb-1">Suffix</label>
-              <input type="text" class="row-suffix border rounded-md px-2 py-1 text-sm w-full" value="${
-                config.suffix || ""
-              }" maxlength="5">
+              <input type="text" class="row-suffix border rounded-md px-2 py-1 text-sm w-full" value="${config.suffix || ""
+      }" maxlength="5">
             </div>
           </div>
         </div>
@@ -390,15 +364,13 @@ export const VenueLayoutEditor = {
             <div class="grid grid-cols-2 gap-3">
               <div>
                 <label class="block text-xs font-medium text-gray-700 mb-1">Padding Start</label>
-                <input type="number" class="row-padding-start border rounded-md px-2 py-1 text-sm w-full" value="${
-                  config.paddingStart
-                }" min="0" max="20">
+                <input type="number" class="row-padding-start border rounded-md px-2 py-1 text-sm w-full" value="${config.paddingStart
+      }" min="0" max="20">
               </div>
               <div>
                 <label class="block text-xs font-medium text-gray-700 mb-1">Padding End</label>
-                <input type="number" class="row-padding-end border rounded-md px-2 py-1 text-sm w-full" value="${
-                  config.paddingEnd
-                }" min="0" max="20">
+                <input type="number" class="row-padding-end border rounded-md px-2 py-1 text-sm w-full" value="${config.paddingEnd
+      }" min="0" max="20">
               </div>
             </div>
 
@@ -406,11 +378,11 @@ export const VenueLayoutEditor = {
               <label class="block text-xs font-medium text-gray-700 mb-1">Skip Numbers</label>
               <div class="row-skip-numbers flex flex-wrap gap-1 bg-white p-2 rounded min-h-10">
                 ${config.skipNumbers
-                  .map(
-                    (n) =>
-                      `<span class="inline-flex items-center bg-red-100 text-red-700 text-xs px-2 py-1 rounded">${n} <button type="button" class="ml-1" onclick="this.parentElement.remove()">×</button></span>`
-                  )
-                  .join("")}
+        .map(
+          (n) =>
+            `<span class="inline-flex items-center bg-red-100 text-red-700 text-xs px-2 py-1 rounded">${n} <button type="button" class="ml-1" onclick="this.parentElement.remove()">×</button></span>`
+        )
+        .join("")}
               </div>
             </div>
 
@@ -418,11 +390,11 @@ export const VenueLayoutEditor = {
               <label class="block text-xs font-medium text-gray-700 mb-1">Empty Seat Indices</label>
               <div class="row-empty-indices flex flex-wrap gap-1 bg-white p-2 rounded min-h-10">
                 ${config.emptySeatIndices
-                  .map(
-                    (i) =>
-                      `<span class="inline-flex items-center bg-gray-200 text-gray-700 text-xs px-2 py-1 rounded">${i} <button type="button" class="ml-1" onclick="this.parentElement.remove()">×</button></span>`
-                  )
-                  .join("")}
+        .map(
+          (i) =>
+            `<span class="inline-flex items-center bg-gray-200 text-gray-700 text-xs px-2 py-1 rounded">${i} <button type="button" class="ml-1" onclick="this.parentElement.remove()">×</button></span>`
+        )
+        .join("")}
               </div>
             </div>
           </div>
@@ -517,8 +489,7 @@ export const VenueLayoutEditor = {
         );
       } else if (isSkippedNumber) {
         preview.push(
-          `<span class="px-2 py-1 bg-red-100 text-red-600 text-xs rounded">${rowLabel}${prefix}${
-            seatNumber + 1
+          `<span class="px-2 py-1 bg-red-100 text-red-600 text-xs rounded">${rowLabel}${prefix}${seatNumber + 1
           }${suffix}</span>`
         );
       } else {

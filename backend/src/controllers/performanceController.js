@@ -1,4 +1,4 @@
-import * as performanceService from "../services/performanceService.js";
+import * as performanceService from "#services/performanceService.js";
 
 export const getAllPerformances = async (req, res, next) => {
   try {

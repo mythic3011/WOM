@@ -1,5 +1,5 @@
-import { generateUUID } from "/src/utils/utils.js";
-import { hashPassword } from "/src/utils/core/crypto.js";
+import { generateUUID } from "@utils/utils.js";
+import { hashPassword } from "@utils/core/crypto.js";
 
 export const MOCK_USERS_STATIC = [
   {

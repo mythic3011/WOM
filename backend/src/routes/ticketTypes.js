@@ -1,8 +1,8 @@
 import express from "express";
 import { body, param } from "express-validator";
-import * as ticketTypeController from "../controllers/ticketTypeController.js";
-import { validate } from "../middleware/validation.js";
-import { isAuthenticated, isAdmin, optionalAuth } from "../middleware/auth.js";
+import * as ticketTypeController from "#controllers/ticketTypeController.js";
+import { validate } from "#middleware/validation.js";
+import { isAuthenticated, isAdmin, optionalAuth } from "#middleware/auth.js";
 
 const router = express.Router();
 

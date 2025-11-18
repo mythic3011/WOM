@@ -1,5 +1,5 @@
 import { faker } from "@faker-js/faker";
-import { hashPassword } from "../../utils/hash.js";
+import { hashPassword } from "#utils/hash.js";
 
 export const generateUsers = async () => {
   faker.seed(12345);

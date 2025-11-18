@@ -1,22 +1,22 @@
-import { createEmptyState } from "/src/components/EmptyState.js";
-import { createLoadingState } from "/src/components/LoadingState.js";
-import { createDataTable } from "/src/components/DataTable.js";
-import { FormComponents } from "/src/components/FormComponents.js";
-import { statsService } from "/src/services/statsService.js";
-import { phoneUtils } from "/src/utils/forms/phoneFormat.js";
-import { notify } from "/src/utils/ui/notification.js";
-import { SwalColors } from "/src/utils/colors.js";
-import { scrollbarUtils } from "/src/utils/ui/scrollbar.js";
-import { Avatar } from "/src/components/Avatar.js";
-import { userAPI, handleApiError } from "/src/services/apiClient.js";
-import { adminUserService } from "/src/services/adminUserService.js";
-import { bookingService } from "/src/services/bookingService.js";
+import { createEmptyState } from "@components/EmptyState.js";
+import { createLoadingState } from "@components/LoadingState.js";
+import { createDataTable } from "@components/DataTable.js";
+import { FormComponents } from "@components/FormComponents.js";
+import { statsService } from "@services/statsService.js";
+import { phoneUtils } from "@utils/forms/phoneFormat.js";
+import { notify } from "@utils/ui/notification.js";
+import { SwalColors } from "@utils/colors.js";
+import { scrollbarUtils } from "@utils/ui/scrollbar.js";
+import { Avatar } from "@components/common/Avatar.js";
+import { userAPI, handleApiError } from "@services/apiClient.js";
+import { adminUserService } from "@services/adminUserService.js";
+import { bookingService } from "@services/bookingService.js";
 import Swal from "sweetalert2";
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
 import Papa from "papaparse";
-import { userService } from "/src/services/userService.js";
-import { ResponseExtractor } from "/src/services/responseExtractor.js";
+import { userService } from "@services/userService.js";
+import { ResponseExtractor } from "@services/responseExtractor.js";
 
 dayjs.extend(relativeTime);
 
@@ -189,11 +189,11 @@ export default {
             <div class="flex items-center">
               <div class="mr-3">
                 ${Avatar.render({
-                  src: user.profileImage,
-                  name: user.name || "User",
-                  size: "sm",
-                  editable: false,
-                })}
+            src: user.profileImage,
+            name: user.name || "User",
+            size: "sm",
+            editable: false,
+          })}
               </div>
               <div class="text-left">
                 <p class="font-medium text-gray-900">${user.title ? user.title + " " : ""}${user.name}</p>
@@ -268,28 +268,24 @@ export default {
           >
             <i class="fas fa-edit pointer-events-none"></i>
           </button>
-          ${
-            user.role !== "admin"
-              ? `<button
-                  class="user-action-btn px-3 py-2 rounded-lg text-white ${
-                    user.status === "active"
-                      ? "bg-orange-500 hover:bg-orange-600"
-                      : "bg-green-500 hover:bg-green-600"
-                  } transition-colors cursor-pointer"
+          ${user.role !== "admin"
+          ? `<button
+                  class="user-action-btn px-3 py-2 rounded-lg text-white ${user.status === "active"
+            ? "bg-orange-500 hover:bg-orange-600"
+            : "bg-green-500 hover:bg-green-600"
+          } transition-colors cursor-pointer"
                   data-action="toggle-status"
                   data-user-id="${user.userId}"
                   title="${user.status === "active" ? "Suspend" : "Activate"}"
                   type="button"
                 >
-                  <i class="fas ${
-                    user.status === "active" ? "fa-ban" : "fa-check"
-                  } pointer-events-none"></i>
+                  <i class="fas ${user.status === "active" ? "fa-ban" : "fa-check"
+          } pointer-events-none"></i>
                 </button>`
-              : ""
-          }
-          ${
-            user.role !== "admin"
-              ? `<button
+          : ""
+        }
+          ${user.role !== "admin"
+          ? `<button
                   class="user-action-btn px-3 py-2 rounded-lg text-white bg-red-500 hover:bg-red-600 transition-colors cursor-pointer"
                   data-action="delete"
                   data-user-id="${user.userId}"
@@ -298,8 +294,8 @@ export default {
                 >
                   <i class="fas fa-trash pointer-events-none"></i>
                 </button>`
-              : ""
-          }
+          : ""
+        }
         </div>
       `,
       ],
@@ -380,18 +376,16 @@ export default {
       title: `
         <div class="flex items-center gap-3">
           ${Avatar.render({
-            src: user.profileImage,
-            name: user.name || "User",
-            size: "lg",
-            editable: false,
-          })}
+        src: user.profileImage,
+        name: user.name || "User",
+        size: "lg",
+        editable: false,
+      })}
           <div>
-            <h3 class="text-lg font-bold text-gray-900">${
-              user.title ? user.title + " " : ""
-            }${user.name}</h3>
-            <p class="text-sm text-gray-500">@${user.username} (ID: #${
-              user.userId
-            })</p>
+            <h3 class="text-lg font-bold text-gray-900">${user.title ? user.title + " " : ""
+        }${user.name}</h3>
+            <p class="text-sm text-gray-500">@${user.username} (ID: #${user.userId
+        })</p>
           </div>
         </div>
       `,
@@ -404,11 +398,10 @@ export default {
             </div>
             <div class="bg-teal-50 p-4 rounded-lg">
               <p class="text-xs text-teal-600 font-semibold uppercase">Phone</p>
-              <p class="text-sm text-gray-900 mt-1">${
-                user.phone
-                  ? phoneUtils.formatHKPhone(user.phone)
-                  : "Not provided"
-              }</p>
+              <p class="text-sm text-gray-900 mt-1">${user.phone
+          ? phoneUtils.formatHKPhone(user.phone)
+          : "Not provided"
+        }</p>
             </div>
             <div class="bg-purple-50 p-4 rounded-lg">
               <p class="text-xs text-purple-600 font-semibold uppercase">Role</p>
@@ -416,23 +409,20 @@ export default {
             </div>
             <div class="bg-green-50 p-4 rounded-lg">
               <p class="text-xs text-green-600 font-semibold uppercase">Status</p>
-              <p class="text-sm text-gray-900 mt-1 capitalize">${
-                user.status
-              }</p>
+              <p class="text-sm text-gray-900 mt-1 capitalize">${user.status
+        }</p>
             </div>
             <div class="bg-orange-50 p-4 rounded-lg">
               <p class="text-xs text-orange-600 font-semibold uppercase">Gender</p>
-              <p class="text-sm text-gray-900 mt-1 capitalize">${
-                user.gender === "prefer_not_to_say"
-                  ? "Not specified"
-                  : user.gender
-              }</p>
+              <p class="text-sm text-gray-900 mt-1 capitalize">${user.gender === "prefer_not_to_say"
+          ? "Not specified"
+          : user.gender
+        }</p>
             </div>
             <div class="bg-yellow-50 p-4 rounded-lg">
               <p class="text-xs text-yellow-600 font-semibold uppercase">Username</p>
-              <p class="text-sm text-gray-900 mt-1 font-mono">@${
-                user.username
-              }</p>
+              <p class="text-sm text-gray-900 mt-1 font-mono">@${user.username
+        }</p>
             </div>
           </div>
 
@@ -441,19 +431,19 @@ export default {
               <div>
                 <p class="text-gray-600">Birthday</p>
                 <p class="font-semibold text-gray-900">${dayjs(
-                  user.birthday
-                ).format("MMMM D, YYYY")} (${dayjs().diff(
-                  dayjs(user.birthday),
-                  "year"
-                )} years old)</p>
+          user.birthday
+        ).format("MMMM D, YYYY")} (${dayjs().diff(
+          dayjs(user.birthday),
+          "year"
+        )} years old)</p>
               </div>
               <div>
                 <p class="text-gray-600">Member Since</p>
                 <p class="font-semibold text-gray-900">${dayjs(
-                  user.createdAt
-                ).format("MMMM D, YYYY")} (${dayjs(
-                  user.createdAt
-                ).fromNow()})</p>
+          user.createdAt
+        ).format("MMMM D, YYYY")} (${dayjs(
+          user.createdAt
+        ).fromNow()})</p>
               </div>
             </div>
           </div>
@@ -462,9 +452,8 @@ export default {
             <h4 class="font-semibold text-gray-900 mb-3">Booking Statistics</h4>
             <div class="grid grid-cols-3 gap-4">
               <div class="bg-indigo-50 p-3 rounded-lg text-center">
-                <p class="text-2xl font-bold text-indigo-600">${
-                  bookings.length
-                }</p>
+                <p class="text-2xl font-bold text-indigo-600">${bookings.length
+        }</p>
                 <p class="text-xs text-gray-600">Total Bookings</p>
               </div>
               <div class="bg-green-50 p-3 rounded-lg text-center">
@@ -472,9 +461,8 @@ export default {
                 <p class="text-xs text-gray-600">Total Spent</p>
               </div>
               <div class="bg-yellow-50 p-3 rounded-lg text-center">
-                <p class="text-2xl font-bold text-yellow-600">${
-                  bookings.filter((b) => b.status === "confirmed").length
-                }</p>
+                <p class="text-2xl font-bold text-yellow-600">${bookings.filter((b) => b.status === "confirmed").length
+        }</p>
                 <p class="text-xs text-gray-600">Confirmed</p>
               </div>
             </div>
@@ -604,16 +592,16 @@ export default {
           <i class="fas fa-times text-xl"></i>
         </button>
         ${Avatar.render({
-          src: user.profileImage,
-          name: user.name || "User",
-          size: "lg",
-          editable: false,
-        })}
+      src: user.profileImage,
+      name: user.name || "User",
+      size: "lg",
+      editable: false,
+    })}
         <div class="text-center">
           <h3 class="text-lg font-bold text-gray-900 mb-0.5">Edit User</h3>
           <p class="text-xs text-gray-600">@${user.username} (ID: #${String(
-            user.userId
-          ).padStart(6, "0")})</p>
+      user.userId
+    ).padStart(6, "0")})</p>
         </div>
       </div>
     `;
@@ -655,13 +643,12 @@ export default {
               class="block w-full text-xs text-gray-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-indigo-100 file:text-indigo-700 hover:file:bg-indigo-200 cursor-pointer"
             />
             <p class="mt-1 text-xs text-gray-500">PNG, JPG, GIF up to 5MB</p>
-            ${
-              defaultImage
-                ? `<button type="button" id="removeUserImage" class="mt-1 text-xs text-red-600 hover:text-red-700">
+            ${defaultImage
+        ? `<button type="button" id="removeUserImage" class="mt-1 text-xs text-red-600 hover:text-red-700">
                     <i class="fas fa-times mr-1"></i>Remove image
                   </button>`
-                : ""
-            }
+        : ""
+      }
           </div>
         </div>
       </div>
@@ -677,44 +664,44 @@ export default {
         </h4>
         <div class="space-y-2.5">
           ${FormComponents.select({
-            id: "editTitle",
-            label: "Title",
-            value: user.title || "",
-            options: [
-              { value: "", label: "None" },
-              { value: "Mr.", label: "Mr." },
-              { value: "Ms.", label: "Ms." },
-              { value: "Mrs.", label: "Mrs." },
-              { value: "Dr.", label: "Dr." },
-              { value: "Prof.", label: "Prof." },
-            ],
-          })}
+      id: "editTitle",
+      label: "Title",
+      value: user.title || "",
+      options: [
+        { value: "", label: "None" },
+        { value: "Mr.", label: "Mr." },
+        { value: "Ms.", label: "Ms." },
+        { value: "Mrs.", label: "Mrs." },
+        { value: "Dr.", label: "Dr." },
+        { value: "Prof.", label: "Prof." },
+      ],
+    })}
           ${FormComponents.input({
-            id: "editName",
-            label: "Full Name",
-            value: user.name,
-            required: true,
-            placeholder: "e.g., John Doe",
-          })}
+      id: "editName",
+      label: "Full Name",
+      value: user.name,
+      required: true,
+      placeholder: "e.g., John Doe",
+    })}
           ${FormComponents.select({
-            id: "editGender",
-            label: "Gender",
-            value: user.gender || "prefer_not_to_say",
-            options: [
-              { value: "male", label: "Male" },
-              { value: "female", label: "Female" },
-              { value: "other", label: "Other" },
-              { value: "prefer_not_to_say", label: "Prefer not to say" },
-            ],
-          })}
+      id: "editGender",
+      label: "Gender",
+      value: user.gender || "prefer_not_to_say",
+      options: [
+        { value: "male", label: "Male" },
+        { value: "female", label: "Female" },
+        { value: "other", label: "Other" },
+        { value: "prefer_not_to_say", label: "Prefer not to say" },
+      ],
+    })}
           ${FormComponents.input({
-            id: "editBirthday",
-            type: "date",
-            label: "Birthday",
-            value: user.birthday
-              ? dayjs(user.birthday).format("YYYY-MM-DD")
-              : "",
-          })}
+      id: "editBirthday",
+      type: "date",
+      label: "Birthday",
+      value: user.birthday
+        ? dayjs(user.birthday).format("YYYY-MM-DD")
+        : "",
+    })}
         </div>
       </div>
     `;
@@ -729,20 +716,20 @@ export default {
         </h4>
         <div class="space-y-2">
           ${FormComponents.input({
-            id: "editEmail",
-            type: "email",
-            label: "Email Address",
-            value: user.email,
-            required: true,
-            placeholder: "user@example.com",
-          })}
+      id: "editEmail",
+      type: "email",
+      label: "Email Address",
+      value: user.email,
+      required: true,
+      placeholder: "user@example.com",
+    })}
           ${FormComponents.input({
-            id: "editPhone",
-            type: "tel",
-            label: "Phone Number (Hong Kong)",
-            value: user.phone ? phoneUtils.formatHKPhone(user.phone) : "",
-            placeholder: "9123 4567",
-          })}
+      id: "editPhone",
+      type: "tel",
+      label: "Phone Number (Hong Kong)",
+      value: user.phone ? phoneUtils.formatHKPhone(user.phone) : "",
+      placeholder: "9123 4567",
+    })}
         </div>
       </div>
     `;
@@ -768,25 +755,25 @@ export default {
             <p class="text-xs text-gray-500 mt-1">Username cannot be changed</p>
           </div>
           ${FormComponents.select({
-            id: "editRole",
-            label: "User Role",
-            value: user.role,
-            options: [
-              { value: "user", label: "User" },
-              { value: "admin", label: "Admin" },
-            ],
-            required: true,
-          })}
+      id: "editRole",
+      label: "User Role",
+      value: user.role,
+      options: [
+        { value: "user", label: "User" },
+        { value: "admin", label: "Admin" },
+      ],
+      required: true,
+    })}
           ${FormComponents.select({
-            id: "editStatus",
-            label: "Account Status",
-            value: user.status,
-            options: [
-              { value: "active", label: "Active" },
-              { value: "suspended", label: "Suspended" },
-            ],
-            required: true,
-          })}
+      id: "editStatus",
+      label: "Account Status",
+      value: user.status,
+      options: [
+        { value: "active", label: "Active" },
+        { value: "suspended", label: "Suspended" },
+      ],
+      required: true,
+    })}
         </div>
       </div>
     `;
@@ -929,20 +916,17 @@ export default {
     const result = await Swal.fire({
       title: `${newStatus === "suspended" ? "Suspend" : "Activate"} User?`,
       html: `
-        <p class="text-gray-700">Are you sure you want to ${
-          newStatus === "suspended" ? "suspend" : "activate"
+        <p class="text-gray-700">Are you sure you want to ${newStatus === "suspended" ? "suspend" : "activate"
         } <strong>${user.name}</strong> (@${user.username})?</p>
-        ${
-          newStatus === "suspended"
-            ? '<p class="text-sm text-red-600 mt-2">This user will not be able to log in or make bookings.</p>'
-            : '<p class="text-sm text-green-600 mt-2">This user will be able to log in and make bookings.</p>'
+        ${newStatus === "suspended"
+          ? '<p class="text-sm text-red-600 mt-2">This user will not be able to log in or make bookings.</p>'
+          : '<p class="text-sm text-green-600 mt-2">This user will be able to log in and make bookings.</p>'
         }
       `,
       icon: "warning",
       showCancelButton: true,
-      confirmButtonText: `Yes, ${
-        newStatus === "suspended" ? "Suspend" : "Activate"
-      }`,
+      confirmButtonText: `Yes, ${newStatus === "suspended" ? "Suspend" : "Activate"
+        }`,
       cancelButtonText: "Cancel",
       confirmButtonColor:
         newStatus === "suspended" ? SwalColors.danger : SwalColors.success,
@@ -965,8 +949,7 @@ export default {
         this.renderStats();
 
         notify.success(
-          `User ${
-            newStatus === "suspended" ? "suspended" : "activated"
+          `User ${newStatus === "suspended" ? "suspended" : "activated"
           } successfully!`
         );
       } catch (error) {
@@ -1171,27 +1154,27 @@ export default {
           </h4>
           <div class="space-y-2">
             ${FormComponents.input({
-              id: "newUsername",
-              label: "Username",
-              placeholder: "e.g., johndoe",
-              required: true,
-            })}
+      id: "newUsername",
+      label: "Username",
+      placeholder: "e.g., johndoe",
+      required: true,
+    })}
             ${FormComponents.input({
-              id: "newPassword",
-              type: "password",
-              label: "Password",
-              placeholder: "Minimum 8 characters",
-              required: true,
-            })}
+      id: "newPassword",
+      type: "password",
+      label: "Password",
+      placeholder: "Minimum 8 characters",
+      required: true,
+    })}
             ${FormComponents.select({
-              id: "newRole",
-              label: "Role",
-              options: [
-                { value: "user", label: "User" },
-                { value: "admin", label: "Admin" },
-              ],
-              required: true,
-            })}
+      id: "newRole",
+      label: "Role",
+      options: [
+        { value: "user", label: "User" },
+        { value: "admin", label: "Admin" },
+      ],
+      required: true,
+    })}
           </div>
         </div>
 
@@ -1202,28 +1185,28 @@ export default {
           </h4>
           <div class="space-y-2">
             ${FormComponents.input({
-              id: "newName",
-              label: "Full Name",
-              placeholder: "e.g., John Doe",
-              required: true,
-            })}
+      id: "newName",
+      label: "Full Name",
+      placeholder: "e.g., John Doe",
+      required: true,
+    })}
             ${FormComponents.select({
-              id: "newGender",
-              label: "Gender",
-              options: [
-                { value: "male", label: "Male" },
-                { value: "female", label: "Female" },
-                { value: "other", label: "Other" },
-                { value: "prefer_not_to_say", label: "Prefer not to say" },
-              ],
-              required: true,
-            })}
+      id: "newGender",
+      label: "Gender",
+      options: [
+        { value: "male", label: "Male" },
+        { value: "female", label: "Female" },
+        { value: "other", label: "Other" },
+        { value: "prefer_not_to_say", label: "Prefer not to say" },
+      ],
+      required: true,
+    })}
             ${FormComponents.input({
-              id: "newBirthday",
-              type: "date",
-              label: "Birthday",
-              required: true,
-            })}
+      id: "newBirthday",
+      type: "date",
+      label: "Birthday",
+      required: true,
+    })}
           </div>
         </div>
 
@@ -1234,18 +1217,18 @@ export default {
           </h4>
           <div class="space-y-2">
             ${FormComponents.input({
-              id: "newEmail",
-              type: "email",
-              label: "Email",
-              placeholder: "e.g., john@example.com",
-              required: true,
-            })}
+      id: "newEmail",
+      type: "email",
+      label: "Email",
+      placeholder: "e.g., john@example.com",
+      required: true,
+    })}
             ${FormComponents.input({
-              id: "newPhone",
-              type: "tel",
-              label: "Phone (Hong Kong)",
-              placeholder: "e.g., 9123 4567",
-            })}
+      id: "newPhone",
+      type: "tel",
+      label: "Phone (Hong Kong)",
+      placeholder: "e.g., 9123 4567",
+    })}
           </div>
         </div>
       </div>
@@ -1452,36 +1435,31 @@ export default {
               html: `
                 <div class="text-left">
                   <p class="text-green-600 font-semibold mb-2">
-                    <i class="fas fa-check-circle mr-2"></i>${
-                      result.imported
-                    } users imported successfully
+                    <i class="fas fa-check-circle mr-2"></i>${result.imported
+                } users imported successfully
                   </p>
-                  ${
-                    result.errors.length > 0
-                      ? `
+                  ${result.errors.length > 0
+                  ? `
                     <p class="text-red-600 font-semibold mt-4 mb-2">
-                      <i class="fas fa-exclamation-triangle mr-2"></i>${
-                        result.errors.length
-                      } errors:
+                      <i class="fas fa-exclamation-triangle mr-2"></i>${result.errors.length
+                  } errors:
                     </p>
                     <div class="bg-red-50 rounded p-3 max-h-40 overflow-y-auto">
                       <ul class="text-xs text-red-700 space-y-1">
                         ${result.errors
-                          .slice(0, 10)
-                          .map((e) => `<li>• ${e}</li>`)
-                          .join("")}
-                        ${
-                          result.errors.length > 10
-                            ? `<li>... and ${
-                                result.errors.length - 10
-                              } more</li>`
-                            : ""
-                        }
+                    .slice(0, 10)
+                    .map((e) => `<li>• ${e}</li>`)
+                    .join("")}
+                        ${result.errors.length > 10
+                    ? `<li>... and ${result.errors.length - 10
+                    } more</li>`
+                    : ""
+                  }
                       </ul>
                     </div>
                   `
-                      : ""
-                  }
+                  : ""
+                }
                 </div>
               `,
               icon: result.imported > 0 ? "success" : "warning",

@@ -19,6 +19,8 @@ build/
 # Docker
 pgadmin-passfile
 docker/pgadmin-passfile
+docker/postgres-data/
+docker/pgadmin-data/
 
 # Logs
 *.log
@@ -35,6 +37,7 @@ coverage/
 .eslintcache
 
 # IDE
+.kiro/*
 .vscode/*
 !.vscode/extensions.json
 !.vscode/settings.json
@@ -45,11 +48,18 @@ coverage/
 *.sln
 *.sw?
 
-# AI Tools
+# AI Tools & IDEs
 .cursor/
 .cursorrules
 .cursorignore
 .windsurf/
+.kiro/
+.bolt/
+.aider*
+.continue/
+.codeium/
+
+docs/
 
 # OS
 .DS_Store

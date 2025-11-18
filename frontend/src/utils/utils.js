@@ -1,7 +1,7 @@
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
 import customParseFormat from "dayjs/plugin/customParseFormat";
-import { calculationService } from "../services/calculationService.js";
+import { calculationService } from "./calculations.js";
 
 dayjs.extend(relativeTime);
 dayjs.extend(customParseFormat);

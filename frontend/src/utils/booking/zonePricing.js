@@ -1,4 +1,4 @@
-import { SEAT_TIER_LABELS } from "/src/data/mockDataConfig.js";
+import { SEAT_TIER_LABELS } from "@/data/index.js";
 
 export const ZonePricing = {
   getSeatZone(seatNumber, pricingSections) {

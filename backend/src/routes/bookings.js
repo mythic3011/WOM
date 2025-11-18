@@ -1,8 +1,8 @@
 import express from "express";
-import * as bookingController from "../controllers/bookingController.js";
-import { validate } from "../middleware/validation.js";
-import { isAuthenticated, isAdmin } from "../middleware/auth.js";
-import { bookingLimiter } from "../middleware/rateLimiter.js";
+import * as bookingController from "#controllers/bookingController.js";
+import { validate } from "#middleware/validation.js";
+import { isAuthenticated, isAdmin } from "#middleware/auth.js";
+import { bookingLimiter } from "#middleware/rateLimiter.js";
 import {
   createBookingValidator,
   updateBookingValidator,
@@ -10,7 +10,7 @@ import {
   cancelBookingValidator,
   confirmBookingValidator,
   listBookingsValidator,
-} from "../middleware/validators/bookingValidators.js";
+} from "#middleware/validators/bookingValidators.js";
 
 const router = express.Router();
 

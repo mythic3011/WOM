@@ -4,7 +4,7 @@ import {
   formatBookingForDisplay,
   formatSeatsDisplay,
   getBookingStatusLabel,
-} from "/src/data/mockData.js";
+} from "@/data/index.js";
 
 export class DataExporter {
   static exportBookingsToCSV(bookings) {

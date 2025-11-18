@@ -1,5 +1,5 @@
-import { seatMapGenerator } from "/src/utils/booking/seatMapGenerator.js";
-import { seatHelpers } from "/src/services/seatHelpers.js";
+import { seatMapGenerator } from "@utils/booking/seatMapGenerator.js";
+import { seatHelpers } from "@services/seatHelpers.js";
 
 export function summarizeCapacity(layoutConfig) {
   return seatHelpers.calculateCapacityBySections(layoutConfig);

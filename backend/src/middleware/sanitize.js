@@ -1,4 +1,4 @@
-import { sanitizeObject, sanitizeString } from "../utils/sanitizer.js";
+import { sanitizeObject, sanitizeString } from "#utils/sanitizer.js";
 
 export const sanitizeBody = (req, res, next) => {
   if (req.body && typeof req.body === "object") {

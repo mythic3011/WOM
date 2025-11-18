@@ -1,10 +1,10 @@
-import { notify } from "/src/utils/ui/notification.js";
-import { SwalColors } from "/src/utils/colors.js";
-import { SYSTEM_TICKET_TYPE_IDS } from "/src/data/mockData.js";
-import { createEmptyState } from "/src/components/EmptyState.js";
-import { FormComponents } from "/src/components/FormComponents.js";
-import { ResponseExtractor } from "/src/services/responseExtractor.js";
-import { ticketTypeAPI, handleApiError } from "/src/services/apiClient.js";
+import { notify } from "@utils/ui/notification.js";
+import { SwalColors } from "@utils/colors.js";
+import { SYSTEM_TICKET_TYPE_IDS } from "@/data/index.js";
+import { createEmptyState } from "@components/EmptyState.js";
+import { FormComponents } from "@components/FormComponents.js";
+import { ResponseExtractor } from "@services/responseExtractor.js";
+import { ticketTypeAPI, handleApiError } from "@services/apiClient.js";
 import Swal from "sweetalert2";
 
 export default {
@@ -77,18 +77,16 @@ export default {
         </h3>
         <div class="space-y-4">
           ${notifications
-            .map(
-              (notif) => `
+        .map(
+          (notif) => `
             <div class="flex items-start justify-between p-4 bg-white rounded-lg border border-gray-200 hover:border-indigo-300 transition-colors">
               <div class="flex-1">
-                <label for="notif-${categoryKey}-${
-                  notif.key
-                }" class="flex items-start cursor-pointer">
+                <label for="notif-${categoryKey}-${notif.key
+            }" class="flex items-start cursor-pointer">
                   <div class="flex-1">
                     <p class="font-medium text-gray-900">${notif.label}</p>
-                    <p class="text-sm text-gray-600 mt-1">${
-                      notif.description
-                    }</p>
+                    <p class="text-sm text-gray-600 mt-1">${notif.description
+            }</p>
                   </div>
                 </label>
               </div>
@@ -100,19 +98,18 @@ export default {
                     class="sr-only peer notification-toggle"
                     data-category="${categoryKey}"
                     data-key="${notif.key}"
-                    ${
-                      this.notificationSettings[categoryKey][notif.key]
-                        ? "checked"
-                        : ""
-                    }
+                    ${this.notificationSettings[categoryKey][notif.key]
+              ? "checked"
+              : ""
+            }
                   >
                   <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
                 </label>
               </div>
             </div>
           `
-            )
-            .join("")}
+        )
+        .join("")}
         </div>
       </div>
     `;
@@ -151,8 +148,7 @@ export default {
         : '<span class="text-gray-400 text-xs"><i class="fas fa-pause-circle"></i> Inactive</span>';
 
     return `
-      <div class="ticket-type-item group bg-white border-2 border-gray-200 rounded-lg p-4 hover:border-indigo-400 hover:shadow-md transition-all" data-type-id="${
-        type.id
+      <div class="ticket-type-item group bg-white border-2 border-gray-200 rounded-lg p-4 hover:border-indigo-400 hover:shadow-md transition-all" data-type-id="${type.id
       }">
         <div class="flex items-center justify-between gap-4">
           <div class="flex items-center gap-4 flex-1">
@@ -178,24 +174,24 @@ export default {
           </div>
           <div class="flex gap-2 opacity-100 group-hover:opacity-100 transition-opacity">
             ${FormComponents.actionButton({
-              icon: "fa-copy",
-              tooltip: "Duplicate",
-              color: "green",
-              dataAttributes: { id: type.id },
-            }).replace("<button", '<button class="duplicate-ticket-type-btn"')}
+        icon: "fa-copy",
+        tooltip: "Duplicate",
+        color: "green",
+        dataAttributes: { id: type.id },
+      }).replace("<button", '<button class="duplicate-ticket-type-btn"')}
             ${FormComponents.actionButton({
-              icon: "fa-edit",
-              tooltip: "Edit",
-              color: "blue",
-              dataAttributes: { id: type.id },
-            }).replace("<button", '<button class="edit-ticket-type-btn"')}
+        icon: "fa-edit",
+        tooltip: "Edit",
+        color: "blue",
+        dataAttributes: { id: type.id },
+      }).replace("<button", '<button class="edit-ticket-type-btn"')}
             ${FormComponents.actionButton({
-              icon: "fa-trash",
-              tooltip: isDefault ? "Cannot delete default types" : "Delete",
-              color: isDefault ? "gray" : "red",
-              disabled: isDefault,
-              dataAttributes: { id: type.id },
-            }).replace("<button", '<button class="delete-ticket-type-btn"')}
+        icon: "fa-trash",
+        tooltip: isDefault ? "Cannot delete default types" : "Delete",
+        color: isDefault ? "gray" : "red",
+        disabled: isDefault,
+        dataAttributes: { id: type.id },
+      }).replace("<button", '<button class="delete-ticket-type-btn"')}
           </div>
         </div>
       </div>
@@ -247,52 +243,52 @@ export default {
                       <p class="text-gray-600 text-sm mt-1">Configure ticket categories and pricing tiers for your performances</p>
                     </div>
                     ${FormComponents.button({
-                      id: "addTicketTypeBtn",
-                      text: "Add Type",
-                      icon: "fa-plus",
-                      color: "indigo",
-                    })}
+      id: "addTicketTypeBtn",
+      text: "Add Type",
+      icon: "fa-plus",
+      color: "indigo",
+    })}
                   </div>
 
                   <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                     ${this.renderInfoBox(
-                      "info",
-                      "fa-info-circle",
-                      "How It Works",
-                      'Ticket types are used in pricing sections when creating performances. Add custom types like "Military", "Group", or "Family Pass" to fit your needs.'
-                    )}
+      "info",
+      "fa-info-circle",
+      "How It Works",
+      'Ticket types are used in pricing sections when creating performances. Add custom types like "Military", "Group", or "Family Pass" to fit your needs.'
+    )}
                     ${this.renderInfoBox(
-                      "warning",
-                      "fa-exclamation-triangle",
-                      "Important Note",
-                      "Changes only affect new performances. Existing performances retain their original ticket types and pricing."
-                    )}
+      "warning",
+      "fa-exclamation-triangle",
+      "Important Note",
+      "Changes only affect new performances. Existing performances retain their original ticket types and pricing."
+    )}
                   </div>
 
                   <div id="ticketTypesList" class="space-y-3 mb-6"></div>
 
                   <div class="flex flex-wrap gap-3 pt-4 border-t border-gray-200">
                     ${FormComponents.button({
-                      id: "resetTicketTypesBtn",
-                      text: "Reset to Defaults",
-                      icon: "fa-undo",
-                      color: "gray",
-                      size: "sm",
-                    })}
+      id: "resetTicketTypesBtn",
+      text: "Reset to Defaults",
+      icon: "fa-undo",
+      color: "gray",
+      size: "sm",
+    })}
                     ${FormComponents.button({
-                      id: "exportTicketTypesBtn",
-                      text: "Export",
-                      icon: "fa-download",
-                      color: "green",
-                      size: "sm",
-                    })}
+      id: "exportTicketTypesBtn",
+      text: "Export",
+      icon: "fa-download",
+      color: "green",
+      size: "sm",
+    })}
                     ${FormComponents.button({
-                      id: "importTicketTypesBtn",
-                      text: "Import",
-                      icon: "fa-upload",
-                      color: "blue",
-                      size: "sm",
-                    })}
+      id: "importTicketTypesBtn",
+      text: "Import",
+      icon: "fa-upload",
+      color: "blue",
+      size: "sm",
+    })}
                   </div>
                 </div>
               </div>
@@ -307,145 +303,145 @@ export default {
                   </div>
 
                   ${this.renderInfoBox(
-                    "info",
-                    "fa-envelope",
-                    "Email Notifications",
-                    "These settings control when the system sends email notifications to administrators. Users have separate notification preferences in their account settings."
-                  )}
+      "info",
+      "fa-envelope",
+      "Email Notifications",
+      "These settings control when the system sends email notifications to administrators. Users have separate notification preferences in their account settings."
+    )}
 
                   <div class="mt-6 space-y-6">
                     ${this.renderNotificationCategory(
-                      "bookings",
-                      "Booking Notifications",
-                      "fa-ticket-alt",
-                      [
-                        {
-                          key: "newBooking",
-                          label: "New Booking Created",
-                          description:
-                            "Notify when a customer makes a new booking",
-                        },
-                        {
-                          key: "bookingConfirmed",
-                          label: "Booking Confirmed",
-                          description: "Notify when a booking is confirmed",
-                        },
-                        {
-                          key: "bookingCancelled",
-                          label: "Booking Cancelled",
-                          description:
-                            "Notify when a customer cancels their booking",
-                        },
-                        {
-                          key: "bookingRefunded",
-                          label: "Booking Refunded",
-                          description: "Notify when a refund is processed",
-                        },
-                      ]
-                    )}
+      "bookings",
+      "Booking Notifications",
+      "fa-ticket-alt",
+      [
+        {
+          key: "newBooking",
+          label: "New Booking Created",
+          description:
+            "Notify when a customer makes a new booking",
+        },
+        {
+          key: "bookingConfirmed",
+          label: "Booking Confirmed",
+          description: "Notify when a booking is confirmed",
+        },
+        {
+          key: "bookingCancelled",
+          label: "Booking Cancelled",
+          description:
+            "Notify when a customer cancels their booking",
+        },
+        {
+          key: "bookingRefunded",
+          label: "Booking Refunded",
+          description: "Notify when a refund is processed",
+        },
+      ]
+    )}
 
                     ${this.renderNotificationCategory(
-                      "performances",
-                      "Performance Notifications",
-                      "fa-music",
-                      [
-                        {
-                          key: "newPerformance",
-                          label: "New Performance Added",
-                          description:
-                            "Notify when a new performance is created",
-                        },
-                        {
-                          key: "performanceUpdated",
-                          label: "Performance Updated",
-                          description:
-                            "Notify when performance details are modified",
-                        },
-                        {
-                          key: "performanceCancelled",
-                          label: "Performance Cancelled",
-                          description: "Notify when a performance is cancelled",
-                        },
-                        {
-                          key: "lowAvailability",
-                          label: "Low Seat Availability",
-                          description:
-                            "Notify when remaining seats fall below 10%",
-                        },
-                      ]
-                    )}
+      "performances",
+      "Performance Notifications",
+      "fa-music",
+      [
+        {
+          key: "newPerformance",
+          label: "New Performance Added",
+          description:
+            "Notify when a new performance is created",
+        },
+        {
+          key: "performanceUpdated",
+          label: "Performance Updated",
+          description:
+            "Notify when performance details are modified",
+        },
+        {
+          key: "performanceCancelled",
+          label: "Performance Cancelled",
+          description: "Notify when a performance is cancelled",
+        },
+        {
+          key: "lowAvailability",
+          label: "Low Seat Availability",
+          description:
+            "Notify when remaining seats fall below 10%",
+        },
+      ]
+    )}
 
                     ${this.renderNotificationCategory(
-                      "users",
-                      "User Account Notifications",
-                      "fa-users",
-                      [
-                        {
-                          key: "newRegistration",
-                          label: "New User Registration",
-                          description:
-                            "Notify when a new user creates an account",
-                        },
-                        {
-                          key: "accountSuspended",
-                          label: "Account Suspended",
-                          description:
-                            "Notify when a user account is suspended",
-                        },
-                        {
-                          key: "passwordReset",
-                          label: "Password Reset Request",
-                          description:
-                            "Notify when a user requests password reset",
-                        },
-                      ]
-                    )}
+      "users",
+      "User Account Notifications",
+      "fa-users",
+      [
+        {
+          key: "newRegistration",
+          label: "New User Registration",
+          description:
+            "Notify when a new user creates an account",
+        },
+        {
+          key: "accountSuspended",
+          label: "Account Suspended",
+          description:
+            "Notify when a user account is suspended",
+        },
+        {
+          key: "passwordReset",
+          label: "Password Reset Request",
+          description:
+            "Notify when a user requests password reset",
+        },
+      ]
+    )}
 
                     ${this.renderNotificationCategory(
-                      "system",
-                      "System Notifications",
-                      "fa-cog",
-                      [
-                        {
-                          key: "dailySummary",
-                          label: "Daily Summary Report",
-                          description:
-                            "Receive daily booking and revenue summary",
-                        },
-                        {
-                          key: "weeklySummary",
-                          label: "Weekly Summary Report",
-                          description: "Receive weekly performance analytics",
-                        },
-                        {
-                          key: "errorAlerts",
-                          label: "System Error Alerts",
-                          description:
-                            "Notify when critical system errors occur",
-                        },
-                        {
-                          key: "maintenanceMode",
-                          label: "Maintenance Mode",
-                          description:
-                            "Notify when system enters maintenance mode",
-                        },
-                      ]
-                    )}
+      "system",
+      "System Notifications",
+      "fa-cog",
+      [
+        {
+          key: "dailySummary",
+          label: "Daily Summary Report",
+          description:
+            "Receive daily booking and revenue summary",
+        },
+        {
+          key: "weeklySummary",
+          label: "Weekly Summary Report",
+          description: "Receive weekly performance analytics",
+        },
+        {
+          key: "errorAlerts",
+          label: "System Error Alerts",
+          description:
+            "Notify when critical system errors occur",
+        },
+        {
+          key: "maintenanceMode",
+          label: "Maintenance Mode",
+          description:
+            "Notify when system enters maintenance mode",
+        },
+      ]
+    )}
                   </div>
 
                   <div class="mt-6 pt-6 border-t border-gray-200 flex gap-3">
                     ${FormComponents.button({
-                      id: "saveNotificationSettings",
-                      text: "Save Changes",
-                      icon: "fa-save",
-                      color: "indigo",
-                    })}
+      id: "saveNotificationSettings",
+      text: "Save Changes",
+      icon: "fa-save",
+      color: "indigo",
+    })}
                     ${FormComponents.button({
-                      id: "resetNotificationSettings",
-                      text: "Reset to Defaults",
-                      icon: "fa-undo",
-                      color: "gray",
-                    })}
+      id: "resetNotificationSettings",
+      text: "Reset to Defaults",
+      icon: "fa-undo",
+      color: "gray",
+    })}
                   </div>
                 </div>
               </div>
@@ -626,30 +622,26 @@ export default {
           : '<i class="fas fa-plus text-indigo-600 mr-2"></i>Add Ticket Type',
         html: `
           <div class="text-left space-y-4">
-            ${
-              !isEdit
-                ? `
+            ${!isEdit
+            ? `
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-2">Type ID</label>
-              <input type="text" id="typeId" class="swal2-input w-full" placeholder="e.g., STUDENT, SENIOR" value="${
-                type?.id || ""
-              }">
+              <input type="text" id="typeId" class="swal2-input w-full" placeholder="e.g., STUDENT, SENIOR" value="${type?.id || ""
+            }">
               <p class="text-xs text-gray-500 mt-1">Unique identifier (uppercase, no spaces)</p>
             </div>
             `
-                : ""
-            }
+            : ""
+          }
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-2">Type Name <span class="text-red-500">*</span></label>
-              <input type="text" id="typeName" class="swal2-input w-full" placeholder="e.g., Student, Senior" value="${
-                type?.name || ""
-              }">
+              <input type="text" id="typeName" class="swal2-input w-full" placeholder="e.g., Student, Senior" value="${type?.name || ""
+          }">
             </div>
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-2">Description</label>
-              <textarea id="typeDescription" class="swal2-input w-full" placeholder="Brief description of this ticket type" rows="2">${
-                type?.description || ""
-              }</textarea>
+              <textarea id="typeDescription" class="swal2-input w-full" placeholder="Brief description of this ticket type" rows="2">${type?.description || ""
+          }</textarea>
             </div>
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-2">Pricing Type</label>
@@ -671,14 +663,12 @@ export default {
             </div>
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-2">Eligibility Requirements</label>
-              <textarea id="typeEligibility" class="swal2-input w-full" placeholder="e.g., Valid student ID required" rows="2">${
-                type?.eligibility || ""
-              }</textarea>
+              <textarea id="typeEligibility" class="swal2-input w-full" placeholder="e.g., Valid student ID required" rows="2">${type?.eligibility || ""
+          }</textarea>
             </div>
             <div class="flex items-center gap-2 bg-gray-50 p-3 rounded">
-              <input type="checkbox" id="typeIsActive" class="w-4 h-4" ${
-                type?.isActive !== false ? "checked" : ""
-              }>
+              <input type="checkbox" id="typeIsActive" class="w-4 h-4" ${type?.isActive !== false ? "checked" : ""
+          }>
               <label for="typeIsActive" class="text-sm font-medium text-gray-700">Active (available for new performances)</label>
             </div>
             <div class="text-xs text-gray-500 bg-blue-50 p-3 rounded border border-blue-200">
@@ -758,7 +748,6 @@ export default {
             return false;
           }
 
-          // Convert percentage to multiplier if needed
           if (pricingType === "percentage") {
             discount = discount / 100;
           }
@@ -918,9 +907,8 @@ export default {
     const url = URL.createObjectURL(dataBlob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = `ticket-types-${
-      new Date().toISOString().split("T")[0]
-    }.json`;
+    link.download = `ticket-types-${new Date().toISOString().split("T")[0]
+      }.json`;
     link.click();
     URL.revokeObjectURL(url);
     notify.success("Ticket types exported successfully");

@@ -1,5 +1,5 @@
-import { VenueController } from "/src/pages/admin/venues/VenueController.js";
-import { VenueView } from "/src/pages/admin/venues/VenueView.js";
+import { VenueController } from "@/pages/admin/venues/VenueController.js";
+import { VenueView } from "@/pages/admin/venues/VenueView.js";
 
 export default {
   title: "Venue Management | Admin",

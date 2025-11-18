@@ -1,10 +1,9 @@
 import page from "page";
-import { storage } from "/src/services/storageService.js";
-import { notify } from "/src/utils/ui/notification.js";
-import { renderNavbar, initNavbar } from "/src/common/navbar.js";
-import { renderFooter, initFooter } from "/src/common/footer.js";
-import { ROUTES } from "/src/config/routes.js";
-import { SEO } from "/src/utils/seo.js";
+import { storage } from "@services/storageService.js";
+import { notify } from "@utils/ui/notification.js";
+import { renderNavbar, initNavbar, renderFooter, initFooter } from "@components/index.js";
+import { ROUTES } from "@config/routes.js";
+import { SEO } from "@utils/seo.js";
 
 import {
   HomePage,
@@ -15,7 +14,7 @@ import {
   Admin,
   User,
   Auth,
-} from "/src/pages/index.js";
+} from "@/pages/index.js";
 
 const LOADING_HTML = `
   <div class="flex items-center justify-center min-h-screen">
@@ -152,7 +151,8 @@ export function setupRouter() {
     loadPage(Admin.PerformancesPage)
   );
 
-  page(ROUTES.ADMIN.VENUES, checkAdminAuth, () => loadPage(Admin.VenuesPage));
+  page("/admin/venues", checkAdminAuth, () => loadPage(Admin.VenuesPage));
+  page("/admin/venues/form", checkAdminAuth, () => loadPage(Admin.VenueFormPage));
 
   page(ROUTES.ADMIN.BOOKINGS, checkAdminAuth, () =>
     loadPage(Admin.BookingsPage)
