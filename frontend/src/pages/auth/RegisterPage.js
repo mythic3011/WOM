@@ -1,14 +1,15 @@
-import { notify } from "@utils/ui/notification.js";
-import { navigate } from "@utils/core/navigation.js";
-import { formValidator } from "@utils/forms/formValidator.js";
-import { phoneUtils } from "@utils/forms/phoneFormat.js";
-import { authAPI, handleApiError } from "@services/apiClient.js";
-import { setUser } from "@utils/core/auth.js";
+
 import {
   createImageUpload,
   initImageUpload,
   getImageDataURL,
 } from "@components/ImageUpload.js";
+import { authAPI, handleApiError } from "@services/apiClient.js";
+import { setUser } from "@utils/core/auth.js";
+import { navigate } from "@utils/core/navigation.js";
+import { formValidator } from "@utils/forms/formValidator.js";
+import { phoneUtils } from "@utils/forms/phoneFormat.js";
+import { notify } from "@utils/ui/notification.js";
 
 export default {
   title: "Register | WOM",

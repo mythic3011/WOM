@@ -1,7 +1,6 @@
 import * as bookingService from "#services/bookingService.js";
 import { asyncHandler } from "#middleware/asyncHandler.js";
 import { successResponse } from "#utils/response.js";
-import { NotFoundError, BadRequestError } from "#utils/errors.js";
 
 export const createBooking = asyncHandler(async (req, res) => {
   const booking = await bookingService.createBooking(req.body, req.session.userId);

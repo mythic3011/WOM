@@ -1,6 +1,8 @@
+
+import dayjs from "dayjs";
+
 import { bookingAPI, handleApiError } from "./apiClient.js";
 import { ResponseExtractor } from "./responseExtractor.js";
-import dayjs from "dayjs";
 
 export const bookingService = {
   async getAll() {

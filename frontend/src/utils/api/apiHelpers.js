@@ -1,4 +1,4 @@
-import { showNotification } from "../ui/notification.js";
+import { showNotification } from "@utils/ui/notification.js";
 
 export class LoadingManager {
   constructor() {

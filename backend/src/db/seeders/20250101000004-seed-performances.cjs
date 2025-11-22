@@ -1,7 +1,10 @@
+// Import required modules for seat map generation
+const { buildSeatMapFromVenueLayout } = require('../../utils/seatMapBuilder.js');
+
 module.exports = {
-  async up(queryInterface, Sequelize) {
+  async up(queryInterface, _Sequelize) {
     const now = new Date();
-    
+
     const generateFutureDate = (daysFromNow) => {
       const date = new Date();
       date.setDate(date.getDate() + daysFromNow);
@@ -11,6 +14,32 @@ module.exports = {
     const generateShowtimeId = (performanceId, index) => {
       return `showtime_${performanceId}_${Date.now()}_${index}`;
     };
+
+    // Fetch venue layouts to generate seat maps
+    const venues = await queryInterface.sequelize.query(
+      'SELECT id, layout FROM venues',
+      { type: queryInterface.sequelize.QueryTypes.SELECT }
+    );
+
+    const venueLayouts = {};
+    venues.forEach(venue => {
+      venueLayouts[venue.id] = typeof venue.layout === 'string'
+        ? JSON.parse(venue.layout)
+        : venue.layout;
+    });
+
+    // Helper function to generate seat map for a venue
+    const generateSeatMap = (venueId) => {
+      const layout = venueLayouts[venueId];
+      if (!layout) {
+        return { sections: [], indexMap: {}, total: 0, version: 1 };
+      }
+      return buildSeatMapFromVenueLayout(layout);
+    };
+
+    // Generate seat maps for each venue
+    const seatMap1 = generateSeatMap(1);
+    const seatMap2 = generateSeatMap(2);
 
     await queryInterface.bulkInsert("performances", [
       {
@@ -69,11 +98,13 @@ module.exports = {
           { sectionName: "Grand Circle", sectionCode: "GC", basePrice: 400 },
           { sectionName: "Upper Circle", sectionCode: "UC", basePrice: 200 },
         ]),
+        seatMap: JSON.stringify(seatMap1),
+        seatMapVersion: 1,
         tags: JSON.stringify(["Beethoven", "Symphony", "Choral", "Orchestra", "Classical"]),
         ageRestriction: null,
         dresscode: "Smart Casual",
-        totalSeats: 2019,
-        availableSeats: 1800,
+        totalSeats: seatMap1.total,
+        availableSeats: Math.max(0, seatMap1.total - 219),
         bookedSeats: 219,
         createdAt: now,
         updatedAt: now,
@@ -130,11 +161,13 @@ module.exports = {
           { sectionName: "Grand Circle", sectionCode: "GC", basePrice: 500 },
           { sectionName: "Upper Circle", sectionCode: "UC", basePrice: 300 },
         ]),
+        seatMap: JSON.stringify(seatMap1),
+        seatMapVersion: 1,
         tags: JSON.stringify(["Tchaikovsky", "Piano", "Concerto", "Romantic"]),
         ageRestriction: null,
         dresscode: "Formal",
-        totalSeats: 2019,
-        availableSeats: 2019,
+        totalSeats: seatMap1.total,
+        availableSeats: seatMap1.total,
         bookedSeats: 0,
         createdAt: now,
         updatedAt: now,
@@ -185,11 +218,13 @@ module.exports = {
           { sectionName: "Circle", sectionCode: "CI", basePrice: 350 },
           { sectionName: "Balcony", sectionCode: "BA", basePrice: 200 },
         ]),
+        seatMap: JSON.stringify(seatMap2),
+        seatMapVersion: 1,
         tags: JSON.stringify(["Vivaldi", "Baroque", "Violin", "Four Seasons", "Family-Friendly"]),
         ageRestriction: "6+",
         dresscode: "Smart Casual",
-        totalSeats: 1434,
-        availableSeats: 1200,
+        totalSeats: seatMap2.total,
+        availableSeats: Math.max(0, seatMap2.total - 234),
         bookedSeats: 234,
         createdAt: now,
         updatedAt: now,
@@ -197,7 +232,7 @@ module.exports = {
     ]);
   },
 
-  async down(queryInterface, Sequelize) {
+  async down(queryInterface, _Sequelize) {
     await queryInterface.bulkDelete("performances", null, {});
   },
 };

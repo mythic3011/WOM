@@ -1,70 +1,63 @@
-import { getCurrentUser, logout } from "@utils/core/auth.js";
-import { ROUTES, getRouteMetadata } from "@config/routes.js";
-import { SwalColors } from "@utils/colors.js";
+
 import dayjs from "dayjs";
 import Swal from "sweetalert2";
 
+import { ROUTES, getRouteMetadata } from "@config/routes.js";
+import { SwalColors } from "@utils/colors.js";
+import { getCurrentUser, logout } from "@utils/core/auth.js";
+import { Avatar } from "@components/common/Avatar.js";
+import { getProfileImage } from "@services/profileImageService.js";
+import { notificationService } from "@services/notificationService.js";
+
 const NAVBAR_CONFIG = {
-    dateFormat: "ddd, MMM D, YYYY",
-    dropdownWidth: "w-60",
-    notificationWidth: "w-80",
+  dateFormat: "ddd, MMM D, YYYY",
+  dropdownWidth: "w-60",
+  notificationWidth: "w-80",
 };
 
+// Track initialization to prevent duplicate calls
+let isInitialized = false;
+let currentUserId = null;
+
 const NAV_LINKS = {
-    admin: [
-        { href: ROUTES.ADMIN.DASHBOARD, icon: "fa-tachometer-alt", label: "Dashboard" },
-        { href: ROUTES.PUBLIC.PERFORMANCES, icon: "fa-music", label: "Browse Performances" },
-        { href: ROUTES.ADMIN.PERFORMANCES, icon: "fa-music", label: "Manage Performances" },
-        { href: ROUTES.ADMIN.VENUES, icon: "fa-building", label: "Venues" },
-        { href: ROUTES.ADMIN.USERS, icon: "fa-users", label: "User Management" },
-        { href: ROUTES.ADMIN.BOOKINGS, icon: "fa-clipboard-list", label: "Bookings" },
-        { href: ROUTES.ADMIN.SEAT_MANAGEMENT, icon: "fa-chair", label: "Seat Management" },
-        { href: ROUTES.ADMIN.SETTINGS, icon: "fa-cog", label: "Settings" },
-        { href: ROUTES.USER.PROFILE, icon: "fa-user-circle", label: "Profile" },
-    ],
-    user: [
-        { href: ROUTES.USER.DASHBOARD, icon: "fa-home", label: "Dashboard" },
-        { href: ROUTES.PUBLIC.PERFORMANCES, icon: "fa-music", label: "Performances" },
-        { href: ROUTES.USER.BOOKINGS, icon: "fa-ticket-alt", label: "My Bookings" },
-        { href: ROUTES.USER.PROFILE, icon: "fa-user-circle", label: "My Profile" },
-    ],
+  admin: [
+    { href: ROUTES.ADMIN.DASHBOARD, icon: "fa-tachometer-alt", label: "Dashboard" },
+    { href: ROUTES.PUBLIC.PERFORMANCES, icon: "fa-music", label: "Browse Performances" },
+    { href: ROUTES.ADMIN.PERFORMANCES, icon: "fa-music", label: "Manage Performances" },
+    { href: ROUTES.ADMIN.VENUES, icon: "fa-building", label: "Venues" },
+    { href: ROUTES.ADMIN.USERS, icon: "fa-users", label: "User Management" },
+    { href: ROUTES.ADMIN.BOOKINGS, icon: "fa-clipboard-list", label: "Bookings" },
+    { href: ROUTES.ADMIN.SEAT_MANAGEMENT, icon: "fa-chair", label: "Seat Management" },
+    { href: ROUTES.ADMIN.SETTINGS, icon: "fa-cog", label: "Settings" },
+    { href: ROUTES.USER.PROFILE, icon: "fa-user-circle", label: "Profile" },
+  ],
+  user: [
+    { href: ROUTES.USER.DASHBOARD, icon: "fa-home", label: "Dashboard" },
+    { href: ROUTES.PUBLIC.PERFORMANCES, icon: "fa-music", label: "Performances" },
+    { href: ROUTES.USER.BOOKINGS, icon: "fa-ticket-alt", label: "My Bookings" },
+    { href: ROUTES.USER.PROFILE, icon: "fa-user-circle", label: "My Profile" },
+  ],
 };
 
 const DROPDOWN_MENU_ITEMS = {
-    admin: [
-        { href: ROUTES.ADMIN.DASHBOARD, icon: "fa-tachometer-alt", label: "Admin Dashboard", color: "indigo" },
-        { href: ROUTES.USER.PROFILE, icon: "fa-user-circle", label: "Profile", color: "indigo" },
-        { href: ROUTES.ADMIN.SETTINGS, icon: "fa-cog", label: "Settings", color: "indigo" },
-    ],
-    user: [
-        { href: ROUTES.USER.DASHBOARD, icon: "fa-home", label: "Dashboard", color: "indigo" },
-        { href: ROUTES.USER.PROFILE, icon: "fa-user-circle", label: "Profile", color: "indigo" },
-        { href: ROUTES.USER.BOOKINGS, icon: "fa-ticket-alt", label: "My Bookings", color: "indigo" },
-    ],
+  admin: [
+    { href: ROUTES.ADMIN.DASHBOARD, icon: "fa-tachometer-alt", label: "Admin Dashboard", color: "indigo" },
+    { href: ROUTES.USER.PROFILE, icon: "fa-user-circle", label: "Profile", color: "indigo" },
+    { href: ROUTES.ADMIN.SETTINGS, icon: "fa-cog", label: "Settings", color: "indigo" },
+  ],
+  user: [
+    { href: ROUTES.USER.DASHBOARD, icon: "fa-home", label: "Dashboard", color: "indigo" },
+    { href: ROUTES.USER.PROFILE, icon: "fa-user-circle", label: "Profile", color: "indigo" },
+    { href: ROUTES.USER.BOOKINGS, icon: "fa-ticket-alt", label: "My Bookings", color: "indigo" },
+  ],
 };
 
-const NOTIFICATIONS = {
-    admin: [
-        { icon: "fa-exclamation-triangle", iconColor: "text-red-500", title: "System Alert", message: "5 pending bookings require approval", time: "5 minutes ago", link: ROUTES.ADMIN.BOOKINGS },
-        { icon: "fa-users", iconColor: "text-blue-500", title: "New User Registration", message: "3 new users registered today", time: "1 hour ago", link: ROUTES.ADMIN.USERS },
-        { icon: "fa-music", iconColor: "text-green-500", title: "Performance Update", message: "Symphony No. 9 is 80% sold", time: "2 hours ago", link: ROUTES.ADMIN.PERFORMANCES },
-        { icon: "fa-chart-line", iconColor: "text-purple-500", title: "Revenue Milestone", message: "Monthly target achieved", time: "5 hours ago", link: ROUTES.ADMIN.DASHBOARD },
-    ],
-    user: [
-        { icon: "fa-ticket-alt", iconColor: "text-blue-500", title: "Booking Confirmed", message: "Symphony No. 9 - Seat A12", time: "10 minutes ago", link: ROUTES.USER.BOOKINGS },
-        { icon: "fa-bell", iconColor: "text-orange-500", title: "Performance Reminder", message: "Your show starts tomorrow at 7:30 PM", time: "2 hours ago", link: ROUTES.USER.BOOKINGS },
-        { icon: "fa-music", iconColor: "text-green-500", title: "New Performance Available", message: "Beethoven's 5th - Early bird tickets", time: "1 day ago", link: ROUTES.PUBLIC.PERFORMANCES },
-    ],
-    guest: [
-        { icon: "fa-star", iconColor: "text-yellow-500", title: "Welcome to WOM", message: "Sign up to book your first performance", time: "Just now", link: ROUTES.AUTH.REGISTER },
-        { icon: "fa-music", iconColor: "text-indigo-500", title: "Featured This Month", message: "Mozart's Requiem - Now on sale", time: "1 hour ago", link: ROUTES.PUBLIC.PERFORMANCES },
-        { icon: "fa-calendar", iconColor: "text-blue-500", title: "Upcoming Events", message: "10 performances scheduled this month", time: "2 hours ago", link: ROUTES.PUBLIC.PERFORMANCES },
-    ],
-};
+// Notifications are now managed by notificationService
+// No more hardcoded notifications!
 
 export const Navbar = {
-    render() {
-        return `
+  render() {
+    return `
       <nav class="bg-indigo-700 text-white shadow-lg border-b-4 border-indigo-900 sticky top-0 z-50">
         <div class="container mx-auto px-4 sm:px-6 lg:px-8">
           <div class="flex justify-between h-16">
@@ -95,10 +88,10 @@ export const Navbar = {
       </nav>
       ${this.renderMobileSidebar()}
     `;
-    },
+  },
 
-    renderMobileSidebar() {
-        return `
+  renderMobileSidebar() {
+    return `
       <div class="fixed inset-0 bg-gray-900 bg-opacity-50 z-40 hidden mobile-sidebar-overlay"></div>
       <div class="fixed inset-y-0 left-0 max-w-xs w-full bg-indigo-800 overflow-y-auto z-50 transform -translate-x-full transition-transform duration-300 ease-in-out mobile-sidebar">
         <div class="p-6 flex flex-col h-full">
@@ -119,34 +112,50 @@ export const Navbar = {
         </div>
       </div>
     `;
-    },
+  },
 
-    renderUserSection(role, username) {
-        if (!role || !username) {
-            return `
+  renderUserSection(role, username, profileImage = null) {
+    if (!role || !username) {
+      return `
         <a href="${ROUTES.AUTH.LOGIN}" data-link class="flex items-center bg-blue-500 hover:bg-blue-600 text-white py-1 px-3 rounded shadow transition duration-150">
           <i class="fas fa-sign-in-alt mr-2"></i>
           <span>Login</span>
         </a>
       `;
-        }
+    }
 
-        const initial = username.charAt(0).toUpperCase();
-        const roleInfo = role === "admin"
-            ? { label: "Administrator", icon: "fa-shield-alt", color: "purple" }
-            : { label: "User", icon: "fa-user", color: "blue" };
-        const menuItems = (DROPDOWN_MENU_ITEMS[role] || [])
-            .map(item => `
+    const roleInfo = role === "admin"
+      ? { label: "Administrator", icon: "fa-shield-alt", color: "purple" }
+      : { label: "User", icon: "fa-user", color: "blue" };
+    const menuItems = (DROPDOWN_MENU_ITEMS[role] || [])
+      .map(item => `
         <a href="${item.href}" data-link class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors">
           <i class="fas ${item.icon} mr-2 text-${item.color}-600"></i> ${item.label}
         </a>
       `)
-            .join("");
+      .join("");
 
-        return `
+    // Use Avatar component for navbar button
+    const navbarAvatar = Avatar.render({
+      src: profileImage,
+      name: username,
+      size: "xs",
+      rounded: "full",
+      className: "navbar-avatar"
+    });
+
+    // Use Avatar component for dropdown header
+    const dropdownAvatar = Avatar.render({
+      src: profileImage,
+      name: username,
+      size: "sm",
+      rounded: "full"
+    });
+
+    return `
       <div class="relative dropdown">
         <button id="userDropdownBtn" class="flex items-center space-x-2 text-sm focus:outline-none hover:bg-indigo-800 px-3 py-2 rounded-lg transition-colors">
-          <div class="w-8 h-8 bg-white rounded-full flex items-center justify-center text-indigo-700 font-bold">${initial}</div>
+          ${navbarAvatar}
           <div class="hidden md:block">
             <div class="text-sm font-medium">${username}</div>
             <div class="text-xs text-indigo-200 capitalize">${roleInfo.label}</div>
@@ -154,10 +163,13 @@ export const Navbar = {
           <i class="fas fa-chevron-down text-xs text-white"></i>
         </button>
         <div id="userDropdownMenu" class="absolute right-0 mt-2 ${NAVBAR_CONFIG.dropdownWidth} bg-white rounded-lg shadow-xl py-2 z-[60] hidden transform transition-all duration-300 border border-gray-200">
-          <div class="px-4 py-3 border-b border-gray-100">
-            <div class="text-sm font-semibold text-gray-900">${username}</div>
-            <div class="text-xs text-gray-500 mt-1 flex items-center">
-              <i class="fas ${roleInfo.icon} text-${roleInfo.color}-600 mr-1"></i> ${roleInfo.label}
+          <div class="px-4 py-3 border-b border-gray-100 flex items-center space-x-3">
+            ${dropdownAvatar}
+            <div class="flex-1">
+              <div class="text-sm font-semibold text-gray-900">${username}</div>
+              <div class="text-xs text-gray-500 mt-1 flex items-center">
+                <i class="fas ${roleInfo.icon} text-${roleInfo.color}-600 mr-1"></i> ${roleInfo.label}
+              </div>
             </div>
           </div>
           ${menuItems}
@@ -169,11 +181,11 @@ export const Navbar = {
         </div>
       </div>
     `;
-    },
+  },
 
-    renderMobileSidebarContent(role, username) {
-        if (!role || !username) {
-            return `
+  renderMobileSidebarContent(role, username, profileImage = null) {
+    if (!role || !username) {
+      return `
         <div class="py-3 border-t border-indigo-700">
           <a href="${ROUTES.AUTH.LOGIN}" data-link class="flex items-center py-2 px-4 text-white hover:bg-indigo-700 rounded">
             <i class="fas fa-sign-in-alt mr-3"></i>
@@ -185,21 +197,30 @@ export const Navbar = {
           </a>
         </div>
       `;
-        }
+    }
 
-        const initial = username.charAt(0).toUpperCase();
-        const links = (NAV_LINKS[role] || [])
-            .map(link => `
+    const links = (NAV_LINKS[role] || [])
+      .map(link => `
         <a href="${link.href}" data-link class="flex items-center py-2 px-4 text-white hover:bg-indigo-700 rounded transition-colors">
           <i class="fas ${link.icon} mr-3"></i>
           <span>${link.label}</span>
         </a>
       `)
-            .join("");
+      .join("");
 
-        return `
+    // Use Avatar component for mobile sidebar
+    const sidebarAvatar = Avatar.render({
+      src: profileImage,
+      name: username,
+      size: "lg",
+      rounded: "full"
+    });
+
+    return `
       <div class="mb-6 text-center">
-        <div class="w-20 h-20 bg-white rounded-full mx-auto flex items-center justify-center text-indigo-700 text-2xl mb-2">${initial}</div>
+        <div class="flex justify-center mb-3">
+          ${sidebarAvatar}
+        </div>
         <div class="text-white font-medium">${username}</div>
         <div class="text-indigo-200 text-sm capitalize">${role}</div>
       </div>
@@ -212,13 +233,20 @@ export const Navbar = {
         </button>
       </div>
     `;
-    },
+  },
 
-    renderNotifications(role) {
-        const notifications = NOTIFICATIONS[role] || NOTIFICATIONS.guest;
-        const notificationCount = notifications.length;
+  renderNotifications(role) {
+    // Get notifications from service
+    let notifications = [];
+    if (role === 'guest') {
+      notifications = notificationService.getGuestNotifications();
+    } else {
+      notifications = notificationService.getNotifications();
+    }
 
-        return `
+    const notificationCount = role === 'guest' ? 0 : notificationService.getUnreadCount();
+
+    return `
       <button class="p-1 text-gray-200 hover:text-white focus:outline-none" id="notificationsBtn">
         <i class="fas fa-bell"></i>
         ${notificationCount > 0 ? `<span class="absolute top-0 right-0 -mt-1 -mr-1 bg-red-500 text-xs rounded-full h-4 w-4 flex items-center justify-center">${notificationCount}</span>` : ""}
@@ -231,59 +259,122 @@ export const Navbar = {
           </div>
         </div>
         <div class="max-h-96 overflow-y-auto">
-          ${notifications.map(notif => `
-            <a href="${notif.link}" data-link class="block px-4 py-3 hover:bg-gray-50 border-b border-gray-100 transition-colors">
+          ${notifications.length > 0 ? notifications.map(notif => `
+            <a href="${notif.link}" data-link data-notification-id="${notif.id}" class="notification-item block px-4 py-3 hover:bg-gray-50 border-b border-gray-100 transition-colors ${notif.read ? 'bg-gray-50' : 'bg-white'}">
               <div class="flex items-start">
                 <div class="flex-shrink-0">
                   <i class="fas ${notif.icon} ${notif.iconColor} text-lg"></i>
                 </div>
                 <div class="ml-3 flex-1">
-                  <p class="text-sm text-gray-900 font-medium">${notif.title}</p>
+                  <div class="flex items-start justify-between">
+                    <p class="text-sm text-gray-900 font-medium">${notif.title}</p>
+                    ${!notif.read ? '<span class="w-2 h-2 bg-blue-500 rounded-full"></span>' : ''}
+                  </div>
                   <p class="text-xs text-gray-600 mt-0.5">${notif.message}</p>
                   <p class="text-xs text-gray-400 mt-1">
-                    <i class="far fa-clock mr-1"></i>${notif.time}
+                    <i class="far fa-clock mr-1"></i>${notif.time || (notif.timestamp ? notificationService.formatTime(notif.timestamp) : 'Just now')}
                   </p>
                 </div>
               </div>
             </a>
-          `).join("")}
+          `).join("") : `
+            <div class="px-4 py-8 text-center text-gray-500">
+              <i class="fas fa-bell-slash text-3xl mb-2"></i>
+              <p class="text-sm">No notifications</p>
+            </div>
+          `}
         </div>
-        <div class="px-4 py-2 text-center border-t border-gray-100">
+        <div class="px-4 py-2 text-center border-t border-gray-100 flex gap-2 justify-center">
           ${role === "guest"
-                ? '<a href="/login" data-link class="text-sm text-indigo-600 hover:text-indigo-800">Login to view all</a>'
-                : role === "admin"
-                    ? '<a href="/admin/dashboard" data-link class="text-sm text-indigo-600 hover:text-indigo-800">View Dashboard</a>'
-                    : '<a href="/user/dashboard" data-link class="text-sm text-indigo-600 hover:text-indigo-800">View all notifications</a>'}
+        ? '<a href="/login" data-link class="text-sm text-indigo-600 hover:text-indigo-800">Login to view all</a>'
+        : `
+            ${notifications.length > 0 ? '<button id="markAllReadBtn" class="text-sm text-gray-600 hover:text-gray-800">Mark all read</button>' : ''}
+            ${role === "admin"
+          ? '<a href="/admin/dashboard" data-link class="text-sm text-indigo-600 hover:text-indigo-800">Dashboard</a>'
+          : '<a href="/user/dashboard" data-link class="text-sm text-indigo-600 hover:text-indigo-800">Dashboard</a>'}
+          `}
         </div>
       </div>
     `;
-    },
+  },
 
-    updateBreadcrumb() {
-        const currentPath = window.location.pathname;
-        const metadata = getRouteMetadata(currentPath);
+  updateBreadcrumb() {
+    const currentPath = window.location.pathname;
+    const metadata = getRouteMetadata(currentPath);
 
-        if (metadata?.breadcrumb) {
-            const breadcrumbHTML = metadata.breadcrumb
-                .map((crumb, index) => {
-                    if (index === metadata.breadcrumb.length - 1 || !crumb.path) {
-                        return `<span class="text-white font-medium">${crumb.label}</span>`;
-                    }
-                    return `<a href="${crumb.path}" data-link class="text-gray-300 hover:text-white transition-colors">${crumb.label}</a>`;
-                })
-                .join('<span class="text-gray-300 mx-2">/</span>');
+    if (metadata?.breadcrumb) {
+      const breadcrumbHTML = metadata.breadcrumb
+        .map((crumb, index) => {
+          if (index === metadata.breadcrumb.length - 1 || !crumb.path) {
+            return `<span class="text-white font-medium">${crumb.label}</span>`;
+          }
+          return `<a href="${crumb.path}" data-link class="text-gray-300 hover:text-white transition-colors">${crumb.label}</a>`;
+        })
+        .join('<span class="text-gray-300 mx-2">/</span>');
 
-            $("#breadcrumb").html(breadcrumbHTML);
-        } else {
-            $("#breadcrumb").html("");
-        }
-    },
+      $("#breadcrumb").html(breadcrumbHTML);
+    } else {
+      $("#breadcrumb").html("");
+    }
+  },
 
-    async handleLogout() {
-        const userData = getCurrentUser();
-        const result = await Swal.fire({
-            title: "Logout Confirmation",
-            html: `
+  /**
+   * Update avatar image dynamically
+   * Call this after user updates their profile image
+   */
+  async updateAvatar(userId, forceRefresh = true) {
+    try {
+      console.log('[Navbar] Updating avatar for user:', userId);
+      const profileImage = await getProfileImage(userId, forceRefresh);
+      const userData = getCurrentUser();
+      const role = userData?.role || "guest";
+      const username = userData?.name;
+
+      // Re-render user section with new image
+      $("#userSection").html(this.renderUserSection(role, username, profileImage));
+      $("#mobileSidebarContent").html(this.renderMobileSidebarContent(role, username, profileImage));
+
+      console.log('[Navbar] Avatar updated successfully');
+    } catch (error) {
+      console.error('[Navbar] Failed to update avatar:', error);
+    }
+  },
+
+  /**
+   * Refresh navbar content (for profile updates)
+   * This bypasses the initialization guard
+   */
+  async refresh() {
+    const userData = getCurrentUser();
+    const role = userData?.role || "guest";
+    const username = userData?.name;
+    const userId = userData?.id;
+
+    console.log('[Navbar] Refreshing navbar for user:', userId || 'guest');
+
+    let profileImage = null;
+    if (userId) {
+      try {
+        profileImage = await getProfileImage(userId, true); // Force refresh
+        console.log('[Navbar] Profile image refreshed');
+      } catch (error) {
+        console.warn('[Navbar] Failed to refresh profile image:', error);
+      }
+    }
+
+    // Re-render all sections
+    $("#notificationsContainer").html(this.renderNotifications(role));
+    $("#userSection").html(this.renderUserSection(role, username, profileImage));
+    $("#mobileSidebarContent").html(this.renderMobileSidebarContent(role, username, profileImage));
+
+    console.log('[Navbar] Refresh complete');
+  },
+
+  async handleLogout() {
+    const userData = getCurrentUser();
+    const result = await Swal.fire({
+      title: "Logout Confirmation",
+      html: `
         <div class="text-center">
           <div class="w-20 h-20 bg-red-100 rounded-full mx-auto mb-4 flex items-center justify-center">
             <i class="fas fa-sign-out-alt text-red-600 text-3xl"></i>
@@ -292,114 +383,182 @@ export const Navbar = {
           ${userData?.name ? `<p class="text-gray-500 text-sm mt-2">Logging out <strong>${userData.name}</strong></p>` : ""}
         </div>
       `,
-            showCancelButton: true,
-            confirmButtonText: '<i class="fas fa-sign-out-alt mr-2"></i>Yes, Logout',
-            cancelButtonText: '<i class="fas fa-times mr-2"></i>Cancel',
-            confirmButtonColor: SwalColors.danger,
-            cancelButtonColor: SwalColors.secondary,
-            reverseButtons: true,
-            focusCancel: true,
-            customClass: {
-                popup: "rounded-lg",
-                confirmButton: "px-6 py-2.5 rounded-lg font-semibold",
-                cancelButton: "px-6 py-2.5 rounded-lg font-semibold",
-            },
+      showCancelButton: true,
+      confirmButtonText: '<i class="fas fa-sign-out-alt mr-2"></i>Yes, Logout',
+      cancelButtonText: '<i class="fas fa-times mr-2"></i>Cancel',
+      confirmButtonColor: SwalColors.danger,
+      cancelButtonColor: SwalColors.secondary,
+      reverseButtons: true,
+      focusCancel: true,
+      customClass: {
+        popup: "rounded-lg",
+        confirmButton: "px-6 py-2.5 rounded-lg font-semibold",
+        cancelButton: "px-6 py-2.5 rounded-lg font-semibold",
+      },
+    });
+
+    if (result.isConfirmed) {
+      $("#userDropdownMenu").addClass("hidden");
+      $(".mobile-sidebar").removeClass("translate-x-0").addClass("-translate-x-full");
+      $(".mobile-sidebar-overlay").addClass("hidden");
+
+      await Swal.fire({
+        title: "Logging Out...",
+        html: '<div class="text-center"><i class="fas fa-spinner fa-spin text-4xl text-indigo-600"></i><p class="mt-4 text-gray-600">Please wait</p></div>',
+        showConfirmButton: false,
+        allowOutsideClick: false,
+        timer: 800,
+      });
+
+      // Reset initialization flag on logout
+      isInitialized = false;
+      currentUserId = null;
+
+      await logout();
+
+      setTimeout(() => {
+        Swal.fire({
+          title: "Logged Out Successfully",
+          text: "You have been logged out. See you again soon!",
+          icon: "success",
+          confirmButtonText: "OK",
+          confirmButtonColor: SwalColors.success,
+          timer: 2000,
+          timerProgressBar: true,
         });
+      }, 100);
+    }
+  },
 
-        if (result.isConfirmed) {
-            $("#userDropdownMenu").addClass("hidden");
-            $(".mobile-sidebar").removeClass("translate-x-0").addClass("-translate-x-full");
-            $(".mobile-sidebar-overlay").addClass("hidden");
+  async init() {
+    const userData = getCurrentUser();
+    const role = userData?.role || "guest";
+    const username = userData?.name;
+    const userId = userData?.id;
 
-            await Swal.fire({
-                title: "Logging Out...",
-                html: '<div class="text-center"><i class="fas fa-spinner fa-spin text-4xl text-indigo-600"></i><p class="mt-4 text-gray-600">Please wait</p></div>',
-                showConfirmButton: false,
-                allowOutsideClick: false,
-                timer: 800,
-            });
+    // Check if user has changed (guest -> logged in, or different user)
+    const userChanged = currentUserId !== userId;
 
-            await logout();
+    // Prevent duplicate initialization for the same user
+    // Allow re-initialization if user changed or if guest
+    if (isInitialized && !userChanged && userId) {
+      console.log('[Navbar] Already initialized for same user, skipping');
+      return;
+    }
 
-            setTimeout(() => {
-                Swal.fire({
-                    title: "Logged Out Successfully",
-                    text: "You have been logged out. See you again soon!",
-                    icon: "success",
-                    confirmButtonText: "OK",
-                    confirmButtonColor: SwalColors.success,
-                    timer: 2000,
-                    timerProgressBar: true,
-                });
-            }, 100);
+    if (userChanged) {
+      console.log('[Navbar] User changed from', currentUserId || 'guest', 'to', userId || 'guest');
+    }
+
+    console.log('[Navbar] Initializing for user:', userId || 'guest');
+    isInitialized = true;
+    currentUserId = userId;
+
+    let profileImage = null;
+    if (userId) {
+      try {
+        console.log('[Navbar] Fetching profile image for user:', userId);
+        profileImage = await getProfileImage(userId);
+        if (profileImage) {
+          console.log('[Navbar] Profile image loaded successfully');
+        } else {
+          console.log('[Navbar] No profile image available for user');
         }
-    },
+      } catch (error) {
+        console.warn('[Navbar] Failed to load profile image:', error);
+      }
+    }
 
-    init() {
-        const userData = getCurrentUser();
-        const role = userData?.role || "guest";
-        const username = userData?.name;
+    this.updateBreadcrumb();
+    $("#notificationsContainer").html(this.renderNotifications(role));
+    $("#userSection").html(this.renderUserSection(role, username, profileImage));
+    $("#mobileSidebarContent").html(this.renderMobileSidebarContent(role, username, profileImage));
+    $("#currentDate").text(dayjs().format(NAVBAR_CONFIG.dateFormat));
 
-        this.updateBreadcrumb();
-        $("#notificationsContainer").html(this.renderNotifications(role));
-        $("#userSection").html(this.renderUserSection(role, username));
-        $("#mobileSidebarContent").html(this.renderMobileSidebarContent(role, username));
-        $("#currentDate").text(dayjs().format(NAVBAR_CONFIG.dateFormat));
+    window.addEventListener("popstate", () => this.updateBreadcrumb());
 
-        window.addEventListener("popstate", () => this.updateBreadcrumb());
+    $(document).off("click", "#mobileSidebarToggle").on("click", "#mobileSidebarToggle", (e) => {
+      e.preventDefault();
+      $(".mobile-sidebar").removeClass("-translate-x-full").addClass("translate-x-0");
+      $(".mobile-sidebar-overlay").removeClass("hidden");
+    });
 
-        $(document).off("click", "#mobileSidebarToggle").on("click", "#mobileSidebarToggle", (e) => {
-            e.preventDefault();
-            $(".mobile-sidebar").removeClass("-translate-x-full").addClass("translate-x-0");
-            $(".mobile-sidebar-overlay").removeClass("hidden");
-        });
+    $(document).off("click", ".mobile-sidebar-overlay").on("click", ".mobile-sidebar-overlay", function () {
+      $(".mobile-sidebar").removeClass("translate-x-0").addClass("-translate-x-full");
+      $(this).addClass("hidden");
+    });
 
-        $(document).off("click", ".mobile-sidebar-overlay").on("click", ".mobile-sidebar-overlay", function () {
-            $(".mobile-sidebar").removeClass("translate-x-0").addClass("-translate-x-full");
-            $(this).addClass("hidden");
-        });
+    $(document).off("click", "#closeSidebar").on("click", "#closeSidebar", (e) => {
+      e.preventDefault();
+      $(".mobile-sidebar").removeClass("translate-x-0").addClass("-translate-x-full");
+      $(".mobile-sidebar-overlay").addClass("hidden");
+    });
 
-        $(document).off("click", "#closeSidebar").on("click", "#closeSidebar", (e) => {
-            e.preventDefault();
-            $(".mobile-sidebar").removeClass("translate-x-0").addClass("-translate-x-full");
-            $(".mobile-sidebar-overlay").addClass("hidden");
-        });
+    $(document).off("click", "#userDropdownBtn").on("click", "#userDropdownBtn", (e) => {
+      e.stopPropagation();
+      $("#userDropdownMenu").toggleClass("hidden");
+      $("#notificationsDropdown").addClass("hidden");
+    });
 
-        $(document).off("click", "#userDropdownBtn").on("click", "#userDropdownBtn", (e) => {
-            e.stopPropagation();
-            $("#userDropdownMenu").toggleClass("hidden");
-            $("#notificationsDropdown").addClass("hidden");
-        });
+    $(document).off("click", "#notificationsBtn").on("click", "#notificationsBtn", (e) => {
+      e.stopPropagation();
+      $("#notificationsDropdown").toggleClass("hidden");
+      $("#userDropdownMenu").addClass("hidden");
+    });
 
-        $(document).off("click", "#notificationsBtn").on("click", "#notificationsBtn", (e) => {
-            e.stopPropagation();
-            $("#notificationsDropdown").toggleClass("hidden");
-            $("#userDropdownMenu").addClass("hidden");
-        });
+    $(document).off("click.closeDropdowns").on("click.closeDropdowns", (e) => {
+      if (!$(e.target).closest("#userDropdownBtn, #notificationsBtn, #userDropdownMenu, #notificationsDropdown").length) {
+        $("#userDropdownMenu").addClass("hidden");
+        $("#notificationsDropdown").addClass("hidden");
+      }
+    });
 
-        $(document).off("click.closeDropdowns").on("click.closeDropdowns", (e) => {
-            if (!$(e.target).closest("#userDropdownBtn, #notificationsBtn, #userDropdownMenu, #notificationsDropdown").length) {
-                $("#userDropdownMenu").addClass("hidden");
-                $("#notificationsDropdown").addClass("hidden");
-            }
-        });
+    $(document).off("click", "#userDropdownMenu, #notificationsDropdown").on("click", "#userDropdownMenu, #notificationsDropdown", (e) => {
+      e.stopPropagation();
+    });
 
-        $(document).off("click", "#userDropdownMenu, #notificationsDropdown").on("click", "#userDropdownMenu, #notificationsDropdown", (e) => {
-            e.stopPropagation();
-        });
+    $(document).off("click", "#logoutBtn, #sidebarLogoutBtn").on("click", "#logoutBtn, #sidebarLogoutBtn", async (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      await this.handleLogout();
+    });
 
-        $(document).off("click", "#logoutBtn, #sidebarLogoutBtn").on("click", "#logoutBtn, #sidebarLogoutBtn", async (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            await this.handleLogout();
-        });
-    },
+    // Notification event listeners
+    $(document).off("click", ".notification-item").on("click", ".notification-item", function (e) {
+      const notificationId = $(this).data("notification-id");
+      if (notificationId && notificationId !== 'guest-1' && notificationId !== 'guest-2' && notificationId !== 'guest-3') {
+        notificationService.markAsRead(notificationId);
+      }
+    });
+
+    $(document).off("click", "#markAllReadBtn").on("click", "#markAllReadBtn", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      notificationService.markAllAsRead();
+      // Re-render notifications
+      const userData = getCurrentUser();
+      const role = userData?.role || "guest";
+      $("#notificationsContainer").html(this.renderNotifications(role));
+    });
+  },
 };
 
 export function renderNavbar() {
-    return Navbar.render();
+  // Reset initialization flag when navbar HTML is re-rendered
+  // This ensures init() will run after new DOM is created
+  isInitialized = false;
+  currentUserId = null;
+  return Navbar.render();
 }
 
 export function initNavbar() {
-    Navbar.init();
+  Navbar.init();
+}
+
+export async function refreshNavbar() {
+  await Navbar.refresh();
+}
+
+export async function updateNavbarAvatar(userId) {
+  await Navbar.updateAvatar(userId);
 }

@@ -135,6 +135,257 @@ This undoes migrations, re-runs migrations, and re-runs seeders.
 - 12 Performances (9 generated)
 - 5 Ticket types
 
+## Mock Data Configuration
+
+The mock data generation system provides configurable, realistic test data for development and testing. It supports multiple configuration modes, deterministic generation, and realistic scenarios including bookings, broken seats, and sold-out performances.
+
+### Configuration Modes
+
+Three preset modes control the volume and characteristics of generated data:
+
+**Minimal Mode** - Fast setup with essential data only:
+- 5 users, 2 venues, 5 performances, 3 ticket types, 10 bookings
+- 10% average occupancy
+- 5% sold-out probability, 10% pre-order probability
+- 2% broken seat probability, max 5 broken seats per venue
+
+**Standard Mode** (default) - Balanced data for typical development:
+- 20 users, 3 venues, 12 performances, 5 ticket types, 50 bookings
+- 30% average occupancy
+- 10% sold-out probability, 15% pre-order probability
+- 5% broken seat probability, max 10 broken seats per venue
+
+**Full Mode** - Comprehensive data for testing at scale:
+- 100 users, 5 venues, 50 performances, 8 ticket types, 300 bookings
+- 50% average occupancy
+- 15% sold-out probability, 20% pre-order probability
+- 8% broken seat probability, max 20 broken seats per venue
+
+### Environment Variables
+
+Control mock data generation through environment variables in your `.env` file:
+
+```env
+# Mock Data Configuration
+MOCK_DATA_MODE=standard              # minimal | standard | full
+MOCK_DATA_SEED=12345                 # Seed for deterministic generation
+MOCK_BOOKINGS_COUNT=50               # Number of bookings to generate
+MOCK_BOOKING_OCCUPANCY=0.3           # Target occupancy rate (0-1)
+MOCK_SOLD_OUT_PROBABILITY=0.1        # Chance of sold-out performance (0-1)
+MOCK_PRE_ORDER_PROBABILITY=0.15      # Chance of pre-order performance (0-1)
+MOCK_GROUP_BOOKING_PROBABILITY=0.3   # Chance of multi-seat booking (0-1)
+MOCK_BROKEN_SEAT_PROBABILITY=0.05    # Chance of broken seats (0-1)
+MOCK_MAX_BROKEN_SEATS=10             # Maximum broken seats per venue
+```
+
+**Key Variables:**
+
+- `MOCK_DATA_MODE` - Preset configuration (minimal/standard/full)
+- `MOCK_DATA_SEED` - Seed value for reproducible random generation
+- `MOCK_BOOKINGS_COUNT` - Total number of bookings to generate
+- `MOCK_BOOKING_OCCUPANCY` - Average occupancy rate across performances (0.0 to 1.0)
+- `MOCK_SOLD_OUT_PROBABILITY` - Probability of a performance being sold out (0.0 to 1.0)
+- `MOCK_PRE_ORDER_PROBABILITY` - Probability of a performance being in pre-order (0.0 to 1.0)
+- `MOCK_GROUP_BOOKING_PROBABILITY` - Probability of multi-seat bookings (0.0 to 1.0)
+- `MOCK_BROKEN_SEAT_PROBABILITY` - Probability of seats being broken/unavailable (0.0 to 1.0)
+- `MOCK_MAX_BROKEN_SEATS` - Maximum number of broken seats per venue
+
+### Custom Configuration Examples
+
+**Example 1: Minimal Setup for Quick Testing**
+
+```env
+MOCK_DATA_MODE=minimal
+MOCK_DATA_SEED=12345
+```
+
+This generates a small dataset perfect for quick feature testing.
+
+**Example 2: High Occupancy Scenario**
+
+```env
+MOCK_DATA_MODE=standard
+MOCK_BOOKING_OCCUPANCY=0.8
+MOCK_SOLD_OUT_PROBABILITY=0.3
+MOCK_BOOKINGS_COUNT=100
+```
+
+This creates a busy booking environment with many sold-out performances.
+
+**Example 3: Testing Venue Conditions**
+
+```env
+MOCK_DATA_MODE=standard
+MOCK_BROKEN_SEAT_PROBABILITY=0.15
+MOCK_MAX_BROKEN_SEATS=25
+```
+
+This generates venues with more broken/unavailable seats for testing seat selection logic.
+
+**Example 4: Pre-Order Heavy Scenario**
+
+```env
+MOCK_DATA_MODE=standard
+MOCK_PRE_ORDER_PROBABILITY=0.5
+MOCK_BOOKING_OCCUPANCY=0.1
+```
+
+This creates many performances in pre-order status with minimal bookings.
+
+**Example 5: Reproducible Test Data**
+
+```env
+MOCK_DATA_MODE=standard
+MOCK_DATA_SEED=99999
+```
+
+Using the same seed value ensures identical data generation across runs, useful for consistent testing.
+
+**Example 6: Large Scale Testing**
+
+```env
+MOCK_DATA_MODE=full
+MOCK_BOOKINGS_COUNT=500
+MOCK_BOOKING_OCCUPANCY=0.6
+```
+
+This generates a large dataset for performance and load testing.
+
+### Special Scenarios
+
+#### Sold-Out Performances
+
+Sold-out performances are automatically generated based on `MOCK_SOLD_OUT_PROBABILITY`. When a performance is marked as sold-out:
+
+- All available seats are booked (100% occupancy)
+- `availableSeats` is set to 0
+- Multiple bookings are distributed across different users
+- Broken/unavailable seats are excluded from booking
+
+**Example**: A sold-out performance with 100 seats might have 30-40 bookings distributed across 25-30 different users, with some users having multiple bookings (e.g., one user books 2 seats, another books 4 seats).
+
+**Testing Use Cases**:
+- Full capacity scenarios
+- Waitlist functionality
+- "No seats available" messaging
+- Booking history and analytics with complete data
+
+#### Pre-Order Performances
+
+Pre-order performances have minimal bookings (5-10% occupancy) to simulate early reservation patterns:
+
+- Limited bookings before general sale
+- Lower occupancy rate
+- Realistic early-bird booking behavior
+
+#### Broken/Unavailable Seats
+
+Venues can have broken or unavailable seats based on `MOCK_BROKEN_SEAT_PROBABILITY`:
+
+- Seats are randomly marked as unavailable
+- Broken seats are excluded from booking generation
+- Seat maps reflect unavailable seats
+- At least one venue will have broken seats for testing
+
+**Testing Use Cases**:
+- Seat selection logic with constraints
+- Availability calculations
+- Seat map rendering with unavailable seats
+- Edge cases in booking flow
+
+### Deterministic Generation
+
+The mock data system uses seeded random generation for reproducibility:
+
+- Same seed value produces identical data across runs
+- Useful for consistent testing and debugging
+- Default seed: 12345
+- Change seed via `MOCK_DATA_SEED` environment variable
+
+**Example**:
+```bash
+# Run 1 with seed 12345
+MOCK_DATA_SEED=12345 npm run db:fresh
+
+# Run 2 with same seed produces identical data
+MOCK_DATA_SEED=12345 npm run db:fresh
+```
+
+### Booking Generation Details
+
+The booking generator creates realistic booking patterns:
+
+**User Assignment**:
+- Each booking is assigned to one user from the generated dataset
+- Fixed accounts (admin@wom.hk, user@example.com) receive bookings
+- Generated users also receive booking assignments
+- Users can have multiple bookings (realistic scenario)
+
+**Seat Selection**:
+- Respects venue seat maps and availability
+- Excludes broken/unavailable seats
+- Supports adjacent seat selection for group bookings
+- Tier preferences based on ticket type pricing
+
+**Booking Status Distribution**:
+- Confirmed: 70%
+- Pending: 15%
+- Cancelled: 10%
+- Completed: 5%
+
+**Temporal Distribution**:
+- Most bookings occur within 30 days before performance
+- Realistic booking date patterns
+- Earlier bookings for popular performances
+
+**Payment Methods**:
+- Credit card: 50%
+- Debit card: 25%
+- PayPal: 15%
+- Bank transfer: 7%
+- Cash: 3%
+
+### Configuration File
+
+The configuration is managed in `backend/src/config/mockDataConfig.js`. This file:
+- Parses environment variables
+- Provides preset configurations
+- Validates configuration values
+- Exports configuration getter function
+
+### Integration with Database Setup
+
+Mock data configuration is automatically applied during:
+
+**Auto-Setup** (`npm run db:fresh`):
+1. Creates users, venues, performances, ticket types
+2. Applies venue conditions (broken seats)
+3. Generates bookings with configured patterns
+4. Updates performance availability counts
+
+**Manual Seed** (`npm run db:seed:all`):
+1. Runs migration seeders
+2. Applies venue conditions
+3. Generates bookings
+4. Updates seat availability
+
+### Troubleshooting
+
+**Issue**: Not enough seats available for bookings
+- **Solution**: Reduce `MOCK_BOOKING_OCCUPANCY` or `MOCK_BOOKINGS_COUNT`
+
+**Issue**: No sold-out performances generated
+- **Solution**: Increase `MOCK_SOLD_OUT_PROBABILITY` or ensure enough performances exist
+
+**Issue**: Data differs between runs
+- **Solution**: Set a fixed `MOCK_DATA_SEED` value for deterministic generation
+
+**Issue**: Too many broken seats
+- **Solution**: Reduce `MOCK_BROKEN_SEAT_PROBABILITY` or `MOCK_MAX_BROKEN_SEATS`
+
+**Issue**: Booking generation fails
+- **Solution**: Check logs for specific errors, ensure performances have valid seat maps
+
 ## Docker Setup
 
 ### Backend Only (Recommended for Development)

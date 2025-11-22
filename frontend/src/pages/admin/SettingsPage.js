@@ -1,11 +1,15 @@
-import { notify } from "@utils/ui/notification.js";
-import { SwalColors } from "@utils/colors.js";
-import { SYSTEM_TICKET_TYPE_IDS } from "@/data/index.js";
+
+import Swal from "sweetalert2";
+
 import { createEmptyState } from "@components/EmptyState.js";
 import { FormComponents } from "@components/FormComponents.js";
-import { ResponseExtractor } from "@services/responseExtractor.js";
+import { Toast } from "@components/Toast.js";
 import { ticketTypeAPI, handleApiError } from "@services/apiClient.js";
-import Swal from "sweetalert2";
+import { ResponseExtractor } from "@services/responseExtractor.js";
+import { SwalColors } from "@utils/colors.js";
+
+// System default ticket type IDs (from seeder)
+const SYSTEM_TICKET_TYPE_IDS = ["adult", "child", "senior", "student", "vip"];
 
 export default {
   title: "Settings | Admin",
@@ -147,6 +151,13 @@ export default {
         ? '<span class="text-green-600 text-xs"><i class="fas fa-check-circle"></i> Active</span>'
         : '<span class="text-gray-400 text-xs"><i class="fas fa-pause-circle"></i> Inactive</span>';
 
+    const groupBadge = type.minGroupSize
+      ? `<span class="flex items-center gap-1 text-purple-600">
+          <i class="fas fa-users"></i>
+          Min ${type.minGroupSize} seats
+        </span>`
+      : '';
+
     return `
       <div class="ticket-type-item group bg-white border-2 border-gray-200 rounded-lg p-4 hover:border-indigo-400 hover:shadow-md transition-all" data-type-id="${type.id
       }">
@@ -168,6 +179,7 @@ export default {
                   <span class="font-mono">${type.id}</span>
                 </span>
                 ${pricingInfo}
+                ${groupBadge}
                 ${type.eligibility ? `<span class="flex items-center gap-1"><i class="fas fa-user-check"></i>${type.eligibility.substring(0, 30)}${type.eligibility.length > 30 ? "..." : ""}</span>` : ""}
               </div>
             </div>
@@ -470,7 +482,7 @@ export default {
       "notificationSettings",
       JSON.stringify(this.notificationSettings)
     );
-    notify.success("Notification settings saved successfully");
+    Toast.success("Your notification preferences have been saved", "Settings Saved");
   },
 
   resetNotificationDefaults() {
@@ -503,7 +515,7 @@ export default {
       "notificationSettings",
       JSON.stringify(this.notificationSettings)
     );
-    notify.success("Notification settings reset to defaults");
+    Toast.success("All notification settings have been restored to defaults", "Reset Complete");
     this.switchTab("notifications");
   },
 
@@ -618,68 +630,126 @@ export default {
 
       const result = await Swal.fire({
         title: isEdit
-          ? '<i class="fas fa-edit text-blue-600 mr-2"></i>Edit Ticket Type'
-          : '<i class="fas fa-plus text-indigo-600 mr-2"></i>Add Ticket Type',
+          ? '<div class="text-left"><h2 class="text-2xl font-bold text-gray-900">Edit Ticket Type</h2><p class="text-sm text-gray-600 mt-1">Update ticket type details and pricing</p></div>'
+          : '<div class="text-left"><h2 class="text-2xl font-bold text-gray-900">Create Ticket Type</h2><p class="text-sm text-gray-600 mt-1">Add a new ticket category for your performances</p></div>',
         html: `
-          <div class="text-left space-y-4">
+          <div class="text-left space-y-6 mt-6">
             ${!isEdit
             ? `
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-2">Type ID</label>
-              <input type="text" id="typeId" class="swal2-input w-full" placeholder="e.g., STUDENT, SENIOR" value="${type?.id || ""
-            }">
-              <p class="text-xs text-gray-500 mt-1">Unique identifier (uppercase, no spaces)</p>
+              <label class="block text-sm font-semibold text-gray-700 mb-2">
+                <i class="fas fa-fingerprint text-gray-400 mr-1"></i>
+                Type ID <span class="text-red-500">*</span>
+              </label>
+              <input type="text" id="typeId" class="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 focus:outline-none transition-all font-mono text-sm" placeholder="e.g., student, family-pack" value="${type?.id || ""
+            }" style="margin: 0; box-shadow: none;">
+              <p class="text-xs text-gray-500 mt-2">Unique identifier (lowercase, use hyphens). Cannot be changed later.</p>
             </div>
             `
-            : ""
+            : `
+            <div class="bg-gray-50 border border-gray-200 rounded-lg p-4">
+              <p class="text-xs font-medium text-gray-600 mb-1">Type ID</p>
+              <p class="font-mono font-semibold text-gray-900">${type.id}</p>
+            </div>
+            `
           }
+            
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-2">Type Name <span class="text-red-500">*</span></label>
-              <input type="text" id="typeName" class="swal2-input w-full" placeholder="e.g., Student, Senior" value="${type?.name || ""
-          }">
+              <label class="block text-sm font-semibold text-gray-700 mb-2">
+                <i class="fas fa-tag text-gray-400 mr-1"></i>
+                Name <span class="text-red-500">*</span>
+              </label>
+              <input type="text" id="typeName" class="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 focus:outline-none transition-all" placeholder="e.g., Student, Family Pack" value="${type?.name || ""
+          }" style="margin: 0; box-shadow: none;">
+              <p class="text-xs text-gray-500 mt-2">Display name shown to customers</p>
             </div>
+            
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-2">Description</label>
-              <textarea id="typeDescription" class="swal2-input w-full" placeholder="Brief description of this ticket type" rows="2">${type?.description || ""
+              <label class="block text-sm font-semibold text-gray-700 mb-2">
+                <i class="fas fa-align-left text-gray-400 mr-1"></i>
+                Description
+              </label>
+              <textarea id="typeDescription" class="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 focus:outline-none transition-all resize-none" placeholder="e.g., 50% discount for children" rows="2" style="margin: 0; box-shadow: none;">${type?.description || ""
           }</textarea>
+              <p class="text-xs text-gray-500 mt-2">Help customers understand this ticket type</p>
             </div>
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-2">Pricing Type</label>
-              <select id="pricingType" class="swal2-input w-full">
+
+            <div class="border-t border-gray-200 pt-6">
+              <h3 class="text-base font-bold text-gray-900 mb-4">Pricing Type</h3>
+              
+              <select id="pricingType" class="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 focus:outline-none transition-all mb-4" style="margin: 0; box-shadow: none;">
                 <option value="multiplier" ${!type || type.discount <= 1.0 ? "selected" : ""}>Multiplier (discount from base price)</option>
                 <option value="percentage" ${type && type.discount > 1.0 ? "selected" : ""}>Percentage (% of base price)</option>
               </select>
+              
+              <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-2">
+                  <span id="discountLabel">Discount Multiplier</span> <span class="text-red-500">*</span>
+                </label>
+                <input type="number" id="typeDiscount" class="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 focus:outline-none transition-all text-lg font-semibold" 
+                  placeholder="1.0" step="0.01" min="0" max="2" 
+                  value="${type?.discount || "1.0"}" style="margin: 0; box-shadow: none;">
+                <p class="text-xs text-gray-500 mt-2" id="discountHelp">
+                  1.0 = full price, 0.5 = 50% off, 1.5 = 150% of base
+                </p>
+              </div>
             </div>
-            <div id="discountContainer">
-              <label class="block text-sm font-medium text-gray-700 mb-2">
-                <span id="discountLabel">Discount Multiplier</span> <span class="text-red-500">*</span>
+
+            <div class="border-t border-gray-200 pt-6">
+              <label class="block text-sm font-semibold text-gray-700 mb-2">
+                <i class="fas fa-user-check text-gray-400 mr-1"></i>
+                Eligibility Requirements
               </label>
-              <input type="number" id="typeDiscount" class="swal2-input w-full" 
-                placeholder="1.0" step="0.01" min="0" max="2" 
-                value="${type?.discount || "1.0"}">
-              <p class="text-xs text-gray-500 mt-1" id="discountHelp">
-                1.0 = full price, 0.5 = 50% off, 1.5 = 150% of base
+              <textarea id="typeEligibility" class="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 focus:outline-none transition-all resize-none" placeholder="e.g., Age 12 or below" rows="2" style="margin: 0; box-shadow: none;">${type?.eligibility || ""
+          }</textarea>
+              <p class="text-xs text-gray-500 mt-2">Who can purchase this ticket type?</p>
+            </div>
+            
+            <div class="border-t border-gray-200 pt-6">
+              <label class="block text-sm font-semibold text-gray-700 mb-2">
+                <i class="fas fa-users text-gray-400 mr-1"></i>
+                Minimum Group Size (Optional)
+              </label>
+              <input type="number" id="typeMinGroupSize" class="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 focus:outline-none transition-all" 
+                placeholder="Leave empty for individual tickets" min="1" max="100" 
+                value="${type?.minGroupSize || ""}" style="margin: 0; box-shadow: none;">
+              <p class="text-xs text-gray-500 mt-2">
+                <i class="fas fa-users text-gray-400 mr-1"></i>
+                Set minimum seats required (e.g., 4 for family pack, 10 for group discount)
               </p>
             </div>
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-2">Eligibility Requirements</label>
-              <textarea id="typeEligibility" class="swal2-input w-full" placeholder="e.g., Valid student ID required" rows="2">${type?.eligibility || ""
-          }</textarea>
-            </div>
-            <div class="flex items-center gap-2 bg-gray-50 p-3 rounded">
-              <input type="checkbox" id="typeIsActive" class="w-4 h-4" ${type?.isActive !== false ? "checked" : ""
+            
+            <div class="border-t border-gray-200 pt-6">
+              <label class="flex items-start gap-3 cursor-pointer">
+                <input type="checkbox" id="typeIsActive" class="mt-1 w-5 h-5 text-indigo-600 border-2 border-gray-300 rounded focus:ring-2 focus:ring-indigo-500 transition-all" ${type?.isActive !== false ? "checked" : ""
           }>
-              <label for="typeIsActive" class="text-sm font-medium text-gray-700">Active (available for new performances)</label>
+                <div class="flex-1">
+                  <p class="text-sm font-semibold text-gray-900">Active (available for new performances)</p>
+                </div>
+              </label>
             </div>
-            <div class="text-xs text-gray-500 bg-blue-50 p-3 rounded border border-blue-200">
-              <i class="fas fa-info-circle mr-1 text-blue-600"></i>
-              This ticket type will be available when creating new performances.
+
+            <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mt-6">
+              <p class="text-xs text-blue-800 flex items-start gap-2">
+                <i class="fas fa-info-circle mt-0.5"></i>
+                <span>This ticket type will be available when creating new performances.</span>
+              </p>
             </div>
           </div>
         `,
-        width: "600px",
+        width: "650px",
         showCancelButton: true,
-        confirmButtonText: isEdit ? "Save Changes" : "Add Type",
+        confirmButtonText: isEdit ? 'Save Changes' : 'Create Ticket Type',
+        cancelButtonText: 'Cancel',
+        customClass: {
+          popup: 'rounded-xl shadow-2xl',
+          title: 'text-left p-6 pb-0',
+          htmlContainer: 'px-6 pb-2',
+          actions: 'px-6 pb-6 pt-4 gap-3',
+          confirmButton: 'px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg transition-colors shadow-sm',
+          cancelButton: 'px-6 py-3 bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold rounded-lg transition-colors'
+        },
+        buttonsStyling: false,
         didOpen: () => {
           const pricingTypeSelect = document.getElementById("pricingType");
           const discountInput = document.getElementById("typeDiscount");
@@ -715,7 +785,10 @@ export default {
             }
           };
 
+          // Add event listeners
           pricingTypeSelect.addEventListener("change", updateDiscountUI);
+
+          // Initial update
           updateDiscountUI();
         },
         preConfirm: () => {
@@ -733,6 +806,8 @@ export default {
           const eligibility = document
             .getElementById("typeEligibility")
             .value.trim();
+          const minGroupSizeValue = document.getElementById("typeMinGroupSize").value.trim();
+          const minGroupSize = minGroupSizeValue ? parseInt(minGroupSizeValue) : null;
           const isActive = document.getElementById("typeIsActive").checked;
 
           if (!isEdit && !id) {
@@ -747,6 +822,10 @@ export default {
             Swal.showValidationMessage("Please enter a valid discount value");
             return false;
           }
+          if (minGroupSize !== null && (isNaN(minGroupSize) || minGroupSize < 1)) {
+            Swal.showValidationMessage("Minimum group size must be at least 1");
+            return false;
+          }
 
           if (pricingType === "percentage") {
             discount = discount / 100;
@@ -757,6 +836,7 @@ export default {
             description,
             discount: discount,
             eligibility,
+            minGroupSize,
             isActive,
           };
 
@@ -772,10 +852,10 @@ export default {
         try {
           if (isEdit) {
             await ticketTypeAPI.update(typeId, result.value);
-            notify.success("Ticket type updated successfully");
+            Toast.success(`"${result.value.name}" has been updated`, "Ticket Type Updated");
           } else {
             await ticketTypeAPI.create(result.value);
-            notify.success("Ticket type added successfully");
+            Toast.success(`"${result.value.name}" has been added`, "Ticket Type Created");
           }
           await this.loadTicketTypes();
         } catch (error) {
@@ -819,7 +899,7 @@ export default {
       const type = ResponseExtractor.extractSingle(response, "ticketType");
 
       if (!type) {
-        notify.error("Ticket type not found");
+        Toast.error("The requested ticket type could not be found", "Not Found");
         return;
       }
 
@@ -845,7 +925,7 @@ export default {
 
       if (result.isConfirmed) {
         await ticketTypeAPI.delete(typeId);
-        notify.success(`"${type.name}" deleted successfully`);
+        Toast.success(`"${type.name}" has been removed from the system`, "Ticket Type Deleted");
         await this.loadTicketTypes();
       }
     } catch (error) {
@@ -877,7 +957,7 @@ export default {
     });
 
     if (result.isConfirmed) {
-      notify.info("Reset to defaults feature is coming soon");
+      Toast.info("This feature is currently under development", "Coming Soon");
     }
   },
 
@@ -893,7 +973,7 @@ export default {
         isActive: type.isActive,
       };
       await ticketTypeAPI.create(newType);
-      notify.success(`"${type.name}" duplicated successfully`);
+      Toast.success(`A copy of "${type.name}" has been created`, "Ticket Type Duplicated");
       await this.loadTicketTypes();
     } catch (error) {
       console.error("Error duplicating ticket type:", error);
@@ -911,7 +991,7 @@ export default {
       }.json`;
     link.click();
     URL.revokeObjectURL(url);
-    notify.success("Ticket types exported successfully");
+    Toast.success(`${this.ticketTypes.length} ticket types exported to JSON file`, "Export Complete");
   },
 
   async importTicketTypes() {
@@ -953,10 +1033,10 @@ export default {
             throw new Error("Invalid format");
           }
           localStorage.setItem("ticketTypes", JSON.stringify(imported));
-          notify.success("Ticket types imported successfully");
+          Toast.success(`${imported.length} ticket types imported successfully`, "Import Complete");
           await this.loadTicketTypes();
         } catch (error) {
-          notify.error("Invalid file format");
+          Toast.error("The file format is invalid. Please upload a valid JSON file", "Import Failed");
         }
       };
       reader.readAsText(file);

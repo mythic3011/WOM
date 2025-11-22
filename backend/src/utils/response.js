@@ -1,10 +1,8 @@
-export const successResponse = (res, data, message = "Success", statusCode = 200) => {
-  return res.status(statusCode).json({
+export const successResponse = (res, data, message = "Success", statusCode = 200) => res.status(statusCode).json({
     success: true,
     message,
     data,
   });
-};
 
 export const errorResponse = (res, message = "Error", statusCode = 500, errors = null) => {
   const response = {
@@ -19,8 +17,7 @@ export const errorResponse = (res, message = "Error", statusCode = 500, errors =
   return res.status(statusCode).json(response);
 };
 
-export const paginatedResponse = (res, data, pagination, message = "Success") => {
-  return res.json({
+export const paginatedResponse = (res, data, pagination, message = "Success") => res.json({
     success: true,
     message,
     data,
@@ -33,4 +30,3 @@ export const paginatedResponse = (res, data, pagination, message = "Success") =>
       hasPrev: pagination.page > 1,
     },
   });
-};

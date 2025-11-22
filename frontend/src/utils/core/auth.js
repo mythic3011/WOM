@@ -9,12 +9,12 @@ export async function checkSession() {
   try {
     const response = await authAPI.checkSession();
     if (response.success && response.authenticated && response.user) {
-      currentUser = response.user;
-      storage.setUser(response.user);
+      const success = setUser(response.user);
       sessionChecked = true;
-      return response.user;
+      return success ? currentUser : null;
     }
   } catch (error) {
+    console.error('Session check error:', error);
     currentUser = null;
     storage.removeUser();
   }
@@ -35,9 +35,61 @@ export function getCurrentUser() {
   return null;
 }
 
+/**
+ * Sanitize user data to prevent storage corruption
+ * Removes empty strings and invalid values
+ */
+function sanitizeUserData(user) {
+  if (!user || typeof user !== 'object') {
+    return null;
+  }
+
+  const sanitized = { ...user };
+
+  // Remove or fix problematic fields
+  Object.keys(sanitized).forEach(key => {
+    const value = sanitized[key];
+
+    // Remove empty strings
+    if (typeof value === 'string' && !value.trim()) {
+      delete sanitized[key];
+    }
+
+    // Handle null/undefined
+    if (value === null || value === undefined) {
+      delete sanitized[key];
+    }
+
+    // Handle nested objects (like profile)
+    if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+      const nestedSanitized = sanitizeUserData(value);
+      if (nestedSanitized && Object.keys(nestedSanitized).length > 0) {
+        sanitized[key] = nestedSanitized;
+      } else {
+        delete sanitized[key];
+      }
+    }
+  });
+
+  // Ensure required fields exist
+  if (!sanitized.id) {
+    console.error('User data missing required id field');
+    return null;
+  }
+
+  return sanitized;
+}
+
 export function setUser(user) {
-  currentUser = user;
-  storage.setUser(user);
+  const sanitized = sanitizeUserData(user);
+
+  if (!sanitized) {
+    console.error('Failed to sanitize user data:', user);
+    return false;
+  }
+
+  currentUser = sanitized;
+  return storage.setUser(sanitized);
 }
 
 export function clearUser() {
@@ -50,8 +102,11 @@ export async function login(email, password) {
   try {
     const response = await authAPI.login(email, password);
     if (response.success && response.data && response.data.user) {
-      setUser(response.data.user);
-      return response.data.user;
+      const success = setUser(response.data.user);
+      if (!success) {
+        throw new Error("Failed to store user data - data may be corrupted");
+      }
+      return currentUser;
     }
     throw new Error("Invalid response from server");
   } catch (error) {

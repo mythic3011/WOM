@@ -1,6 +1,6 @@
+import dayjs from "dayjs";
 import { DataTypes, Op } from "sequelize";
 import sequelize from "#config/database.js";
-import dayjs from "dayjs";
 
 const Performance = sequelize.define(
   "Performance",
@@ -29,6 +29,8 @@ const Performance = sequelize.define(
         model: "venues",
         key: "id",
       },
+      onUpdate: "CASCADE",
+      onDelete: "RESTRICT",
     },
     venueName: {
       type: DataTypes.STRING,
@@ -133,6 +135,16 @@ const Performance = sequelize.define(
       allowNull: false,
       defaultValue: 1,
     },
+    priceTiers: {
+      type: DataTypes.JSONB,
+      allowNull: true,
+      defaultValue: [],
+    },
+    pricingZones: {
+      type: DataTypes.JSONB,
+      allowNull: true,
+      defaultValue: [],
+    },
   },
   {
     tableName: "performances",
@@ -194,7 +206,7 @@ Performance.prototype.hasAvailableSeats = function () {
 };
 
 Performance.prototype.getOccupancyRate = function () {
-  if (!this.totalSeats || this.totalSeats === 0) return 0;
+  if (!this.totalSeats || this.totalSeats === 0) { return 0; }
   const occupied = this.totalSeats - this.availableSeats;
   return Math.round((occupied / this.totalSeats) * 100);
 };

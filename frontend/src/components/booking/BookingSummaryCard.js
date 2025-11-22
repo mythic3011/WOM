@@ -1,5 +1,7 @@
-import { getDisplayLabel } from "@utils/seatIdHelper.js";
+
 import dayjs from "dayjs";
+
+import { getDisplayLabel } from "@utils/seatIdHelper.js";
 
 export const BookingSummaryCard = {
   render(performanceData, selectedSeats, seatTicketTypes, totalPrice) {

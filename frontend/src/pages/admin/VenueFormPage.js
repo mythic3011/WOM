@@ -1,6 +1,7 @@
+
 import { venueAPI, handleApiError } from "@services/apiClient.js";
-import { notify } from "@utils/ui/notification.js";
 import { ResponseExtractor } from "@services/responseExtractor.js";
+import { notify } from "@utils/ui/notification.js";
 
 const COMMON_FACILITIES = [
   { id: "wifi", label: "WiFi", icon: "fa-wifi" },

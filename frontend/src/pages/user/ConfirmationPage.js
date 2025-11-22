@@ -1,9 +1,11 @@
+
+import dayjs from "dayjs";
+
 import { FormComponents } from "@components/FormComponents.js";
-import { storage } from "@services/storageService.js";
 import { bookingService } from "@services/bookingService.js";
 import { performanceService } from "@services/performanceService.js";
+import { storage } from "@services/storageService.js";
 import { formatCurrency } from "@utils/utils.js";
-import dayjs from "dayjs";
 
 export default {
   title: "Booking Confirmed | User",

@@ -60,8 +60,66 @@ const Booking = sequelize.define(
     },
     seats: {
       type: DataTypes.JSONB,
+      allowNull: true,
+      defaultValue: null,
+      comment: 'DEPRECATED: Use seatTickets instead. Kept for backward compatibility.',
+    },
+    seatTickets: {
+      type: DataTypes.JSONB,
       allowNull: false,
       defaultValue: [],
+      comment: 'Array of seat-ticket assignments with compact structure',
+      validate: {
+        isValidStructure(value) {
+          if (!Array.isArray(value)) {
+            throw new Error('seatTickets must be an array');
+          }
+
+          // Allow empty array for initialization
+          if (value.length === 0) {
+            return;
+          }
+
+          // Track seat IDs to ensure one ticket per seat
+          const seenSeatIds = new Set();
+
+          value.forEach((seatTicket, index) => {
+            // Required fields validation
+            if (!seatTicket.seatId || typeof seatTicket.seatId !== 'string') {
+              throw new Error(`seatTickets[${index}]: seatId is required and must be a string`);
+            }
+            if (!seatTicket.seatLabel || typeof seatTicket.seatLabel !== 'string') {
+              throw new Error(`seatTickets[${index}]: seatLabel is required and must be a string`);
+            }
+            if (!seatTicket.ticketTypeId || typeof seatTicket.ticketTypeId !== 'string') {
+              throw new Error(`seatTickets[${index}]: ticketTypeId is required and must be a string`);
+            }
+            if (!seatTicket.ticketTypeName || typeof seatTicket.ticketTypeName !== 'string') {
+              throw new Error(`seatTickets[${index}]: ticketTypeName is required and must be a string`);
+            }
+            if (typeof seatTicket.price !== 'number' || seatTicket.price <= 0) {
+              throw new Error(`seatTickets[${index}]: price is required and must be a positive number`);
+            }
+
+            // One ticket per seat validation
+            if (seenSeatIds.has(seatTicket.seatId)) {
+              throw new Error(`seatTickets[${index}]: duplicate seatId "${seatTicket.seatId}" - each seat must have exactly one ticket`);
+            }
+            seenSeatIds.add(seatTicket.seatId);
+
+            // Optional fields type validation
+            if (seatTicket.basePrice !== undefined && seatTicket.basePrice !== null && (typeof seatTicket.basePrice !== 'number' || seatTicket.basePrice <= 0)) {
+              throw new Error(`seatTickets[${index}]: basePrice must be a positive number if provided`);
+            }
+            if (seatTicket.section !== undefined && seatTicket.section !== null && typeof seatTicket.section !== 'string') {
+              throw new Error(`seatTickets[${index}]: section must be a string if provided`);
+            }
+            if (seatTicket.row !== undefined && seatTicket.row !== null && typeof seatTicket.row !== 'string') {
+              throw new Error(`seatTickets[${index}]: row must be a string if provided`);
+            }
+          });
+        }
+      }
     },
     seatCount: {
       type: DataTypes.INTEGER,
@@ -129,6 +187,11 @@ const Booking = sequelize.define(
       },
       {
         fields: ["bookingDate"],
+      },
+      {
+        name: "bookings_seat_tickets_gin_idx",
+        fields: ["seatTickets"],
+        using: "gin",
       },
     ],
   }

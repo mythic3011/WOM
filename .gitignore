@@ -35,6 +35,8 @@ lerna-debug.log*
 coverage/
 .nyc_output/
 .eslintcache
+e2e-role-tests/
+test-results/
 
 # IDE
 .kiro/*

@@ -114,3 +114,29 @@ export const checkSession = async (req, res) => {
     authenticated: false,
   });
 };
+
+export const getProfileImage = async (req, res, next) => {
+  try {
+    const user = await authService.getUserById(req.session.userId);
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    // Get the full user object with profile image
+    const fullUser = await authService.getUserWithImage(req.session.userId);
+
+    res.json({
+      success: true,
+      data: {
+        profileImage: fullUser?.profileImage || null,
+        hasProfileImage: !!fullUser?.profileImage,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};

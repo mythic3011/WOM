@@ -96,3 +96,22 @@ export const deleteVenue = async (req, res, next) => {
     next(error);
   }
 };
+
+export const getVenuePreview = async (req, res, next) => {
+  try {
+    const preview = await venueService.getVenuePreview(req.params.id);
+
+    res.json({
+      success: true,
+      data: preview,
+    });
+  } catch (error) {
+    if (error.message === "Venue not found") {
+      return res.status(404).json({
+        success: false,
+        message: error.message,
+      });
+    }
+    next(error);
+  }
+};

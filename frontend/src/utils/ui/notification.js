@@ -1,109 +1,75 @@
-import { Notyf } from "notyf";
-import "notyf/notyf.min.css";
+import { Toast } from "@components/Toast.js";
 
-const notyf = new Notyf({
-  duration: 4000,
-  position: { x: "right", y: "top" },
-  dismissible: true,
-  ripple: true,
-  types: [
-    {
-      type: "success",
-      background: "#10b981",
-      className: "shadow-lg border-l-4 border-green-600",
-      icon: {
-        className: "fas fa-check-circle",
-        tagName: "i",
-        color: "white",
+// Extended Toast component with additional notification types
+const ExtendedToast = {
+  ...Toast,
+
+  // Override getConfig to add more types
+  getConfig(type) {
+    const configs = {
+      success: {
+        bgColor: 'bg-green-50',
+        borderColor: 'border-green-500',
+        textColor: 'text-green-800',
+        icon: 'fas fa-check-circle',
       },
-    },
-    {
-      type: "error",
-      background: "#ef4444",
-      className: "shadow-lg border-l-4 border-red-600",
-      icon: {
-        className: "fas fa-times-circle",
-        tagName: "i",
-        color: "white",
+      error: {
+        bgColor: 'bg-red-50',
+        borderColor: 'border-red-500',
+        textColor: 'text-red-800',
+        icon: 'fas fa-times-circle',
       },
-    },
-    {
-      type: "warning",
-      background: "#f59e0b",
-      className: "shadow-lg border-l-4 border-amber-600",
-      icon: {
-        className: "fas fa-exclamation-triangle",
-        tagName: "i",
-        color: "white",
+      warning: {
+        bgColor: 'bg-yellow-50',
+        borderColor: 'border-yellow-500',
+        textColor: 'text-yellow-800',
+        icon: 'fas fa-exclamation-triangle',
       },
-    },
-    {
-      type: "info",
-      background: "#3b82f6",
-      className: "shadow-lg border-l-4 border-blue-600",
-      icon: {
-        className: "fas fa-info-circle",
-        tagName: "i",
-        color: "white",
+      info: {
+        bgColor: 'bg-blue-50',
+        borderColor: 'border-blue-500',
+        textColor: 'text-blue-800',
+        icon: 'fas fa-info-circle',
       },
-    },
-    {
-      type: "loading",
-      background: "#6366f1",
-      className: "shadow-lg border-l-4 border-indigo-600",
-      duration: 0,
-      icon: {
-        className: "fas fa-spinner fa-spin",
-        tagName: "i",
-        color: "white",
+      loading: {
+        bgColor: 'bg-indigo-50',
+        borderColor: 'border-indigo-500',
+        textColor: 'text-indigo-800',
+        icon: 'fas fa-spinner fa-spin',
       },
-    },
-    {
-      type: "saved",
-      background: "#8b5cf6",
-      className: "shadow-lg border-l-4 border-purple-600",
-      icon: {
-        className: "fas fa-save",
-        tagName: "i",
-        color: "white",
+      saved: {
+        bgColor: 'bg-purple-50',
+        borderColor: 'border-purple-500',
+        textColor: 'text-purple-800',
+        icon: 'fas fa-save',
       },
-    },
-    {
-      type: "deleted",
-      background: "#f43f5e",
-      className: "shadow-lg border-l-4 border-rose-600",
-      icon: {
-        className: "fas fa-trash-alt",
-        tagName: "i",
-        color: "white",
+      deleted: {
+        bgColor: 'bg-rose-50',
+        borderColor: 'border-rose-500',
+        textColor: 'text-rose-800',
+        icon: 'fas fa-trash-alt',
       },
-    },
-    {
-      type: "upload",
-      background: "#06b6d4",
-      className: "shadow-lg border-l-4 border-cyan-600",
-      icon: {
-        className: "fas fa-cloud-upload-alt",
-        tagName: "i",
-        color: "white",
+      upload: {
+        bgColor: 'bg-cyan-50',
+        borderColor: 'border-cyan-500',
+        textColor: 'text-cyan-800',
+        icon: 'fas fa-cloud-upload-alt',
       },
-    },
-    {
-      type: "download",
-      background: "#14b8a6",
-      className: "shadow-lg border-l-4 border-teal-600",
-      icon: {
-        className: "fas fa-download",
-        tagName: "i",
-        color: "white",
+      download: {
+        bgColor: 'bg-teal-50',
+        borderColor: 'border-teal-500',
+        textColor: 'text-teal-800',
+        icon: 'fas fa-download',
       },
-    },
-  ],
-});
+    };
+
+    return configs[type] || configs.info;
+  },
+};
 
 export const notify = {
   success(message, duration = 4000) {
-    return notyf.open({
+    return ExtendedToast.show({
       type: "success",
       message,
       duration,
@@ -111,7 +77,7 @@ export const notify = {
   },
 
   error(message, duration = 5000) {
-    return notyf.open({
+    return ExtendedToast.show({
       type: "error",
       message,
       duration,
@@ -119,7 +85,7 @@ export const notify = {
   },
 
   warning(message, duration = 4500) {
-    return notyf.open({
+    return ExtendedToast.show({
       type: "warning",
       message,
       duration,
@@ -127,7 +93,7 @@ export const notify = {
   },
 
   info(message, duration = 4000) {
-    return notyf.open({
+    return ExtendedToast.show({
       type: "info",
       message,
       duration,
@@ -135,7 +101,7 @@ export const notify = {
   },
 
   loading(message = "Loading...", duration = 0) {
-    return notyf.open({
+    return ExtendedToast.show({
       type: "loading",
       message,
       duration,
@@ -143,7 +109,7 @@ export const notify = {
   },
 
   saved(message = "Changes saved successfully!", duration = 3000) {
-    return notyf.open({
+    return ExtendedToast.show({
       type: "saved",
       message,
       duration,
@@ -151,7 +117,7 @@ export const notify = {
   },
 
   deleted(message = "Item deleted successfully!", duration = 3000) {
-    return notyf.open({
+    return ExtendedToast.show({
       type: "deleted",
       message,
       duration,
@@ -159,7 +125,7 @@ export const notify = {
   },
 
   upload(message = "Upload complete!", duration = 3000) {
-    return notyf.open({
+    return ExtendedToast.show({
       type: "upload",
       message,
       duration,
@@ -167,7 +133,7 @@ export const notify = {
   },
 
   download(message = "Download started!", duration = 3000) {
-    return notyf.open({
+    return ExtendedToast.show({
       type: "download",
       message,
       duration,
@@ -192,33 +158,33 @@ export const notify = {
   },
 
   confirm(message, duration = 6000) {
-    return notyf.open({
+    return ExtendedToast.show({
       type: "success",
-      message: `<i class="fas fa-check-double mr-2"></i>${message}`,
+      message,
       duration,
     });
   },
 
   question(message, duration = 5000) {
-    return notyf.open({
+    return ExtendedToast.show({
       type: "info",
-      message: `<i class="fas fa-question-circle mr-2"></i>${message}`,
+      message,
       duration,
     });
   },
 
   custom(options) {
-    return notyf.open(options);
+    return ExtendedToast.show(options);
   },
 
   dismiss(notification) {
     if (notification) {
-      notyf.dismiss(notification);
+      ExtendedToast.dismiss(notification);
     }
   },
 
   dismissAll() {
-    notyf.dismissAll();
+    ExtendedToast.dismissAll();
   },
 
   queue: {

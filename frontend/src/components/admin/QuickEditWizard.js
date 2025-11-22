@@ -6,7 +6,7 @@ export async function openQuickEdit(performance, venues, onSave) {
       ...performance,
       ...formData,
       showtimes: formData.showtimes.map((st) => ({
-        dateTime: `${st.date}T${st.time}`,
+        dateTime: `${st.date}T${st.time}:00`,
         totalSeats: 200,
         availableSeats: 200,
       })),

@@ -1,6 +1,8 @@
+
+import dayjs from "dayjs";
+
 import { performanceAPI, handleApiError } from "./apiClient.js";
 import { ResponseExtractor } from "./responseExtractor.js";
-import dayjs from "dayjs";
 
 export const performanceService = {
   async getAll(params = {}) {
@@ -103,11 +105,42 @@ export const performanceService = {
     ).length;
     const soldOut = this.getSoldOut(performances).length;
 
+    // Get prices from ticketTypes or pricingSections
     const validPrices = performances
-      .map((p) => p.price || 0)
+      .map((p) => {
+        let minPrice = null;
+
+        // Check ticketTypes
+        if (p.ticketTypes && Array.isArray(p.ticketTypes)) {
+          const prices = p.ticketTypes
+            .map(tt => tt.price || tt.basePrice)
+            .filter(price => price != null && price > 0);
+          if (prices.length > 0) {
+            minPrice = Math.min(...prices);
+          }
+        }
+
+        // Check pricingSections
+        if (!minPrice && p.pricingSections && Array.isArray(p.pricingSections)) {
+          const prices = p.pricingSections
+            .map(ps => ps.basePrice || ps.price)
+            .filter(price => price != null && price > 0);
+          if (prices.length > 0) {
+            const sectionMin = Math.min(...prices);
+            minPrice = minPrice ? Math.min(minPrice, sectionMin) : sectionMin;
+          }
+        }
+
+        // Fallback to direct price fields
+        if (!minPrice) {
+          minPrice = p.price || p.basePrice;
+        }
+
+        return minPrice || 0;
+      })
       .filter((p) => p > 0);
 
-    let priceRange = { min: 0, max: 0, display: "N/A" };
+    let priceRange = { min: 0, max: 0, display: "Price TBA" };
 
     if (validPrices.length > 0) {
       const minPrice = Math.min(...validPrices);
@@ -117,8 +150,8 @@ export const performanceService = {
         max: maxPrice,
         display:
           minPrice === maxPrice
-            ? `HKD ${maxPrice}`
-            : `HKD ${minPrice}-${maxPrice}`,
+            ? `HKD ${maxPrice.toLocaleString()}`
+            : `HKD ${minPrice.toLocaleString()} - ${maxPrice.toLocaleString()}`,
       };
     }
 

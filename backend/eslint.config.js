@@ -63,6 +63,23 @@ export default [
     },
   },
   {
+    files: ["**/__tests__/**/*.js", "**/*.test.js", "**/*.spec.js"],
+    languageOptions: {
+      globals: {
+        describe: "readonly",
+        it: "readonly",
+        test: "readonly",
+        expect: "readonly",
+        beforeEach: "readonly",
+        afterEach: "readonly",
+        beforeAll: "readonly",
+        afterAll: "readonly",
+        jest: "readonly",
+        performance: "readonly",
+      },
+    },
+  },
+  {
     ignores: [
       "node_modules/**",
       "dist/**",

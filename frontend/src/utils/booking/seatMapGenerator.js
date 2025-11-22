@@ -1,3 +1,4 @@
+
 import {
   getSectionColor,
   getSeatStatusColor,
@@ -7,6 +8,7 @@ import {
   getSeatStatusOpacity,
 } from "@utils/colors.js";
 import { generateFullId } from "@utils/seatIdHelper.js";
+
 import { initializeSeatDetails } from "./seatUtils.js";
 
 export const seatMapGenerator = {

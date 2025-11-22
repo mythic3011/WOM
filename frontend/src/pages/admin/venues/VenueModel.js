@@ -1,5 +1,6 @@
+
+import { constants } from "@/store/constants.js";
 import { venueAPI } from "@services/apiClient.js";
-import { DEFAULT_VENUE_TEMPLATES } from "@/data/index.js";
 import { ResponseExtractor } from "@services/responseExtractor.js";
 
 export class VenueModel {
@@ -148,7 +149,7 @@ export class VenueModel {
   }
 
   getTemplates() {
-    return DEFAULT_VENUE_TEMPLATES;
+    return constants.VENUE_TEMPLATES;
   }
 
   calculateCapacity(layout) {

@@ -2,6 +2,8 @@ export class SeatNumberingSystem {
   constructor(layoutConfig) {
     this.sections = layoutConfig?.sections || [];
     this.globalAisles = layoutConfig?.globalAisles || [];
+    this.rowCache = new Map();
+    this.labelCache = new Map();
   }
 
   configure(sectionConfig) {
@@ -32,6 +34,12 @@ export class SeatNumberingSystem {
   }
 
   computeRowLabel(sectionIndex, rowIndex) {
+    const cacheKey = `${sectionIndex}-${rowIndex}`;
+    const cached = this.labelCache.get(cacheKey);
+    if (cached !== undefined) {
+      return cached;
+    }
+
     const meta = this.getSectionMeta(sectionIndex);
     if (!meta) {
       return "";
@@ -41,13 +49,17 @@ export class SeatNumberingSystem {
     const startCode = startRow.charCodeAt(startRow.length - 1) - 65;
     const totalIndex = startCode + rowIndex;
 
+    let result;
     if (totalIndex < 26) {
-      return String.fromCharCode(65 + totalIndex);
+      result = String.fromCharCode(65 + totalIndex);
+    } else {
+      const first = Math.floor(totalIndex / 26) - 1;
+      const second = totalIndex % 26;
+      result = String.fromCharCode(65 + first) + String.fromCharCode(65 + second);
     }
 
-    const first = Math.floor(totalIndex / 26) - 1;
-    const second = totalIndex % 26;
-    return String.fromCharCode(65 + first) + String.fromCharCode(65 + second);
+    this.labelCache.set(cacheKey, result);
+    return result;
   }
 
   getRowOverride(sectionIndex, rowLabel) {
@@ -146,34 +158,152 @@ export class SeatNumberingSystem {
     return override.emptySeatIndices.includes(seatIndex);
   }
 
+  /**
+   * Parses a pattern string into an array of position types
+   * @param {string} pattern - Pattern string using S (seat), H (gap), E (empty)
+   * @returns {Array} Array of position objects with type property
+   */
+  parsePattern(pattern) {
+    if (!pattern || typeof pattern !== 'string') {
+      return [];
+    }
+
+    const positions = [];
+    for (let i = 0; i < pattern.length; i++) {
+      const char = pattern[i].toUpperCase();
+
+      if (char === 'S') {
+        positions.push({ type: 'seat', index: i });
+      } else if (char === 'H') {
+        positions.push({ type: 'gap', index: i });
+      } else if (char === 'E') {
+        positions.push({ type: 'empty', index: i });
+      } else {
+        // Invalid character - treat as empty
+        positions.push({ type: 'empty', index: i });
+      }
+    }
+
+    return positions;
+  }
+
+  /**
+   * Gets the seat shape configuration for a specific position
+   * @param {number} position - Seat position/index in the row
+   * @param {Object} rowConfig - Row configuration object
+   * @returns {Object} Shape configuration with type, width, and metadata
+   */
+  getSeatShape(position, rowConfig) {
+    // Default shape configuration
+    const defaultShape = {
+      shape: 'standard',
+      width: 1.0,
+      metadata: {}
+    };
+
+    // If no row config or no seat shapes defined, return default
+    if (!rowConfig || !rowConfig.seatShapes || !Array.isArray(rowConfig.seatShapes)) {
+      return defaultShape;
+    }
+
+    // Find the seat shape configuration that includes this position
+    for (const shapeConfig of rowConfig.seatShapes) {
+      if (shapeConfig.positions && Array.isArray(shapeConfig.positions)) {
+        if (shapeConfig.positions.includes(position)) {
+          return {
+            shape: shapeConfig.shape || 'standard',
+            width: shapeConfig.width || 1.0,
+            metadata: shapeConfig.metadata || {}
+          };
+        }
+      }
+    }
+
+    // No specific shape found, return default
+    return defaultShape;
+  }
+
   enumerateRow(sectionIndex, rowIndex) {
+    const cacheKey = `${sectionIndex}-${rowIndex}`;
+    const cached = this.rowCache.get(cacheKey);
+    if (cached) {
+      return cached;
+    }
+
     const meta = this.getSectionMeta(sectionIndex);
     if (!meta) {
       return [];
     }
 
     const rowLabel = this.computeRowLabel(sectionIndex, rowIndex);
+    const rowOverride = this.getRowOverride(sectionIndex, rowLabel);
     const seats = [];
     let effectiveIndex = 0;
 
-    for (let seatIndex = 0; seatIndex < meta.seatsPerRow; seatIndex++) {
-      const skipped = this.shouldSkipIndex(sectionIndex, rowIndex, seatIndex);
-      const empty = this.isSeatEmpty(sectionIndex, rowIndex, seatIndex);
-      const label = this.computeSeatLabel(sectionIndex, rowIndex, seatIndex);
-
-      seats.push({
-        seatIndex,
-        label: label || `${rowLabel}-SKIP`,
-        skipped,
-        empty,
-        effectiveIndex: skipped || empty ? null : effectiveIndex,
-      });
-
-      if (!skipped && !empty) {
-        effectiveIndex++;
+    // Check if row has a custom pattern
+    let positions = [];
+    if (rowOverride && rowOverride.pattern) {
+      // Use pattern from row override
+      positions = this.parsePattern(rowOverride.pattern);
+    } else {
+      // Generate default pattern (all seats)
+      for (let i = 0; i < meta.seatsPerRow; i++) {
+        positions.push({ type: 'seat', index: i });
       }
     }
 
+    // Process each position in the pattern
+    for (let i = 0; i < positions.length; i++) {
+      const position = positions[i];
+
+      if (position.type === 'gap') {
+        // Gap position - add as gap marker
+        seats.push({
+          seatIndex: i,
+          label: null,
+          skipped: false,
+          empty: false,
+          gap: true,
+          effectiveIndex: null,
+          shape: null
+        });
+      } else if (position.type === 'empty') {
+        // Empty position - add as empty marker
+        seats.push({
+          seatIndex: i,
+          label: null,
+          skipped: false,
+          empty: true,
+          gap: false,
+          effectiveIndex: null,
+          shape: null
+        });
+      } else {
+        // Seat position
+        const skipped = this.shouldSkipIndex(sectionIndex, rowIndex, i);
+        const empty = this.isSeatEmpty(sectionIndex, rowIndex, i);
+        const label = this.computeSeatLabel(sectionIndex, rowIndex, i);
+
+        // Get seat shape configuration
+        const shape = this.getSeatShape(i, rowOverride);
+
+        seats.push({
+          seatIndex: i,
+          label: label || `${rowLabel}-SKIP`,
+          skipped,
+          empty,
+          gap: false,
+          effectiveIndex: skipped || empty ? null : effectiveIndex,
+          shape: shape
+        });
+
+        if (!skipped && !empty) {
+          effectiveIndex++;
+        }
+      }
+    }
+
+    this.rowCache.set(cacheKey, seats);
     return seats;
   }
 

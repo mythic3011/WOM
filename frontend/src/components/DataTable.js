@@ -1,8 +1,11 @@
-import { createTable, initTableFeatures } from "./Table.js";
-import { TableSortUtil } from "@utils/table/tableSortUtil.js";
-import { TableFilterUtil } from "@utils/table/tableFilterUtil.js";
-import { Avatar } from "./common/Avatar.js";
+
 import dayjs from "dayjs";
+
+import { TableFilterUtil } from "@utils/table/tableFilterUtil.js";
+import { TableSortUtil } from "@utils/table/tableSortUtil.js";
+
+import { Avatar } from "./common/Avatar.js";
+import { createTable, initTableFeatures } from "./Table.js";
 
 export class DataTable {
   constructor(containerId, options) {
@@ -403,6 +406,12 @@ export class DataTable {
 
   attachEventListeners() {
     const tableSelector = `#${this.containerId}`;
+
+    // Remove previous listeners to prevent duplicates
+    $(document).off("change", `${tableSelector} .column-filter`);
+    $(document).off("click", `${tableSelector} #clearColumnFilters`);
+    $(document).off("click", `${tableSelector} #toggleColumnVisibility`);
+    $(document).off("change", `${tableSelector} .column-visibility-toggle`);
 
     $(document).on("change", `${tableSelector} .column-filter`, (e) => {
       const column = $(e.target).data("column");

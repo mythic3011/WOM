@@ -1,6 +1,6 @@
 import { User } from "#models/index.js";
-import { hashPassword, comparePassword } from "#utils/hash.js";
-import { ConflictError, UnauthorizedError, NotFoundError } from "#utils/errors.js";
+import { hashPassword } from "#utils/hash.js";
+import { ConflictError, UnauthorizedError } from "#utils/errors.js";
 
 export const register = async (userData) => {
   const { email, username, password, name, phone, role = "user" } = userData;
@@ -72,7 +72,9 @@ export const login = async (identifier, password) => {
     lastLoginAt: new Date(),
   });
 
-  return user.toSafeObject();
+  // Return storage-optimized object without large base64 images
+  // This prevents localStorage quota exceeded errors
+  return user.toStorageObject();
 };
 
 export const getUserById = async (userId) => {
@@ -82,5 +84,21 @@ export const getUserById = async (userId) => {
     return null;
   }
 
+  // Return storage-optimized object for session/localStorage
+  return user.toStorageObject();
+};
+
+/**
+ * Get user with full data including profile image
+ * Use this only when you specifically need the image
+ */
+export const getUserWithImage = async (userId) => {
+  const user = await User.findByPk(userId);
+
+  if (!user) {
+    return null;
+  }
+
+  // Return full safe object including profile image
   return user.toSafeObject();
 };

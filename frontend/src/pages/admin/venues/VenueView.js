@@ -1,10 +1,11 @@
-import { createEmptyState } from "@components/EmptyState.js";
-import { createButton } from "@components/common/Button.js";
+
 import { createBadge } from "@components/common/Badge.js";
+import { createButton } from "@components/common/Button.js";
+import { createEmptyState } from "@components/EmptyState.js";
 import { createImageUpload } from "@components/ImageUpload.js";
-import { VenueLayoutEditor } from "@components/VenueLayoutEditor.js";
 import { SeatLayoutEditor } from "@components/SeatLayoutEditor.js";
 import { SeatMap } from "@components/SeatMap.js";
+import { VenueLayoutEditor } from "@components/VenueLayoutEditor.js";
 import { SeatNumberingSystem } from "@utils/SeatNumberingSystem.js";
 
 export class VenueView {

@@ -1,6 +1,8 @@
+
+import dayjs from "dayjs";
+
 import { performanceUtils } from "@utils/performanceUtils.js";
 import { getStatusBadge } from "@utils/status.js";
-import dayjs from "dayjs";
 
 export const PerformanceCard = {
   render(performance, onView, onEdit, onDelete, onManageShowtimes) {

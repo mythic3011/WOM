@@ -1,19 +1,22 @@
-import { createEmptyState } from "@components/EmptyState.js";
-import { FormComponents } from "@components/FormComponents.js";
-import { BookingCard } from "@components/BookingCard.js";
-import { SwalColors } from "@utils/colors.js";
-import { bookingService } from "@services/bookingService.js";
-import { performanceService } from "@services/performanceService.js";
+
 import dayjs from "dayjs";
 import Swal from "sweetalert2";
-import { notify } from "@utils/ui/notification.js";
-import { TicketGenerator } from "@utils/reports/ticketGenerator.js";
-import { InvoiceGenerator } from "@utils/reports/invoiceGenerator.js";
-import { getStatusConfig } from "@utils/status.js";
+
+import { BookingCard } from "@components/BookingCard.js";
+import { createEmptyState } from "@components/EmptyState.js";
+import { FormComponents } from "@components/FormComponents.js";
 import { handleApiError } from "@services/apiClient.js";
+import { bookingService } from "@services/bookingService.js";
+import { performanceService } from "@services/performanceService.js";
+import { downloadBookingCalendar } from "@utils/calendar.js";
+import { SwalColors } from "@utils/colors.js";
 import { getCurrentUser } from "@utils/core/auth.js";
-import { formatCurrency } from "@utils/utils.js";
+import { InvoiceGenerator } from "@utils/reports/invoiceGenerator.js";
+import { TicketGenerator } from "@utils/reports/ticketGenerator.js";
 import { getDisplayLabel } from "@utils/seatIdHelper.js";
+import { getStatusConfig } from "@utils/status.js";
+import { notify } from "@utils/ui/notification.js";
+import { formatCurrency } from "@utils/utils.js";
 
 export default {
   title: "My Bookings | User",
@@ -223,6 +226,26 @@ export default {
     $(document).on("click", ".cancel-booking-btn", (e) => {
       const bookingId = $(e.currentTarget).attr("data-id");
       this.cancelBooking(bookingId);
+    });
+
+    // Calendar download buttons
+    $(document).on('click', '.add-to-calendar-btn', (e) => {
+      e.preventDefault();
+      const btn = $(e.currentTarget);
+      const bookingData = {
+        id: btn.data('booking-id'),
+        performanceTitle: btn.data('title'),
+        performanceDate: btn.data('date'),
+        venueName: btn.data('venue')
+      };
+
+      try {
+        downloadBookingCalendar(bookingData);
+        notify.success('Calendar event downloaded!');
+      } catch (error) {
+        console.error('Error downloading calendar:', error);
+        notify.error('Failed to download calendar event');
+      }
     });
   },
 

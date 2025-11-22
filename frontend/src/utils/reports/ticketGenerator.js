@@ -1,26 +1,12 @@
+
 import dayjs from "dayjs";
-import { statsService } from "@services/statsService.js";
-import QRCode from "qrcode";
 import pdfMake from "pdfmake/build/pdfmake";
+import QRCode from "qrcode";
+
 import { COMPANY_INFO } from "@config/config.js";
+import { statsService } from "@services/statsService.js";
 import { parseFullId, getDisplayLabel } from "@utils/seatIdHelper.js";
-
-const initPdfMake = async () => {
-  try {
-    const pdfFonts = await import("pdfmake/build/vfs_fonts");
-    if (pdfFonts.pdfMake?.vfs) {
-      pdfMake.vfs = pdfFonts.pdfMake.vfs;
-    } else if (pdfFonts.default?.pdfMake?.vfs) {
-      pdfMake.vfs = pdfFonts.default.pdfMake.vfs;
-    } else if (pdfFonts.default?.vfs) {
-      pdfMake.vfs = pdfFonts.default.vfs;
-    }
-  } catch (error) {
-    console.error("Failed to load pdfMake fonts:", error);
-  }
-};
-
-initPdfMake();
+import "./pdfUtils.js";
 
 export const TicketGenerator = {
   generateVerificationCode(booking, performance) {
@@ -516,9 +502,9 @@ export const TicketGenerator = {
         {
           text: [
             { text: "Need Assistance?\n", bold: true, fontSize: 11 },
-            `${COMPANY_INFO.email} |  ${COMPANY_INFO.phone}\n`,
+            `${COMPANY_INFO.contact.email} | ${COMPANY_INFO.contact.phone}\n`,
             {
-              text: "Western Orchestral Music Performance System",
+              text: COMPANY_INFO.fullName,
               fontSize: 8,
             },
           ],

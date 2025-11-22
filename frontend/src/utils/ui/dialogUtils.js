@@ -1,4 +1,6 @@
+
 import Swal from "sweetalert2";
+
 import { SwalColors } from "@utils/colors.js";
 
 export const dialogUtils = {

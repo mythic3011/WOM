@@ -1,22 +1,24 @@
-import { createEmptyState } from "@components/EmptyState.js";
-import { FormComponents } from "@components/FormComponents.js";
-import { createTable, initTableFeatures } from "@components/Table.js";
-import { ticketTypeService, bookingService, performanceService, userAPI, handleApiError, bookingAPI } from "@services/index.js";
-import { SwalColors } from "@utils/colors.js";
 import dayjs from "dayjs";
 import Swal from "sweetalert2";
-import { notify } from "@utils/ui/notification.js";
+
+import { createEmptyState } from "@components/EmptyState.js";
+import { FormComponents } from "@components/FormComponents.js";
+import { SeatMap } from "@components/SeatMap.js";
+import { createTable, initTableFeatures } from "@components/Table.js";
+import { getTierBadge } from "@config/tierConfig.js";
+import { ticketTypeService, bookingService, performanceService, userAPI, handleApiError, bookingAPI } from "@services/index.js";
+import { attachSeatTooltipListeners } from "@utils/booking/seatTooltip.js";
+import { SwalColors } from "@utils/colors.js";
+import { initSeatMapPanzoom } from "@utils/panzoomSeatMap.js";
+import { getDisplayLabel, parseFullId } from "@utils/seatIdHelper.js";
 import {
   getStatusBadge,
   getStatusConfig,
   STATUS_CONFIGS,
 } from "@utils/status.js";
+import { notify } from "@utils/ui/notification.js";
 import { formatCurrency } from "@utils/utils.js";
-import { getTierBadge } from "@config/tierConfig.js";
-import { getDisplayLabel, parseFullId } from "@utils/seatIdHelper.js";
-import { SeatMap } from "@components/SeatMap.js";
-import { initSeatMapPanzoom } from "@utils/panzoomSeatMap.js";
-import { attachSeatTooltipListeners } from "@utils/booking/seatTooltip.js";
+
 const SEAT_GRID_CONFIG = {
   rows: ["A", "B", "C", "D", "E", "F", "G", "H"],
   seatsPerRow: 15,
@@ -523,25 +525,21 @@ export default {
   },
 
   renderSeatsCell(booking) {
-    const seats = this.extractSeatNumbers(booking.seats);
+    const { seatLabels, isNewFormat } = this.extractBookingSeats(booking);
     return `
       <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
         <i class="fas fa-chair mr-1"></i>
-        ${seats.length} seat${seats.length > 1 ? "s" : ""}
+        ${seatLabels.length} seat${seatLabels.length > 1 ? "s" : ""}
       </span>
-      <div class="text-xs text-gray-500 mt-1 font-mono">${seats.join(
-      ", "
-    )}</div>
+      <div class="text-xs text-gray-500 mt-1 font-mono">${seatLabels.join(", ")}</div>
+      ${isNewFormat ? '<div class="text-xs text-green-600 mt-1"><i class="fas fa-check-circle"></i> Optimized</div>' : ''}
     `;
   },
 
   renderAmountCell(booking) {
-    const ticketTypeName =
-      typeof booking.ticketType === "object"
-        ? booking.ticketType?.name
-        : booking.ticketType;
-    const ticketTypeInfo = ticketTypeName
-      ? `<div class="text-xs text-gray-500">${ticketTypeName}</div>`
+    const { ticketInfo } = this.extractBookingSeats(booking);
+    const ticketTypeInfo = ticketInfo
+      ? `<div class="text-xs text-gray-500">${ticketInfo}</div>`
       : "";
     return `
       <span class="text-sm font-bold text-gray-900">${formatCurrency(
@@ -695,6 +693,19 @@ export default {
   },
 
   parseSeatDetails(seat, index) {
+    // Handle seatTicket object (new format)
+    if (seat.seatId && seat.ticketTypeId) {
+      return {
+        index: index + 1,
+        seatNumber: seat.seatLabel || getDisplayLabel(seat.seatId),
+        section: seat.section || "-",
+        tier: null,
+        ticketType: seat.ticketTypeName || "-",
+        price: seat.price ? formatCurrency(seat.price) : "-",
+      };
+    }
+
+    // Handle string seat ID
     if (typeof seat === "string") {
       const parsed = parseFullId(seat);
       if (parsed) {
@@ -719,6 +730,7 @@ export default {
       };
     }
 
+    // Handle old seat object format
     return {
       index: index + 1,
       seatNumber:
@@ -736,18 +748,11 @@ export default {
   },
 
   renderSeatDetailRow(seatData) {
-    const tierBadge = seatData.tier
-      ? `<span class="px-2 py-0.5 rounded-full text-xs font-semibold ${getTierBadge(
-        seatData.tier
-      )}">${seatData.tier}</span>`
-      : "-";
-
     return `
       <tr class="border-b border-gray-200 hover:bg-gray-50">
         <td class="py-2 px-3 text-sm">${seatData.index}</td>
         <td class="py-2 px-3 text-sm font-mono font-semibold text-indigo-700">${seatData.seatNumber}</td>
         <td class="py-2 px-3 text-sm">${seatData.section}</td>
-        <td class="py-2 px-3 text-sm">${tierBadge}</td>
         <td class="py-2 px-3 text-sm">${seatData.ticketType}</td>
         <td class="py-2 px-3 text-sm text-right font-semibold">${seatData.price}</td>
       </tr>
@@ -790,7 +795,8 @@ export default {
         ${this.renderCustomerInfoSection(customer)}
         ${this.renderSeatsDetailsSection(
       seats,
-      booking.amount || booking.totalAmount
+      booking.amount || booking.totalAmount,
+      booking
     )}
       </div>
     `;
@@ -826,6 +832,7 @@ export default {
       ? dayjs(performanceData.date).format("MMMM D, YYYY")
       : "N/A";
 
+    const venueName = performanceData.venueName || performanceData.venue?.name || performanceData.venue || "N/A";
     return `
       <div class="bg-blue-50 rounded-lg p-4">
         <h3 class="font-semibold text-gray-900 mb-2">
@@ -833,7 +840,7 @@ export default {
         </h3>
         <div class="space-y-2 text-sm">
           <p class="font-semibold text-indigo-900 text-base">${performanceData.title}</p>
-          <p><span class="font-medium">Venue:</span> ${performanceData.venue}</p>
+          <p><span class="font-medium">Venue:</span> ${venueName}</p>
           <p><span class="font-medium">Date:</span> ${dateDisplay}</p>
         </div>
       </div>
@@ -859,8 +866,13 @@ export default {
     `;
   },
 
-  renderSeatsDetailsSection(seats, totalAmount) {
-    const seatRows = seats
+  renderSeatsDetailsSection(seats, totalAmount, booking) {
+    // Use seatTickets if available (new format)
+    const seatsToRender = booking?.seatTickets && Array.isArray(booking.seatTickets) && booking.seatTickets.length > 0
+      ? booking.seatTickets
+      : seats;
+
+    const seatRows = seatsToRender
       .map((seat, index) => {
         const seatData = this.parseSeatDetails(seat, index);
         return this.renderSeatDetailRow(seatData);
@@ -879,7 +891,6 @@ export default {
                 <th class="py-2 px-3 text-left text-xs font-semibold text-gray-700">#</th>
                 <th class="py-2 px-3 text-left text-xs font-semibold text-gray-700">Seat</th>
                 <th class="py-2 px-3 text-left text-xs font-semibold text-gray-700">Section/Zone</th>
-                <th class="py-2 px-3 text-left text-xs font-semibold text-gray-700">Tier</th>
                 <th class="py-2 px-3 text-left text-xs font-semibold text-gray-700">Ticket Type</th>
                 <th class="py-2 px-3 text-right text-xs font-semibold text-gray-700">Price</th>
               </tr>
@@ -889,7 +900,7 @@ export default {
             </tbody>
             <tfoot class="bg-gray-50 border-t-2 border-gray-300">
               <tr>
-                <td colspan="5" class="py-3 px-3 text-sm font-semibold text-gray-900 text-right">Total Amount:</td>
+                <td colspan="4" class="py-3 px-3 text-sm font-semibold text-gray-900 text-right">Total Amount:</td>
                 <td class="py-3 px-3 text-right">
                   <span class="text-lg font-bold text-green-700">${formatCurrency(
       totalAmount
@@ -975,13 +986,26 @@ export default {
     const customer = this.getCustomerData(booking);
 
     const { value: formValues } = await Swal.fire({
-      title: '<i class="fas fa-edit text-blue-600"></i> Edit Booking',
+      title: `
+        <div class="flex items-center justify-center gap-3 text-gray-900">
+          <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg">
+            <i class="fas fa-edit text-white text-lg"></i>
+          </div>
+          <span class="text-2xl font-bold">Edit Booking</span>
+        </div>
+      `,
       html: this.generateEditBookingFormHTML(booking, customer.email),
-      width: "600px",
+      width: "700px",
       showCancelButton: true,
-      confirmButtonText: "Save Changes",
-      cancelButtonText: "Cancel",
-      confirmButtonColor: SwalColors.info,
+      confirmButtonText: '<i class="fas fa-save mr-2"></i>Save Changes',
+      cancelButtonText: '<i class="fas fa-times mr-2"></i>Cancel',
+      confirmButtonColor: "#4f46e5",
+      cancelButtonColor: "#6b7280",
+      customClass: {
+        popup: "rounded-2xl shadow-2xl",
+        confirmButton: "rounded-xl px-6 py-3 font-bold shadow-lg hover:shadow-xl transition-all",
+        cancelButton: "rounded-xl px-6 py-3 font-semibold",
+      },
       didOpen: () => this.setupEditBookingHandlers(performance),
       preConfirm: () => this.validateEditBookingForm(),
     });
@@ -999,6 +1023,29 @@ export default {
         }
 
         this.filterBookings();
+
+        await Swal.fire({
+          icon: "success",
+          title: "Booking Updated!",
+          html: `
+            <div class="text-center">
+              <p class="text-gray-600 mb-2">Booking <strong class="text-indigo-600">#${bookingId}</strong> has been updated successfully.</p>
+              <div class="mt-4 p-3 bg-green-50 rounded-lg border border-green-200">
+                <p class="text-sm text-green-800">
+                  <i class="fas fa-check-circle mr-1"></i>
+                  All changes have been saved and applied.
+                </p>
+              </div>
+            </div>
+          `,
+          confirmButtonText: "Got it!",
+          confirmButtonColor: "#10b981",
+          customClass: {
+            popup: "rounded-2xl",
+            confirmButton: "rounded-xl px-6 py-3 font-bold",
+          },
+        });
+
         notify.success("Booking updated successfully");
       } catch (error) {
         console.error("Error updating booking:", error);
@@ -1009,30 +1056,65 @@ export default {
 
   generateEditBookingFormHTML(booking, customerEmail) {
     const ticketTypes = ticketTypeService.getAll() || [];
-    const seats = Array.isArray(booking.seats) ? booking.seats : [];
+    // Prefer seatTickets for better seat information
+    const seats = (booking.seatTickets && Array.isArray(booking.seatTickets) && booking.seatTickets.length > 0)
+      ? booking.seatTickets
+      : (Array.isArray(booking.seats) ? booking.seats : []);
 
     return `
-      <div class="text-left space-y-4">
-        ${this.renderEditField(
-      "Booking ID",
-      "edit-booking-id",
-      "text",
-      booking.id,
-      true
-    )}
+      <div class="text-left space-y-5 p-1">
+        <!-- Booking ID (Read-only) -->
+        <div class="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-xl p-4 border-2 border-indigo-200">
+          <label class="block text-xs font-bold text-indigo-900 uppercase tracking-wider mb-2">
+            <i class="fas fa-hashtag mr-1"></i>Booking ID
+          </label>
+          <input
+            id="edit-booking-id"
+            type="text"
+            value="${booking.id}"
+            disabled
+            class="w-full px-4 py-3 bg-white border-2 border-indigo-100 rounded-xl font-mono font-bold text-indigo-700 text-lg cursor-not-allowed"
+          >
+        </div>
+
+        <!-- Performance Selection -->
         ${this.renderEditPerformanceSelect(booking.performanceId)}
+        
+        <!-- Customer Selection -->
         ${this.renderEditCustomerSelect(customerEmail)}
+        
+        <!-- Seats Selection -->
         ${this.renderEditSeatsField(seats)}
-        ${this.renderEditField(
-      "Amount (HKD)",
-      "edit-amount",
-      "number",
-      booking.amount,
-      false,
-      { min: "0", step: "1" }
-    )}
-        ${this.renderEditTicketTypeSelect(booking.ticketType, ticketTypes)}
+        
+        <!-- Amount -->
+        <div>
+          <label class="block text-sm font-bold text-gray-700 mb-2">
+            <i class="fas fa-dollar-sign mr-1.5 text-green-600"></i>Amount (HKD)
+          </label>
+          <input
+            id="edit-amount"
+            type="number"
+            value="${booking.amount}"
+            min="0"
+            step="1"
+            class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-green-500 font-semibold text-lg transition-all"
+            placeholder="0.00"
+          >
+        </div>
+        
+        <!-- Status -->
         ${this.renderEditStatusSelect(booking.status)}
+        
+        <!-- Hidden ticket type field -->
+        <input type="hidden" id="edit-ticket-type" value="${typeof booking.ticketType === "object" ? booking.ticketType?.name || '' : booking.ticketType || ''}" />
+
+        <!-- Info Box -->
+        <div class="bg-blue-50 rounded-xl p-4 border-l-4 border-blue-500">
+          <p class="text-sm text-blue-900 flex items-start gap-2">
+            <i class="fas fa-info-circle mt-0.5 flex-shrink-0"></i>
+            <span>Changes will be saved immediately. Make sure all information is correct before saving.</span>
+          </p>
+        </div>
       </div>
     `;
   },
@@ -1040,60 +1122,78 @@ export default {
   renderEditField(label, id, type, value, disabled = false, attrs = {}) {
     const disabledClass = disabled
       ? "bg-gray-50 text-gray-500 cursor-not-allowed"
-      : "";
+      : "focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500";
     const attrsStr = Object.entries(attrs)
       .map(([k, v]) => `${k}="${v}"`)
       .join(" ");
 
     return `
       <div>
-        <label class="block text-sm font-medium text-gray-700 mb-1">${label}</label>
+        <label class="block text-sm font-bold text-gray-700 mb-2">${label}</label>
         <input
           id="${id}"
           type="${type}"
           value="${value}"
           ${disabled ? "disabled" : ""}
           ${attrsStr}
-          class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 ${disabledClass}"
+          class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl transition-all ${disabledClass}"
         >
       </div>
     `;
   },
 
   renderEditPerformanceSelect(selectedId) {
-    const options = this.performances
-      .map(
-        (p) =>
-          `<option value="${p.id}" ${String(p.id) === String(selectedId) ? "selected" : ""
-          }>${p.title}</option>`
-      )
-      .join("");
+    const selectedPerformance = this.performances.find(p => String(p.id) === String(selectedId));
+    const performanceTitle = selectedPerformance?.title || "Unknown Performance";
 
     return `
       <div>
-        <label class="block text-sm font-medium text-gray-700 mb-1">Performance</label>
-        <select id="edit-performance" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
-          ${options}
-        </select>
+        <label class="block text-sm font-bold text-gray-700 mb-2">
+          <i class="fas fa-music mr-1.5 text-indigo-600"></i>Performance
+        </label>
+        <input 
+          type="text" 
+          value="${performanceTitle}"
+          disabled
+          class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl bg-gray-50 font-semibold text-gray-700 cursor-not-allowed"
+        />
+        <input type="hidden" id="edit-performance" value="${selectedId}" />
+        <p class="text-xs text-gray-500 mt-1">
+          <i class="fas fa-lock mr-1"></i>Performance cannot be changed
+        </p>
       </div>
     `;
   },
 
   renderEditCustomerSelect(selectedEmail) {
-    const options = this.users
-      .map(
-        (u) =>
-          `<option value="${u.id}" ${u.email === selectedEmail ? "selected" : ""
-          }>${u.name} (${u.email})</option>`
-      )
+    const selectedUser = this.users.find(u => u.email === selectedEmail);
+    const selectedValue = selectedUser ? `${selectedUser.name} (${selectedUser.email})` : '';
+    const selectedId = selectedUser?.id || '';
+    
+    const datalistOptions = this.users
+      .map(u => `<option value="${u.name} (${u.email})" data-id="${u.id}"></option>`)
       .join("");
 
     return `
       <div>
-        <label class="block text-sm font-medium text-gray-700 mb-1">Customer</label>
-        <select id="edit-customer" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
-          ${options}
-        </select>
+        <label class="block text-sm font-bold text-gray-700 mb-2">
+          <i class="fas fa-user mr-1.5 text-purple-600"></i>Customer
+        </label>
+        <input 
+          id="edit-customer-search" 
+          type="text" 
+          list="customer-list"
+          value="${selectedValue}"
+          placeholder="Type to search customer..."
+          class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 font-semibold transition-all"
+        />
+        <datalist id="customer-list">
+          ${datalistOptions}
+        </datalist>
+        <input type="hidden" id="edit-customer" value="${selectedId}" />
+        <p class="text-xs text-gray-500 mt-1">
+          <i class="fas fa-search mr-1"></i>Start typing to filter customers
+        </p>
       </div>
     `;
   },
@@ -1102,16 +1202,30 @@ export default {
     const labels = this.extractSeatNumbers(seats);
     return `
       <div>
-        <label class="block text-sm font-medium text-gray-700 mb-1">Selected Seats</label>
-        <div class="flex gap-2">
-          <input id="edit-seats" type="text" value="${labels.join(
-      ", "
-    )}" class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="A1, A2, A3" readonly>
-          <button id="select-seats-btn" type="button" class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 focus:ring-2 focus:ring-indigo-500 transition-colors">
+        <label class="block text-sm font-bold text-gray-700 mb-2">
+          <i class="fas fa-couch mr-1.5 text-pink-600"></i>Selected Seats
+        </label>
+        <div class="flex gap-3">
+          <input 
+            id="edit-seats" 
+            type="text" 
+            value="${labels.join(", ")}" 
+            class="flex-1 px-4 py-3 border-2 border-gray-200 rounded-xl bg-gray-50 font-mono font-semibold text-gray-700 cursor-not-allowed" 
+            placeholder="No seats selected" 
+            readonly
+          >
+          <button 
+            id="select-seats-btn" 
+            type="button" 
+            class="px-6 py-3 bg-gradient-to-r from-pink-500 to-rose-500 text-white rounded-xl hover:from-pink-600 hover:to-rose-600 focus:ring-2 focus:ring-pink-500 transition-all font-bold shadow-md hover:shadow-lg whitespace-nowrap"
+          >
             <i class="fas fa-chair mr-2"></i>Select Seats
           </button>
         </div>
-        <p class="text-xs text-gray-500 mt-1">Click "Select Seats" to choose from available seats</p>
+        <p class="text-xs text-gray-500 mt-2 flex items-center gap-1">
+          <i class="fas fa-info-circle"></i>
+          Click "Select Seats" to open the interactive seat map
+        </p>
       </div>
     `;
   },
@@ -1119,29 +1233,35 @@ export default {
   renderEditTicketTypeSelect(selectedType, ticketTypes) {
     const selectedName =
       typeof selectedType === "object" ? selectedType?.name : selectedType;
-    const options =
-      ticketTypes.length > 0
-        ? ticketTypes
-          .map(
-            (type) =>
-              `<option value="${type.name}" ${type.name === selectedName ? "selected" : ""
-              }>${type.name}${type.isCustom ? " (Custom)" : ""}</option>`
-          )
-          .join("")
-        : `<option value="${selectedName}" selected>${selectedName}</option>`;
+    
+    const displayName = selectedName && selectedName !== "undefined" ? selectedName : "No ticket type";
 
     return `
       <div>
-        <label class="block text-sm font-medium text-gray-700 mb-1">Ticket Type</label>
-        <select id="edit-ticket-type" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
-          ${options}
-        </select>
+        <label class="block text-sm font-bold text-gray-700 mb-2">
+          <i class="fas fa-ticket-alt mr-1.5 text-orange-600"></i>Ticket Type
+        </label>
+        <input 
+          type="text" 
+          value="${displayName}"
+          disabled
+          class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl bg-gray-50 font-semibold text-gray-700 cursor-not-allowed"
+        />
+        <input type="hidden" id="edit-ticket-type" value="${selectedName || ''}" />
+        <p class="text-xs text-gray-500 mt-1">
+          <i class="fas fa-lock mr-1"></i>Ticket type cannot be changed
+        </p>
       </div>
     `;
   },
 
   renderEditStatusSelect(selectedStatus) {
     const statuses = ["pending", "confirmed", "cancelled"];
+    const statusIcons = {
+      pending: "fa-clock",
+      confirmed: "fa-check-circle",
+      cancelled: "fa-times-circle"
+    };
     const options = statuses
       .map(
         (status) =>
@@ -1152,8 +1272,10 @@ export default {
 
     return `
       <div>
-        <label class="block text-sm font-medium text-gray-700 mb-1">Status</label>
-        <select id="edit-status" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+        <label class="block text-sm font-bold text-gray-700 mb-2">
+          <i class="fas fa-info-circle mr-1.5 text-blue-600"></i>Status
+        </label>
+        <select id="edit-status" class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-semibold transition-all">
           ${options}
         </select>
       </div>
@@ -1161,6 +1283,17 @@ export default {
   },
 
   setupEditBookingHandlers(performance) {
+    // Handle customer search input
+    $("#edit-customer-search").on("input change", (e) => {
+      const searchValue = $(e.target).val();
+      const matchedUser = this.users.find(u => 
+        `${u.name} (${u.email})` === searchValue
+      );
+      if (matchedUser) {
+        $("#edit-customer").val(matchedUser.id);
+      }
+    });
+
     $("#select-seats-btn").on("click", async () => {
       const $seatsInput = $("#edit-seats");
       const currentSeats = $seatsInput
@@ -1510,12 +1643,12 @@ export default {
   },
 
   renderSeatSelectionHeader(performance) {
+    const venueName = performance?.venueName || performance?.venue?.name || performance?.venue || "N/A";
     return `
       <div class="bg-gray-50 rounded-lg p-4 mb-4">
         <p class="text-sm mb-2"><span class="font-medium">Performance:</span> ${performance?.title || "Unknown"
       }</p>
-        <p class="text-sm"><span class="font-medium">Venue:</span> ${performance?.venue || "N/A"
-      }</p>
+        <p class="text-sm"><span class="font-medium">Venue:</span> ${venueName}</p>
       </div>
     `;
   },
@@ -1901,14 +2034,14 @@ export default {
     const rows = this.filteredBookings.map((booking) => {
       const performance = this.getPerformanceById(booking.performanceId);
       const customer = this.getCustomerData(booking);
-      const seats = this.extractSeatNumbers(booking.seats);
+      const { seatLabels } = this.extractBookingSeats(booking);
 
       return [
         booking.id,
         performance?.title || "Unknown",
         customer.name,
         customer.email,
-        seats.join("; "),
+        seatLabels.join("; "),
         booking.amount,
         booking.status,
         dayjs(booking.bookingDate || booking.date).format("YYYY-MM-DD HH:mm"),
@@ -1918,5 +2051,41 @@ export default {
     return [headers, ...rows]
       .map((row) => row.map((cell) => `"${cell}"`).join(","))
       .join("\n");
+  },
+
+  /**
+   * Extract booking seat data from either seatTickets (new format) or seats (old format)
+   * Returns seat labels, ticket info, and format indicator
+   */
+  extractBookingSeats(booking) {
+    // Check if using new seatTickets format
+    if (booking.seatTickets && Array.isArray(booking.seatTickets) && booking.seatTickets.length > 0) {
+      const seatLabels = booking.seatTickets.map(st => st.seatLabel || getDisplayLabel(st.seatId));
+
+      // Get unique ticket type names
+      const ticketTypes = [...new Set(booking.seatTickets.map(st => st.ticketTypeName))];
+      const ticketInfo = ticketTypes.length === 1
+        ? ticketTypes[0]
+        : `${ticketTypes.length} types`;
+
+      return {
+        seatLabels,
+        ticketInfo,
+        isNewFormat: true
+      };
+    }
+
+    // Fallback to old seats format
+    const seats = this.extractSeatNumbers(booking.seats);
+    const ticketTypeName =
+      typeof booking.ticketType === "object"
+        ? booking.ticketType?.name
+        : booking.ticketType;
+
+    return {
+      seatLabels: seats,
+      ticketInfo: ticketTypeName || null,
+      isNewFormat: false
+    };
   },
 };

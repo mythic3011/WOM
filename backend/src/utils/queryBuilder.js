@@ -39,7 +39,7 @@ export class QueryBuilder {
   }
 
   search(fields, searchTerm) {
-    if (!searchTerm) return this;
+    if (!searchTerm) {return this;}
 
     const searchConditions = fields.map((field) => ({
       [field]: {

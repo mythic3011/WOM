@@ -49,19 +49,40 @@ export function encrypt(data, customKey = null) {
   try {
     const key = customKey || ENCRYPTION_KEY;
     const dataString = typeof data === "string" ? data : JSON.stringify(data);
-    const encrypted = CryptoJS.AES.encrypt(dataString, key).toString();
+
+    const bytes = [];
+    for (let i = 0; i < dataString.length; i++) {
+      bytes.push(dataString.charCodeAt(i));
+    }
+    const wordArray = CryptoJS.lib.WordArray.create(new Uint8Array(bytes));
+    const encrypted = CryptoJS.AES.encrypt(wordArray, key).toString();
     return encrypted;
   } catch (error) {
     console.error("Error encrypting data:", error);
+    console.error("Data type:", typeof data);
     throw new Error("Failed to encrypt data");
   }
 }
 
 export function decrypt(encryptedData, customKey = null) {
   try {
+    // Validate input
+    if (!encryptedData || (typeof encryptedData === 'string' && !encryptedData.trim())) {
+      throw new Error("Cannot decrypt empty or invalid data");
+    }
+
     const key = customKey || ENCRYPTION_KEY;
     const decrypted = CryptoJS.AES.decrypt(encryptedData, key);
-    const decryptedString = decrypted.toString(CryptoJS.enc.Utf8);
+
+    const words = decrypted.words;
+    const sigBytes = decrypted.sigBytes;
+    const bytes = [];
+
+    for (let i = 0; i < sigBytes; i++) {
+      bytes.push((words[i >>> 2] >>> (24 - (i % 4) * 8)) & 0xff);
+    }
+
+    const decryptedString = String.fromCharCode.apply(null, bytes);
 
     if (!decryptedString) {
       throw new Error("Decryption failed - invalid key or corrupted data");

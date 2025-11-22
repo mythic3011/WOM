@@ -1,5 +1,7 @@
-import { getTierBadge } from "@config/tierConfig.js";
+
 import dayjs from "dayjs";
+
+import { getTierBadge } from "@config/tierConfig.js";
 
 export const PerformanceDetails = {
   render(performance, venue, showtimes, ticketTypes) {

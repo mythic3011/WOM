@@ -3,7 +3,7 @@
  * Provides consistent file operations across the application
  */
 
-import { notify } from '../ui/notification.js';
+import { notify } from "@utils/ui/notification.js";
 
 /**
  * File handler utility for upload, download, and validation operations

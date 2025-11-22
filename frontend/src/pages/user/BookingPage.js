@@ -1,32 +1,35 @@
-import { performanceService } from "@services/performanceService.js";
-import { ticketTypeService } from "@services/ticketTypeService.js";
-import { bookingAPI, handleApiError } from "@services/apiClient.js";
-import { ResponseExtractor } from "@services/responseExtractor.js";
-import { FormComponents } from "@components/FormComponents.js";
+
+import dayjs from "dayjs";
+import page from "page";
+import Swal from "sweetalert2";
+
 import {
   BookingProgress,
   BookingSummaryCard,
 } from "@components/booking/index.js";
+import { FormComponents } from "@components/FormComponents.js";
 import { createLoadingState } from "@components/LoadingState.js";
-import { notify } from "@utils/ui/notification.js";
-import { SwalColors } from "@utils/colors.js";
-import { ZonePricing } from "@utils/booking/zonePricing.js";
+import { SeatMap } from "@components/SeatMap.js";
+import { ROUTES } from "@config/routes.js";
 import {
   getTierColors,
   getTierLabel,
   getTierBadge,
 } from "@config/tierConfig.js";
-import { storage } from "@services/storageService.js";
-import { generateFullId, getDisplayLabel } from "@utils/seatIdHelper.js";
-import { SeatMap } from "@components/SeatMap.js";
-import { initSeatMapPanzoom } from "@utils/panzoomSeatMap.js";
-import { attachSeatTooltipListeners } from "@utils/booking/seatTooltip.js";
+import { bookingAPI, handleApiError } from "@services/apiClient.js";
 import { bookingHelpers } from "@services/bookingHelpers.js";
+import { performanceService } from "@services/performanceService.js";
+import { ResponseExtractor } from "@services/responseExtractor.js";
+import { storage } from "@services/storageService.js";
+import { ticketTypeService } from "@services/ticketTypeService.js";
+import { notificationHelpers } from "@services/notificationService.js";
+import { attachSeatTooltipListeners } from "@utils/booking/seatTooltip.js";
+import { ZonePricing } from "@utils/booking/zonePricing.js";
 import { calculationService } from "@utils/calculations.js";
-import { ROUTES } from "@config/routes.js";
-import Swal from "sweetalert2";
-import dayjs from "dayjs";
-import page from "page";
+import { SwalColors } from "@utils/colors.js";
+import { initSeatMapPanzoom } from "@utils/panzoomSeatMap.js";
+import { generateFullId, getDisplayLabel, parseSeatId, extractSection, extractRow } from "@utils/seatIdHelper.js";
+import { notify } from "@utils/ui/notification.js";
 
 export default {
   title: "Book Your Seats | WOM",
@@ -81,7 +84,7 @@ export default {
     const showtimeId = params?.showtime;
 
     if (!performanceId && !showtimeId) {
-      this.showError("No performance selected");
+      this.showError("No performance selected. Please select a performance from our catalog to continue booking.", 5);
       return;
     }
 
@@ -101,14 +104,14 @@ export default {
       }
 
       if (!this.performanceData) {
-        this.showError("Performance not found");
+        this.showError("The selected performance could not be found. It may have been removed or is no longer available.", 5);
         return;
       }
 
       await this.renderBookingForm();
     } catch (error) {
       console.error("Error loading performance:", error);
-      this.showError("Failed to load performance data");
+      this.showError("Failed to load performance data. Please check your connection and try again.", 5);
     }
   },
 
@@ -566,26 +569,28 @@ export default {
                 <div class="flex items-center justify-between mb-3">
                   <div class="flex items-center gap-3">
                     <div class="w-12 h-12 rounded-full bg-indigo-600 text-white flex items-center justify-center font-bold text-lg">
-                      ${seat}
+                      ${getDisplayLabel(seat)}
                     </div>
                     <div>
-                      <p class="font-bold text-gray-900">Seat ${seat}</p>
+                      <p class="font-bold text-gray-900">Seat ${getDisplayLabel(seat)}</p>
                       ${(() => {
               const zone = ZonePricing.getSeatZone(
                 seat,
                 pricingSections
               );
-              const zoneName = zone
-                ? zone.tier.toUpperCase()
-                : "STANDARD";
+              if (!zone) {
+                return '<p class="text-xs text-gray-600 font-semibold">Standard Section</p>';
+              }
+
+              const tierLabel = zone.tier ? zone.tier.charAt(0).toUpperCase() + zone.tier.slice(1) : 'Standard';
               const zoneColor =
-                zone?.tier === "premium"
+                zone.tier === "premium"
                   ? "text-purple-600"
-                  : zone?.tier === "economy"
+                  : zone.tier === "economy"
                     ? "text-blue-600"
                     : "text-green-600";
-              return `<p class="text-xs ${zoneColor} font-semibold">${zone?.sectionName || "Unknown"
-                } - ${zoneName}</p>`;
+
+              return `<p class="text-xs ${zoneColor} font-semibold">${zone.sectionName || "Section"} • ${tierLabel}</p>`;
             })()}
                       <p class="text-sm ${assigned ? "text-green-600" : "text-gray-500"
             }">
@@ -616,7 +621,8 @@ export default {
                     ${ZonePricing.getTicketTypesWithPrices(
                 seat,
                 ticketTypes,
-                pricingSections
+                pricingSections,
+                this.selectedSeats.length
               )
                 .map(
                   (type) => `
@@ -724,7 +730,7 @@ export default {
               </div>
               <div class="flex justify-between">
                 <span class="text-gray-600">Venue:</span>
-                <span class="font-medium text-gray-900">${this.performanceData.venue
+                <span class="font-medium text-gray-900">${this.performanceData.venue?.name || this.performanceData.venueName || "Venue"
       }</span>
               </div>
               <div class="flex justify-between">
@@ -784,15 +790,20 @@ export default {
             </div>
           `
         : `
-            <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-              <h3 class="font-semibold text-yellow-900 mb-2 flex items-center">
-                <i class="fas fa-exclamation-triangle mr-2"></i>
-                Guest Booking
-              </h3>
-              <p class="text-sm text-yellow-800 mb-3">
-                You're booking as a guest. Please provide your contact information.
-              </p>
-              <div class="space-y-3">
+            <div class="bg-gradient-to-br from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-lg p-5">
+              <div class="flex items-start gap-3 mb-4">
+                <div class="flex-shrink-0 w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center">
+                  <i class="fas fa-user-circle text-white text-lg"></i>
+                </div>
+                <div class="flex-1">
+                  <h3 class="font-bold text-blue-900 text-lg mb-1">Guest Booking</h3>
+                  <p class="text-sm text-blue-700">
+                    You're booking as a guest. Please provide your contact information to receive booking confirmation.
+                  </p>
+                </div>
+              </div>
+              
+              <div class="space-y-3 mb-4">
                 ${FormComponents.input({
           id: "guestName",
           type: "text",
@@ -814,6 +825,17 @@ export default {
           placeholder: "+852 1234 5678",
           required: true,
         })}
+              </div>
+              
+              <div class="bg-white border border-blue-200 rounded-lg p-3">
+                <p class="text-xs text-gray-600 mb-2">
+                  <i class="fas fa-lightbulb text-yellow-500 mr-1"></i>
+                  <strong>Tip:</strong> Create an account to easily manage your bookings and get exclusive benefits!
+                </p>
+                <a href="${ROUTES.AUTH.REGISTER}" data-link class="text-xs text-blue-600 hover:text-blue-800 font-semibold">
+                  <i class="fas fa-user-plus mr-1"></i>
+                  Create Account After Booking
+                </a>
               </div>
             </div>
           `
@@ -1129,7 +1151,16 @@ export default {
       .off("click", "g.interactive-seat")
       .on("click", "g.interactive-seat", function (e) {
         const fullId = $(this).attr("data-full-id");
+        const seatStatus = $(this).attr("data-status");
+
         if (!fullId) return;
+
+        // Prevent selection of occupied seats
+        if (seatStatus === 'occupied') {
+          notify.error('This seat is already booked');
+          return;
+        }
+
         self.toggleSeat(fullId);
       });
 
@@ -1138,7 +1169,16 @@ export default {
       .on("keydown", "g.interactive-seat", function (e) {
         if (e.key !== "Enter" && e.key !== " ") return;
         const fullId = $(this).attr("data-full-id");
+        const seatStatus = $(this).attr("data-status");
+
         if (!fullId) return;
+
+        // Prevent selection of occupied seats
+        if (seatStatus === 'occupied') {
+          notify.error('This seat is already booked');
+          return;
+        }
+
         e.preventDefault();
         self.toggleSeat(fullId);
       });
@@ -1237,6 +1277,26 @@ export default {
     $(document)
       .off("click", "#continueToPayment")
       .on("click", "#continueToPayment", async function () {
+        const user = storage.getUser();
+
+        // Validate guest information if not logged in
+        if (!user) {
+          const guestName = $("#guestName").val()?.trim();
+          const guestEmail = $("#guestEmail").val()?.trim();
+          const guestPhone = $("#guestPhone").val()?.trim();
+
+          if (!guestName || !guestEmail || !guestPhone) {
+            notify.error("Please fill in all contact information");
+            return;
+          }
+
+          const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+          if (!emailRegex.test(guestEmail)) {
+            notify.error("Please enter a valid email address");
+            return;
+          }
+        }
+
         self.bookingStep = 4;
         await self.renderBookingForm();
         self.updateProgressSteps();
@@ -1374,6 +1434,49 @@ export default {
           self.confirmBooking();
         }
       });
+
+    // Add real-time validation for guest form fields
+    $("#guestEmail").on("blur", function () {
+      const email = $(this).val()?.trim();
+      if (email) {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) {
+          $(this).addClass("border-red-500");
+          if (!$(this).next(".error-message").length) {
+            $(this).after('<p class="error-message text-xs text-red-600 mt-1"><i class="fas fa-exclamation-circle mr-1"></i>Please enter a valid email address</p>');
+          }
+        } else {
+          $(this).removeClass("border-red-500").addClass("border-green-500");
+          $(this).next(".error-message").remove();
+        }
+      }
+    });
+
+    $("#guestPhone").on("blur", function () {
+      const phone = $(this).val()?.trim();
+      if (phone && phone.length < 8) {
+        $(this).addClass("border-red-500");
+        if (!$(this).next(".error-message").length) {
+          $(this).after('<p class="error-message text-xs text-red-600 mt-1"><i class="fas fa-exclamation-circle mr-1"></i>Please enter a valid phone number</p>');
+        }
+      } else if (phone) {
+        $(this).removeClass("border-red-500").addClass("border-green-500");
+        $(this).next(".error-message").remove();
+      }
+    });
+
+    $("#guestName").on("blur", function () {
+      const name = $(this).val()?.trim();
+      if (name && name.length < 2) {
+        $(this).addClass("border-red-500");
+        if (!$(this).next(".error-message").length) {
+          $(this).after('<p class="error-message text-xs text-red-600 mt-1"><i class="fas fa-exclamation-circle mr-1"></i>Please enter your full name</p>');
+        }
+      } else if (name) {
+        $(this).removeClass("border-red-500").addClass("border-green-500");
+        $(this).next(".error-message").remove();
+      }
+    });
   },
 
   computeRowLabel(section, rowIndex) {
@@ -1398,6 +1501,21 @@ export default {
   },
 
   async toggleSeat(seatId) {
+    // Disable seat selection after step 1
+    if (this.bookingStep !== 1) {
+      notify.warning('Please go back to seat selection to change your seats');
+      return;
+    }
+
+    // Check if seat is occupied before allowing selection
+    const seatElement = $(`#seatMap svg g.interactive-seat[data-full-id="${seatId}"]`);
+    const seatStatus = seatElement.attr('data-status');
+
+    if (seatStatus === 'occupied') {
+      notify.error('This seat is already booked and cannot be selected');
+      return;
+    }
+
     const index = this.selectedSeats.indexOf(seatId);
     if (index > -1) {
       this.selectedSeats.splice(index, 1);
@@ -1411,12 +1529,29 @@ export default {
 
   updateSeatSelection() {
     const self = this;
+    const isSelectionDisabled = this.bookingStep !== 1;
+
     $("#seatMap svg g.interactive-seat").each(function () {
       const fullId = $(this).attr("data-full-id");
       const seatId = $(this).attr("data-seat-id");
       const id = fullId || seatId;
       const isSelected = self.selectedSeats.includes(id);
       const isBooked = $(this).attr("data-status") === "occupied";
+
+      // Disable pointer events on steps 2+
+      if (isSelectionDisabled) {
+        $(this).css({
+          'pointer-events': 'none',
+          'cursor': 'not-allowed',
+          'opacity': '0.7'
+        });
+      } else if (!isBooked) {
+        $(this).css({
+          'pointer-events': 'auto',
+          'cursor': 'pointer',
+          'opacity': '1'
+        });
+      }
 
       if (!isBooked) {
         const $rect = $(this).find("rect").first();
@@ -1480,11 +1615,40 @@ export default {
   async confirmBooking() {
     const user = storage.getUser();
     let customerInfo = null;
+
     if (!user) {
-      notify.error("Login required to complete booking");
-      return;
+      // Handle guest booking - validate guest information
+      const guestName = $("#guestName").val()?.trim();
+      const guestEmail = $("#guestEmail").val()?.trim();
+      const guestPhone = $("#guestPhone").val()?.trim();
+
+      if (!guestName || !guestEmail || !guestPhone) {
+        notify.error("Please fill in all contact information");
+        return;
+      }
+
+      // Validate email format
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(guestEmail)) {
+        notify.error("Please enter a valid email address");
+        return;
+      }
+
+      customerInfo = {
+        name: guestName,
+        email: guestEmail,
+        phone: guestPhone,
+        isGuest: true
+      };
+    } else {
+      customerInfo = {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        phone: user.phone,
+        isGuest: false
+      };
     }
-    customerInfo = { id: user.id, name: user.name, email: user.email };
 
     const rawMethod =
       $(
@@ -1556,14 +1720,34 @@ export default {
 
     if (result.isConfirmed) {
       try {
+        // Transform seatTicketTypes to seatTickets array format
+        const seatTickets = this.selectedSeats.map((seatId) => {
+          const ticket = this.seatTicketTypes[seatId];
+          const parsed = parseSeatId(seatId);
+
+          return {
+            seatId: seatId,
+            seatLabel: getDisplayLabel(seatId),
+            ticketTypeId: String(ticket.id),
+            ticketTypeName: String(ticket.name),
+            price: Number(ticket.price),
+            basePrice: Number(ticket.basePrice || ticket.price),
+            section: parsed?.section || extractSection(seatId) || '',
+            row: parsed?.row || extractRow(seatId) || ''
+          };
+        });
+
         const booking = {
           performanceId: this.performanceData.id,
           showtimeId: this.selectedShowtimeId,
           seats: this.selectedSeats,
-          amount: totalPrice,
+          seatTickets: seatTickets,
+          amount: Number(totalPrice),
           paymentMethod,
           customerInfo,
         };
+
+        console.log('Booking payload:', JSON.stringify(booking, null, 2));
 
         const createResp = await bookingAPI.create(booking);
         const createdBooking =
@@ -1574,6 +1758,18 @@ export default {
         const bookingId =
           createdBooking?.bookingReference || createdBooking?.id || "";
 
+        // Add notification for logged-in users
+        if (user) {
+          const seatInfo = this.selectedSeats.length > 1
+            ? `${this.selectedSeats.length} seats`
+            : `Seat ${this.selectedSeats[0]}`;
+          notificationHelpers.bookingConfirmed(
+            bookingId,
+            this.performanceData.title,
+            seatInfo
+          );
+        }
+
         Swal.fire({
           title: "Booking Confirmed!",
           html: `
@@ -1583,17 +1779,29 @@ export default {
             </div>
             <p class="text-gray-700">Your booking has been confirmed!</p>
             <div class="bg-gray-100 p-4 rounded-lg">
-              <p class="text-sm text-gray-600">Booking ID</p>
+              <p class="text-sm text-gray-600">Booking Reference</p>
               <p class="text-xl font-mono font-bold text-gray-900">${bookingId}</p>
             </div>
-            <p class="text-sm text-gray-600">A confirmation email will be sent to ${customerInfo.email}</p>
+            <p class="text-sm text-gray-600">A confirmation email will be sent to <strong>${customerInfo.email}</strong></p>
+            ${customerInfo.isGuest ? `
+              <div class="bg-blue-50 border border-blue-200 rounded-lg p-3 mt-3">
+                <p class="text-sm text-blue-800">
+                  <i class="fas fa-info-circle mr-1"></i>
+                  Please save your booking reference. You'll need it to view or manage your booking.
+                </p>
+              </div>
+            ` : ''}
           </div>
         `,
           icon: "success",
           confirmButtonText: user ? "View My Bookings" : "Go to Homepage",
           confirmButtonColor: SwalColors.success,
         }).then(() => {
-          page.redirect(ROUTES.USER.BOOKINGS);
+          if (user) {
+            page.redirect(ROUTES.USER.BOOKINGS);
+          } else {
+            page.redirect(ROUTES.HOME);
+          }
         });
       } catch (error) {
         console.error("Error creating booking:", error);
@@ -1608,17 +1816,81 @@ export default {
     }
   },
 
-  showError(message) {
+  showError(message, redirectSeconds = 5) {
+    let countdown = redirectSeconds;
+
+    const updateCountdown = () => {
+      $("#countdown").text(countdown);
+      countdown--;
+
+      if (countdown < 0) {
+        page.redirect(ROUTES.PUBLIC.PERFORMANCES);
+      }
+    };
+
     $("#bookingContent").html(`
-      <div class="text-center py-20">
-        <i class="fas fa-exclamation-triangle text-6xl text-red-500 mb-4"></i>
-        <h2 class="text-2xl font-bold text-gray-900 mb-2">Error</h2>
-        <p class="text-gray-600 mb-4">${message}</p>
-        <a href="/performances" data-link class="text-indigo-600 hover:text-indigo-800">
-          <i class="fas fa-arrow-left mr-2"></i>Back to Performances
-        </a>
+      <div class="max-w-2xl mx-auto text-center py-20">
+        <div class="bg-red-50 border-2 border-red-200 rounded-lg p-8 mb-6">
+          <div class="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <i class="fas fa-exclamation-triangle text-4xl text-red-500"></i>
+          </div>
+          <h2 class="text-2xl font-bold text-gray-900 mb-3">Booking Error</h2>
+          <p class="text-gray-700 text-lg mb-4">${message}</p>
+          
+          <div class="bg-white border border-red-200 rounded-lg p-4 mb-4">
+            <p class="text-sm text-gray-600 mb-2">
+              <i class="fas fa-info-circle text-blue-500 mr-1"></i>
+              You will be redirected to the performances page in <span id="countdown" class="font-bold text-red-600">${redirectSeconds}</span> seconds
+            </p>
+            <div class="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+              <div id="progressBar" class="bg-red-500 h-2 transition-all duration-1000" style="width: 100%"></div>
+            </div>
+          </div>
+          
+          <div class="flex gap-3 justify-center">
+            <a href="${ROUTES.PUBLIC.PERFORMANCES}" data-link class="inline-flex items-center gap-2 px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-semibold shadow-md hover:shadow-lg">
+              <i class="fas fa-music"></i>
+              <span>Browse Performances</span>
+            </a>
+            <a href="${ROUTES.HOME}" data-link class="inline-flex items-center gap-2 px-6 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors font-semibold shadow-md hover:shadow-lg">
+              <i class="fas fa-home"></i>
+              <span>Go Home</span>
+            </a>
+          </div>
+        </div>
+        
+        <div class="text-left bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <h3 class="font-semibold text-blue-900 mb-2 flex items-center">
+            <i class="fas fa-lightbulb text-yellow-500 mr-2"></i>
+            How to Book Tickets
+          </h3>
+          <ol class="text-sm text-blue-800 space-y-1 list-decimal list-inside">
+            <li>Browse available performances</li>
+            <li>Select a performance you'd like to attend</li>
+            <li>Choose your preferred showtime</li>
+            <li>Click "Book Now" to start your booking</li>
+          </ol>
+        </div>
       </div>
     `);
+
+    // Start countdown
+    const countdownInterval = setInterval(updateCountdown, 1000);
+
+    // Update progress bar
+    const progressInterval = setInterval(() => {
+      const remaining = countdown + 1;
+      const percentage = (remaining / redirectSeconds) * 100;
+      $("#progressBar").css("width", `${percentage}%`);
+
+      if (countdown < 0) {
+        clearInterval(countdownInterval);
+        clearInterval(progressInterval);
+      }
+    }, 100);
+
+    // Show notification
+    notify.error(message);
   },
 
   renderZoneSummary() {

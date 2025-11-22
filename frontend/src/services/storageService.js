@@ -5,10 +5,7 @@ const STORAGE_KEYS = {
   USER: "user",
   TOKEN: "token",
   THEME: "theme",
-  LANGUAGE: "language",
-  PREFERENCES: "preferences",
   LAST_VISIT: "lastVisit",
-  REGISTERED_USERS: "registeredUsers",
   PERFORMANCES: "performances",
   BOOKINGS: "bookings",
   VENUES: "venues",
@@ -19,7 +16,7 @@ const STORAGE_VERSION = "4.0";
 const STORAGE_NAMESPACE = "wom_";
 const MAX_STORAGE_SIZE = 5 * 1024 * 1024;
 const COMPRESSION_THRESHOLD = 1024;
-const SECURE_KEYS = ["USER", "TOKEN", "REGISTERED_USERS"];
+const SECURE_KEYS = ["USER", "TOKEN"];
 
 class StorageService {
   constructor() {
@@ -34,34 +31,80 @@ class StorageService {
       this.set("storageVersion", STORAGE_VERSION);
     }
 
+    // Clean up legacy "user" key (without namespace)
     const oldUserKey = "user";
     const oldUser = localStorage.getItem(oldUserKey);
-    if (oldUser && !this.has("USER")) {
-      try {
-        const userData = JSON.parse(oldUser);
-        if (userData && typeof userData === "object" && userData.id) {
-          this.setUser(userData);
-          localStorage.removeItem(oldUserKey);
-          console.info(
-            "[StorageService] Migrated user data from legacy storage to encrypted storage"
-          );
-        } else {
-          console.warn(
-            "[StorageService] Legacy user data has invalid format, skipping migration"
+
+    if (oldUser !== null) {
+      // If empty or whitespace, just remove it
+      if (!oldUser.trim()) {
+        console.warn(
+          "[StorageService] Legacy user data is empty, removing invalid entry"
+        );
+        localStorage.removeItem(oldUserKey);
+      } else if (!this.has("USER")) {
+        // Only migrate if we don't already have a USER in new storage
+        try {
+          const userData = JSON.parse(oldUser);
+          if (userData && typeof userData === "object" && userData.id) {
+            this.setUser(userData);
+            localStorage.removeItem(oldUserKey);
+            console.info(
+              "[StorageService] Migrated user data from legacy storage to encrypted storage"
+            );
+          } else {
+            console.warn(
+              "[StorageService] Legacy user data has invalid format, skipping migration"
+            );
+            localStorage.removeItem(oldUserKey);
+          }
+        } catch (error) {
+          console.error(
+            "[StorageService] Failed to migrate legacy user data:",
+            error
           );
           localStorage.removeItem(oldUserKey);
         }
-      } catch (error) {
-        console.error(
-          "[StorageService] Failed to migrate legacy user data:",
-          error
-        );
+      } else {
+        // We have new USER storage, remove the old key
         localStorage.removeItem(oldUserKey);
+        console.info("[StorageService] Removed legacy user key (already migrated)");
       }
     }
 
+    // Clean up any corrupted entries in localStorage
+    this.cleanCorrupted();
+
     this.set(STORAGE_KEYS.LAST_VISIT, new Date().toISOString());
     this.cleanExpired();
+  }
+
+  cleanCorrupted() {
+    // Clean up corrupted entries in our namespaced storage
+    const keys = this.keys();
+    let cleaned = 0;
+
+    keys.forEach((fullKey) => {
+      try {
+        const item = localStorage.getItem(fullKey);
+        if (!item || !item.trim()) {
+          localStorage.removeItem(fullKey);
+          cleaned++;
+          return;
+        }
+
+        // Try to parse to validate
+        JSON.parse(item);
+      } catch (error) {
+        console.warn(`Removing corrupted key: ${fullKey}`);
+        localStorage.removeItem(fullKey);
+        cleaned++;
+      }
+    });
+
+    if (cleaned > 0) {
+      console.info(`[StorageService] Cleaned ${cleaned} corrupted items from storage`);
+    }
   }
 
   migrate(fromVersion, toVersion) {
@@ -77,6 +120,13 @@ class StorageService {
       let item = localStorage.getItem(this.getKey(key));
       if (item === null) return defaultValue;
 
+      // Handle empty or whitespace-only values
+      if (!item.trim()) {
+        console.warn(`Empty value found for key: ${key}, removing invalid entry`);
+        this.remove(key);
+        return defaultValue;
+      }
+
       let parsed = JSON.parse(item);
 
       if (parsed.compressed) {
@@ -85,6 +135,12 @@ class StorageService {
       }
 
       if (parsed.encrypted) {
+        // Validate encrypted value before attempting decryption
+        if (!parsed.value || (typeof parsed.value === 'string' && !parsed.value.trim())) {
+          console.warn(`Empty encrypted value for key: ${key}, removing invalid entry`);
+          this.remove(key);
+          return defaultValue;
+        }
         parsed.value = decrypt(parsed.value);
       }
 
@@ -96,12 +152,30 @@ class StorageService {
       return parsed.value !== undefined ? parsed.value : parsed;
     } catch (error) {
       console.error(`Error reading from localStorage (${key}):`, error);
+      // Clean up corrupted data
+      try {
+        this.remove(key);
+        console.warn(`Removed corrupted data for key: ${key}`);
+      } catch (cleanupError) {
+        console.error(`Failed to cleanup corrupted key: ${key}`, cleanupError);
+      }
       return defaultValue;
     }
   }
 
   set(key, value, options = {}) {
     try {
+      // Validate input - prevent storing null, undefined, or empty strings
+      if (value === null || value === undefined) {
+        console.warn(`Attempted to store null/undefined for key: ${key}`);
+        return false;
+      }
+
+      if (typeof value === 'string' && !value.trim()) {
+        console.warn(`Attempted to store empty string for key: ${key}`);
+        return false;
+      }
+
       let { ttl, compress = false, encrypt: encryptData = false } = options;
 
       if (this.getStorageSize() > MAX_STORAGE_SIZE * 0.9) {
@@ -127,6 +201,12 @@ class StorageService {
       if (encryptData) {
         processedValue = encrypt(isCompressed ? processedValue : value);
         isEncrypted = true;
+
+        // Validate encryption output
+        if (!processedValue || (typeof processedValue === 'string' && !processedValue.trim())) {
+          console.error(`Encryption produced invalid output for key: ${key}`);
+          return false;
+        }
       }
 
       const data = {
@@ -317,10 +397,29 @@ class StorageService {
 
   setUser(user) {
     if (!user || !user.id) {
-      console.error("Invalid user data");
+      console.error("Invalid user data - missing required fields");
       return false;
     }
-    return this.set(STORAGE_KEYS.USER, user);
+
+    // Sanitize user data to prevent corruption
+    const sanitized = { ...user };
+
+    // Remove empty string fields that can cause JSON parse errors
+    Object.keys(sanitized).forEach(key => {
+      const value = sanitized[key];
+      if (typeof value === 'string' && !value.trim()) {
+        console.warn(`Removing empty field from user data: ${key}`);
+        delete sanitized[key];
+      }
+    });
+
+    // Validate critical fields
+    if (!sanitized.id || !sanitized.username) {
+      console.error("User data missing critical fields after sanitization");
+      return false;
+    }
+
+    return this.set(STORAGE_KEYS.USER, sanitized);
   }
 
   removeUser() {
@@ -529,15 +628,21 @@ class StorageService {
     let compressed = 0;
     let encrypted = 0;
     let expired = 0;
+    let corrupted = 0;
 
     keys.forEach((fullKey) => {
       try {
         const item = localStorage.getItem(fullKey);
+        if (!item || !item.trim()) {
+          corrupted++;
+          return;
+        }
         const parsed = JSON.parse(item);
         if (parsed.compressed) compressed++;
         if (parsed.encrypted) encrypted++;
         if (this.isExpired(parsed)) expired++;
       } catch (error) {
+        corrupted++;
         console.error(`Error analyzing key: ${fullKey}`, error);
       }
     });
@@ -547,6 +652,7 @@ class StorageService {
       compressed,
       encrypted,
       expired,
+      corrupted,
       compressionRate:
         keys.length > 0
           ? ((compressed / keys.length) * 100).toFixed(2) + "%"
@@ -556,6 +662,106 @@ class StorageService {
           ? ((encrypted / keys.length) * 100).toFixed(2) + "%"
           : "0%",
     };
+  }
+
+  /**
+   * Force cleanup of all corrupted data in localStorage
+   * This is a utility method that can be called manually to fix storage issues
+   * @returns {Object} Cleanup results with counts
+   */
+  forceCleanup() {
+    console.info('[StorageService] Starting force cleanup...');
+
+    let cleaned = {
+      corrupted: 0,
+      expired: 0,
+      legacy: 0,
+      total: 0
+    };
+
+    // Clean legacy keys (without namespace)
+    const legacyKeys = ['user', 'token', 'theme', 'language', 'preferences'];
+    legacyKeys.forEach(key => {
+      if (localStorage.getItem(key) !== null) {
+        localStorage.removeItem(key);
+        cleaned.legacy++;
+        cleaned.total++;
+      }
+    });
+
+    // Clean corrupted and expired namespaced keys
+    const keys = this.keys();
+    keys.forEach((fullKey) => {
+      try {
+        const item = localStorage.getItem(fullKey);
+
+        // Remove empty values
+        if (!item || !item.trim()) {
+          localStorage.removeItem(fullKey);
+          cleaned.corrupted++;
+          cleaned.total++;
+          return;
+        }
+
+        // Try to parse and check expiration
+        const parsed = JSON.parse(item);
+        if (this.isExpired(parsed)) {
+          localStorage.removeItem(fullKey);
+          cleaned.expired++;
+          cleaned.total++;
+        }
+      } catch (error) {
+        // Remove corrupted entries
+        localStorage.removeItem(fullKey);
+        cleaned.corrupted++;
+        cleaned.total++;
+      }
+    });
+
+    console.info('[StorageService] Force cleanup complete:', cleaned);
+    return cleaned;
+  }
+
+  /**
+   * Diagnose storage issues and return a report
+   * @returns {Object} Diagnostic report
+   */
+  diagnose() {
+    const report = {
+      healthy: true,
+      issues: [],
+      stats: this.getStorageStats()
+    };
+
+    // Check for corrupted data
+    if (report.stats.corrupted > 0) {
+      report.healthy = false;
+      report.issues.push(`Found ${report.stats.corrupted} corrupted entries`);
+    }
+
+    // Check for expired data
+    if (report.stats.expired > 0) {
+      report.issues.push(`Found ${report.stats.expired} expired entries`);
+    }
+
+    // Check for legacy keys
+    const legacyKeys = ['user', 'token', 'theme', 'language', 'preferences'];
+    const foundLegacy = legacyKeys.filter(key => localStorage.getItem(key) !== null);
+    if (foundLegacy.length > 0) {
+      report.healthy = false;
+      report.issues.push(`Found ${foundLegacy.length} legacy keys: ${foundLegacy.join(', ')}`);
+    }
+
+    // Check storage usage
+    const usagePercent = parseFloat(report.stats.used);
+    if (usagePercent > 90) {
+      report.healthy = false;
+      report.issues.push(`Storage usage is high: ${report.stats.used}`);
+    } else if (usagePercent > 75) {
+      report.issues.push(`Storage usage is moderate: ${report.stats.used}`);
+    }
+
+    return report;
   }
 }
 

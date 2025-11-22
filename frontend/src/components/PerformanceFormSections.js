@@ -243,11 +243,14 @@ export const PerformanceFormSections = {
     return `
       <div class="bg-gray-50 p-6 rounded-lg">
         <div class="flex justify-between items-center mb-4">
-          <h3 class="text-lg font-semibold text-gray-900">
-            <i class="fas fa-calendar-alt text-indigo-600 mr-2"></i>Showtimes & Pricing
-          </h3>
+          <div class="flex-1">
+            <h3 class="text-lg font-semibold text-gray-900">
+              <i class="fas fa-calendar-alt text-indigo-600 mr-2"></i>Showtimes & Pricing
+            </h3>
+            <p class="text-xs text-gray-500 mt-1">Add performance dates and configure pricing tiers</p>
+          </div>
           <button type="button" id="addShowtimeBtn"
-            class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors">
+            class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors shadow-sm">
             <i class="fas fa-plus mr-2"></i>Add Showtime
           </button>
         </div>

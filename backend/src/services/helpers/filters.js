@@ -37,3 +37,45 @@ export const buildStatusFilter = (status, allowedStatuses = []) => {
 
   return status;
 };
+
+export const applyDateRangeFilter = (where, field, dateFrom, dateTo) => {
+  if (dateFrom) {
+    where[field] = {
+      ...(where[field] || {}),
+      [Op.gte]: new Date(dateFrom),
+    };
+  }
+
+  if (dateTo) {
+    where[field] = {
+      ...(where[field] || {}),
+      [Op.lte]: new Date(dateTo),
+    };
+  }
+
+  return where;
+};
+
+export const buildWhereClause = (filters, config) => {
+  const where = {};
+
+  if (filters.status && config.statusField) {
+    where[config.statusField] = filters.status;
+  }
+
+  if (filters.search && config.searchFields) {
+    where[Op.or] = config.searchFields.map((field) => ({
+      [field]: { [Op.iLike]: `%${filters.search}%` },
+    }));
+  }
+
+  if (config.dateField) {
+    applyDateRangeFilter(where, config.dateField, filters.dateFrom, filters.dateTo);
+  }
+
+  if (config.additionalFilters) {
+    Object.assign(where, config.additionalFilters(filters));
+  }
+
+  return where;
+};

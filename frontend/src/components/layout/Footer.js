@@ -1,8 +1,10 @@
-import { getCurrentUser, logout } from "@utils/core/auth.js";
-import { ROUTES } from "@config/routes.js";
-import { CONTACT_INFO } from "@config/config.js";
-import { SwalColors } from "@utils/colors.js";
+
 import Swal from "sweetalert2";
+
+import { CONTACT_INFO } from "@config/config.js";
+import { ROUTES } from "@config/routes.js";
+import { SwalColors } from "@utils/colors.js";
+import { getCurrentUser, logout } from "@utils/core/auth.js";
 
 const FOOTER_CONFIG = {
     appName: "Western Orchestral Music Performance",

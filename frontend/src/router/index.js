@@ -1,20 +1,21 @@
+
+
 import page from "page";
-import { storage } from "@services/storageService.js";
-import { notify } from "@utils/ui/notification.js";
-import { renderNavbar, initNavbar, renderFooter, initFooter } from "@components/index.js";
-import { ROUTES } from "@config/routes.js";
-import { SEO } from "@utils/seo.js";
 
 import {
   HomePage,
   PerformancesListPage,
   PerformanceDetailPage,
-  DevToolsPage,
   NotFoundPage,
   Admin,
   User,
   Auth,
 } from "@/pages/index.js";
+import { renderNavbar, initNavbar, renderFooter, initFooter } from "@components/index.js";
+import { ROUTES } from "@config/routes.js";
+import { storage } from "@services/storageService.js";
+import { SEO } from "@utils/seo.js";
+import { notify } from "@utils/ui/notification.js";
 
 const LOADING_HTML = `
   <div class="flex items-center justify-center min-h-screen">
@@ -58,14 +59,7 @@ function checkAdminAuth(ctx, next) {
   next();
 }
 
-function checkDevMode(ctx, next) {
-  if (import.meta.env.MODE !== "development") {
-    notify.error("Developer tools are only available in development mode.");
-    page.redirect(ROUTES.HOME);
-    return;
-  }
-  next();
-}
+
 
 export function updateNavigation() {
   $("#navbar").html(renderNavbar());
@@ -113,8 +107,6 @@ export function setupRouter() {
   page(ROUTES.PUBLIC.PERFORMANCE_DETAIL, (ctx) =>
     loadPage(PerformanceDetailPage, { id: ctx.params.id })
   );
-
-  page(ROUTES.PUBLIC.DEV_TOOLS, checkDevMode, () => loadPage(DevToolsPage));
 
   page(ROUTES.AUTH.LOGIN, () => loadPage(Auth.LoginPage));
   page(ROUTES.AUTH.REGISTER, () => loadPage(Auth.RegisterPage));

@@ -49,6 +49,36 @@ const options = {
             createdAt: { type: "string", format: "date-time" },
             updatedAt: { type: "string", format: "date-time" },
           },
+          examples: [
+            {
+              id: "550e8400-e29b-41d4-a716-446655440000",
+              username: "johndoe",
+              email: "john.doe@example.com",
+              name: "John Doe",
+              role: "user",
+              status: "active",
+              phone: "+852 9123 4567",
+              birthday: "1990-05-15",
+              gender: "male",
+              profileImage: "https://example.com/images/johndoe.jpg",
+              createdAt: "2024-01-15T10:30:00Z",
+              updatedAt: "2024-11-15T14:20:00Z",
+            },
+            {
+              id: "660e8400-e29b-41d4-a716-446655440001",
+              username: "admin",
+              email: "admin@wom.hk",
+              name: "Admin User",
+              role: "admin",
+              status: "active",
+              phone: "+852 9876 5432",
+              birthday: "1985-03-20",
+              gender: "female",
+              profileImage: null,
+              createdAt: "2023-06-01T08:00:00Z",
+              updatedAt: "2024-11-18T09:15:00Z",
+            },
+          ],
         },
         UserInput: {
           type: "object",
@@ -63,6 +93,24 @@ const options = {
             birthday: { type: "string", format: "date" },
             gender: { type: "string" },
           },
+          examples: [
+            {
+              username: "newuser123",
+              email: "newuser@example.com",
+              password: "SecurePass123!",
+              name: "New User",
+              role: "user",
+              phone: "+852 9111 2222",
+              birthday: "1995-08-10",
+              gender: "male",
+            },
+            {
+              username: "janedoe",
+              email: "jane.doe@example.com",
+              password: "AnotherSecure456!",
+              name: "Jane Doe",
+            },
+          ],
         },
         Performance: {
           type: "object",
@@ -81,6 +129,58 @@ const options = {
             showtimes: { type: "array", items: { type: "object" } },
             createdAt: { type: "string", format: "date-time" },
           },
+          examples: [
+            {
+              id: "770e8400-e29b-41d4-a716-446655440002",
+              title: "Symphony No. 9 in D minor",
+              composer: "Ludwig van Beethoven",
+              conductor: "Herbert von Karajan",
+              orchestra: "Hong Kong Philharmonic Orchestra",
+              venueId: "880e8400-e29b-41d4-a716-446655440003",
+              date: "2025-12-15T19:30:00Z",
+              duration: 120,
+              status: "scheduled",
+              category: "Classical",
+              image: "https://example.com/images/beethoven-9th.jpg",
+              showtimes: [
+                {
+                  id: "show-001",
+                  startTime: "2025-12-15T19:30:00Z",
+                  endTime: "2025-12-15T21:30:00Z",
+                  availableSeats: 450,
+                },
+                {
+                  id: "show-002",
+                  startTime: "2025-12-16T14:00:00Z",
+                  endTime: "2025-12-16T16:00:00Z",
+                  availableSeats: 500,
+                },
+              ],
+              createdAt: "2024-10-01T12:00:00Z",
+            },
+            {
+              id: "770e8400-e29b-41d4-a716-446655440004",
+              title: "The Four Seasons",
+              composer: "Antonio Vivaldi",
+              conductor: "Yannick Nézet-Séguin",
+              orchestra: "Hong Kong Sinfonietta",
+              venueId: "880e8400-e29b-41d4-a716-446655440003",
+              date: "2025-11-20T20:00:00Z",
+              duration: 90,
+              status: "scheduled",
+              category: "Baroque",
+              image: "https://example.com/images/four-seasons.jpg",
+              showtimes: [
+                {
+                  id: "show-003",
+                  startTime: "2025-11-20T20:00:00Z",
+                  endTime: "2025-11-20T21:30:00Z",
+                  availableSeats: 300,
+                },
+              ],
+              createdAt: "2024-09-15T10:30:00Z",
+            },
+          ],
         },
         PerformanceInput: {
           type: "object",
@@ -94,6 +194,72 @@ const options = {
             duration: { type: "integer" },
             category: { type: "string" },
           },
+          examples: [
+            {
+              title: "Piano Concerto No. 21",
+              composer: "Wolfgang Amadeus Mozart",
+              conductor: "Gustavo Dudamel",
+              venueId: "880e8400-e29b-41d4-a716-446655440003",
+              date: "2026-01-10T19:00:00Z",
+              duration: 105,
+              category: "Classical",
+            },
+            {
+              title: "Requiem",
+              composer: "Giuseppe Verdi",
+              venueId: "880e8400-e29b-41d4-a716-446655440003",
+              date: "2026-02-14T20:00:00Z",
+            },
+          ],
+        },
+        SeatTicket: {
+          type: "object",
+          required: ["seatId", "seatLabel", "ticketTypeId", "ticketTypeName", "price"],
+          properties: {
+            seatId: {
+              type: "string",
+              description: "Unique seat identifier in format: {section}-{row}-{number}",
+              example: "orchestra-A-12",
+            },
+            seatLabel: {
+              type: "string",
+              description: "Display label for the seat (e.g., row + number)",
+              example: "A12",
+            },
+            ticketTypeId: {
+              type: "string",
+              description: "Ticket type identifier",
+              example: "adult",
+            },
+            ticketTypeName: {
+              type: "string",
+              description: "Human-readable ticket type name",
+              example: "Adult",
+            },
+            price: {
+              type: "number",
+              format: "float",
+              description: "Final price after any discounts",
+              example: 500.00,
+            },
+            basePrice: {
+              type: "number",
+              format: "float",
+              description: "Original price before discounts (optional)",
+              example: 500.00,
+            },
+            section: {
+              type: "string",
+              description: "Section name (optional, extracted from seatId)",
+              example: "orchestra",
+            },
+            row: {
+              type: "string",
+              description: "Row identifier (optional, extracted from seatId)",
+              example: "A",
+            },
+          },
+          description: "Compact seat-ticket assignment structure that combines seat location with ticket type information",
         },
         Booking: {
           type: "object",
@@ -109,17 +275,195 @@ const options = {
             paymentMethod: { type: "string" },
             paymentStatus: { type: "string" },
             bookingDate: { type: "string", format: "date-time" },
+            seatTickets: {
+              type: "array",
+              items: { $ref: "#/components/schemas/SeatTicket" },
+              description: "Array of seat-ticket assignments (NEW: optimized structure)",
+            },
+            seats: {
+              type: "array",
+              items: { type: "object" },
+              deprecated: true,
+              description: "DEPRECATED: Legacy seat structure. Use seatTickets instead. Will be removed in v2.0 (Q2 2025)",
+            },
           },
+          examples: [
+            {
+              id: "990e8400-e29b-41d4-a716-446655440005",
+              bookingReference: "BK-2024-001234",
+              userId: "550e8400-e29b-41d4-a716-446655440000",
+              performanceId: "770e8400-e29b-41d4-a716-446655440002",
+              showtimeId: "show-001",
+              seatCount: 2,
+              totalAmount: 1200.00,
+              status: "confirmed",
+              paymentMethod: "credit_card",
+              paymentStatus: "paid",
+              bookingDate: "2024-11-10T15:30:00Z",
+              seatTickets: [
+                {
+                  seatId: "orchestra-A-12",
+                  seatLabel: "A12",
+                  ticketTypeId: "adult",
+                  ticketTypeName: "Adult",
+                  price: 600.00,
+                  basePrice: 600.00,
+                  section: "orchestra",
+                  row: "A",
+                },
+                {
+                  seatId: "orchestra-A-13",
+                  seatLabel: "A13",
+                  ticketTypeId: "adult",
+                  ticketTypeName: "Adult",
+                  price: 600.00,
+                  basePrice: 600.00,
+                  section: "orchestra",
+                  row: "A",
+                },
+              ],
+            },
+            {
+              id: "990e8400-e29b-41d4-a716-446655440006",
+              bookingReference: "BK-2024-001235",
+              userId: "550e8400-e29b-41d4-a716-446655440000",
+              performanceId: "770e8400-e29b-41d4-a716-446655440004",
+              showtimeId: "show-003",
+              seatCount: 4,
+              totalAmount: 2000.00,
+              status: "pending",
+              paymentMethod: "bank_transfer",
+              paymentStatus: "pending",
+              bookingDate: "2024-11-18T10:15:00Z",
+              seatTickets: [
+                {
+                  seatId: "balcony-C-5",
+                  seatLabel: "C5",
+                  ticketTypeId: "adult",
+                  ticketTypeName: "Adult",
+                  price: 500.00,
+                  section: "balcony",
+                  row: "C",
+                },
+                {
+                  seatId: "balcony-C-6",
+                  seatLabel: "C6",
+                  ticketTypeId: "student",
+                  ticketTypeName: "Student",
+                  price: 350.00,
+                  basePrice: 500.00,
+                  section: "balcony",
+                  row: "C",
+                },
+                {
+                  seatId: "balcony-C-7",
+                  seatLabel: "C7",
+                  ticketTypeId: "student",
+                  ticketTypeName: "Student",
+                  price: 350.00,
+                  basePrice: 500.00,
+                  section: "balcony",
+                  row: "C",
+                },
+                {
+                  seatId: "balcony-C-8",
+                  seatLabel: "C8",
+                  ticketTypeId: "senior",
+                  ticketTypeName: "Senior",
+                  price: 400.00,
+                  basePrice: 500.00,
+                  section: "balcony",
+                  row: "C",
+                },
+              ],
+            },
+          ],
         },
         BookingInput: {
           type: "object",
-          required: ["performanceId", "showtimeId", "seats"],
+          required: ["performanceId", "showtimeId", "seatTickets"],
           properties: {
-            performanceId: { type: "string", format: "uuid" },
-            showtimeId: { type: "string" },
-            seats: { type: "array", items: { type: "object" } },
-            paymentMethod: { type: "string" },
+            performanceId: {
+              type: "string",
+              format: "uuid",
+              description: "ID of the performance to book",
+            },
+            showtimeId: {
+              type: "string",
+              description: "ID of the specific showtime",
+            },
+            seatTickets: {
+              type: "array",
+              items: { $ref: "#/components/schemas/SeatTicket" },
+              minItems: 1,
+              description: "Array of seat-ticket assignments (NEW: optimized structure)",
+            },
+            paymentMethod: {
+              type: "string",
+              enum: ["credit_card", "debit_card", "bank_transfer", "cash"],
+              description: "Payment method for the booking",
+            },
+            customerInfo: {
+              type: "object",
+              description: "Customer contact information",
+              properties: {
+                name: { type: "string" },
+                email: { type: "string", format: "email" },
+                phone: { type: "string" },
+              },
+            },
           },
+          examples: [
+            {
+              performanceId: "770e8400-e29b-41d4-a716-446655440002",
+              showtimeId: "show-001",
+              seatTickets: [
+                {
+                  seatId: "orchestra-A-12",
+                  seatLabel: "A12",
+                  ticketTypeId: "adult",
+                  ticketTypeName: "Adult",
+                  price: 600.00,
+                  basePrice: 600.00,
+                  section: "orchestra",
+                  row: "A",
+                },
+                {
+                  seatId: "orchestra-A-13",
+                  seatLabel: "A13",
+                  ticketTypeId: "adult",
+                  ticketTypeName: "Adult",
+                  price: 600.00,
+                  basePrice: 600.00,
+                  section: "orchestra",
+                  row: "A",
+                },
+              ],
+              paymentMethod: "credit_card",
+              customerInfo: {
+                name: "John Doe",
+                email: "john.doe@example.com",
+                phone: "+852 9123 4567",
+              },
+            },
+            {
+              performanceId: "770e8400-e29b-41d4-a716-446655440004",
+              showtimeId: "show-003",
+              seatTickets: [
+                {
+                  seatId: "balcony-C-5",
+                  seatLabel: "C5",
+                  ticketTypeId: "student",
+                  ticketTypeName: "Student",
+                  price: 350.00,
+                  basePrice: 500.00,
+                  section: "balcony",
+                  row: "C",
+                },
+              ],
+              paymentMethod: "bank_transfer",
+            },
+          ],
         },
         Venue: {
           type: "object",
@@ -134,6 +478,61 @@ const options = {
             facilities: { type: "array", items: { type: "string" } },
             createdAt: { type: "string", format: "date-time" },
           },
+          examples: [
+            {
+              id: 1,
+              name: "Hong Kong Cultural Centre Concert Hall",
+              address: "10 Salisbury Road, Tsim Sha Tsui, Kowloon",
+              contact: "+852 2734 2009",
+              status: "active",
+              capacity: 2019,
+              layout: {
+                sections: [
+                  {
+                    name: "Orchestra",
+                    rows: 20,
+                    seatsPerRow: 30,
+                  },
+                  {
+                    name: "Mezzanine",
+                    rows: 10,
+                    seatsPerRow: 25,
+                  },
+                  {
+                    name: "Balcony",
+                    rows: 15,
+                    seatsPerRow: 28,
+                  },
+                ],
+              },
+              facilities: ["Wheelchair Access", "Parking", "Restaurant", "Gift Shop"],
+              createdAt: "2023-01-15T08:00:00Z",
+            },
+            {
+              id: 2,
+              name: "City Hall Concert Hall",
+              address: "5 Edinburgh Place, Central",
+              contact: "+852 2921 2840",
+              status: "active",
+              capacity: 1434,
+              layout: {
+                sections: [
+                  {
+                    name: "Stalls",
+                    rows: 18,
+                    seatsPerRow: 32,
+                  },
+                  {
+                    name: "Circle",
+                    rows: 12,
+                    seatsPerRow: 30,
+                  },
+                ],
+              },
+              facilities: ["Wheelchair Access", "Parking"],
+              createdAt: "2023-02-20T09:30:00Z",
+            },
+          ],
         },
         VenueInput: {
           type: "object",
@@ -147,6 +546,37 @@ const options = {
             layout: { type: "object" },
             facilities: { type: "array", items: { type: "string" } },
           },
+          examples: [
+            {
+              name: "New Performance Hall",
+              address: "123 Arts Avenue, Wan Chai",
+              contact: "+852 2800 1234",
+              status: "active",
+              capacity: 800,
+              layout: {
+                sections: [
+                  {
+                    name: "Main Floor",
+                    rows: 15,
+                    seatsPerRow: 25,
+                  },
+                  {
+                    name: "Upper Level",
+                    rows: 10,
+                    seatsPerRow: 20,
+                  },
+                ],
+              },
+              facilities: ["Wheelchair Access", "Parking", "Cafe"],
+            },
+            {
+              name: "Studio Theatre",
+              address: "456 Culture Street, Kowloon",
+              contact: "+852 2900 5678",
+              status: "active",
+              capacity: 300,
+            },
+          ],
         },
         ErrorItem: {
           type: "object",
@@ -177,6 +607,437 @@ const options = {
           },
           required: ["success", "message", "errors"],
         },
+        TicketType: {
+          type: "object",
+          properties: {
+            id: { type: "string" },
+            name: { type: "string" },
+            description: { type: "string" },
+            price: { type: "number" },
+            color: { type: "string" },
+            createdAt: { type: "string", format: "date-time" },
+            updatedAt: { type: "string", format: "date-time" },
+          },
+          examples: [
+            {
+              id: "1",
+              name: "Standard",
+              description: "Standard admission ticket",
+              price: 500.00,
+              color: "#3B82F6",
+              createdAt: "2024-01-01T00:00:00Z",
+              updatedAt: "2024-01-01T00:00:00Z",
+            },
+            {
+              id: "2",
+              name: "Premium",
+              description: "Premium seating with enhanced amenities",
+              price: 800.00,
+              color: "#F59E0B",
+              createdAt: "2024-01-01T00:00:00Z",
+              updatedAt: "2024-01-01T00:00:00Z",
+            },
+            {
+              id: "3",
+              name: "Student",
+              description: "Discounted ticket for students with valid ID",
+              price: 300.00,
+              color: "#10B981",
+              createdAt: "2024-01-01T00:00:00Z",
+              updatedAt: "2024-01-01T00:00:00Z",
+            },
+          ],
+        },
+        LoginCredentials: {
+          type: "object",
+          required: ["username", "password"],
+          properties: {
+            username: { type: "string" },
+            password: { type: "string" },
+          },
+          examples: [
+            {
+              username: "johndoe",
+              password: "SecurePass123!",
+            },
+            {
+              username: "admin",
+              password: "AdminPass456!",
+            },
+          ],
+        },
+      },
+      examples: {
+        UserResponse: {
+          summary: "Successful user response",
+          value: {
+            success: true,
+            message: "User retrieved successfully",
+            data: {
+              id: "550e8400-e29b-41d4-a716-446655440000",
+              username: "johndoe",
+              email: "john.doe@example.com",
+              name: "John Doe",
+              role: "user",
+              status: "active",
+              phone: "+852 9123 4567",
+              birthday: "1990-05-15",
+              gender: "male",
+              profileImage: "https://example.com/images/johndoe.jpg",
+              createdAt: "2024-01-15T10:30:00Z",
+              updatedAt: "2024-11-15T14:20:00Z",
+            },
+          },
+        },
+        UserListResponse: {
+          summary: "List of users with pagination",
+          value: {
+            success: true,
+            message: "Users retrieved successfully",
+            data: [
+              {
+                id: "550e8400-e29b-41d4-a716-446655440000",
+                username: "johndoe",
+                email: "john.doe@example.com",
+                name: "John Doe",
+                role: "user",
+                status: "active",
+              },
+              {
+                id: "660e8400-e29b-41d4-a716-446655440001",
+                username: "admin",
+                email: "admin@wom.hk",
+                name: "Admin User",
+                role: "admin",
+                status: "active",
+              },
+            ],
+            pagination: {
+              page: 1,
+              limit: 10,
+              total: 2,
+              totalPages: 1,
+            },
+          },
+        },
+        PerformanceResponse: {
+          summary: "Successful performance response",
+          value: {
+            success: true,
+            message: "Performance retrieved successfully",
+            data: {
+              id: "770e8400-e29b-41d4-a716-446655440002",
+              title: "Symphony No. 9 in D minor",
+              composer: "Ludwig van Beethoven",
+              conductor: "Herbert von Karajan",
+              orchestra: "Hong Kong Philharmonic Orchestra",
+              venueId: "880e8400-e29b-41d4-a716-446655440003",
+              date: "2025-12-15T19:30:00Z",
+              duration: 120,
+              status: "scheduled",
+              category: "Classical",
+              image: "https://example.com/images/beethoven-9th.jpg",
+              showtimes: [
+                {
+                  id: "show-001",
+                  startTime: "2025-12-15T19:30:00Z",
+                  endTime: "2025-12-15T21:30:00Z",
+                  availableSeats: 450,
+                },
+              ],
+              createdAt: "2024-10-01T12:00:00Z",
+            },
+          },
+        },
+        PerformanceListResponse: {
+          summary: "List of performances with optional filters",
+          value: {
+            success: true,
+            message: "Performances retrieved successfully",
+            data: [
+              {
+                id: "770e8400-e29b-41d4-a716-446655440002",
+                title: "Symphony No. 9 in D minor",
+                composer: "Ludwig van Beethoven",
+                date: "2025-12-15T19:30:00Z",
+                status: "scheduled",
+                category: "Classical",
+              },
+              {
+                id: "770e8400-e29b-41d4-a716-446655440004",
+                title: "The Four Seasons",
+                composer: "Antonio Vivaldi",
+                date: "2025-11-20T20:00:00Z",
+                status: "scheduled",
+                category: "Baroque",
+              },
+            ],
+            pagination: {
+              page: 1,
+              limit: 10,
+              total: 2,
+              totalPages: 1,
+            },
+          },
+        },
+        BookingResponse: {
+          summary: "Successful booking response with new seatTickets structure",
+          value: {
+            success: true,
+            message: "Booking created successfully",
+            data: {
+              id: "990e8400-e29b-41d4-a716-446655440005",
+              bookingReference: "BK-2024-001234",
+              userId: "550e8400-e29b-41d4-a716-446655440000",
+              performanceId: "770e8400-e29b-41d4-a716-446655440002",
+              showtimeId: "show-001",
+              seatCount: 2,
+              totalAmount: 1200.00,
+              status: "confirmed",
+              paymentMethod: "credit_card",
+              paymentStatus: "paid",
+              bookingDate: "2024-11-10T15:30:00Z",
+              seatTickets: [
+                {
+                  seatId: "orchestra-A-12",
+                  seatLabel: "A12",
+                  ticketTypeId: "adult",
+                  ticketTypeName: "Adult",
+                  price: 600.00,
+                  basePrice: 600.00,
+                  section: "orchestra",
+                  row: "A",
+                },
+                {
+                  seatId: "orchestra-A-13",
+                  seatLabel: "A13",
+                  ticketTypeId: "adult",
+                  ticketTypeName: "Adult",
+                  price: 600.00,
+                  basePrice: 600.00,
+                  section: "orchestra",
+                  row: "A",
+                },
+              ],
+            },
+          },
+        },
+        BookingResponseLegacy: {
+          summary: "Legacy booking response (deprecated seats field)",
+          value: {
+            success: true,
+            message: "Booking retrieved successfully",
+            data: {
+              id: "990e8400-e29b-41d4-a716-446655440005",
+              bookingReference: "BK-2024-001234",
+              userId: "550e8400-e29b-41d4-a716-446655440000",
+              performanceId: "770e8400-e29b-41d4-a716-446655440002",
+              showtimeId: "show-001",
+              seatCount: 2,
+              totalAmount: 1200.00,
+              status: "confirmed",
+              paymentMethod: "credit_card",
+              paymentStatus: "paid",
+              bookingDate: "2024-11-10T15:30:00Z",
+              seatTickets: [
+                {
+                  seatId: "orchestra-A-12",
+                  seatLabel: "A12",
+                  ticketTypeId: "adult",
+                  ticketTypeName: "Adult",
+                  price: 600.00,
+                  section: "orchestra",
+                  row: "A",
+                },
+                {
+                  seatId: "orchestra-A-13",
+                  seatLabel: "A13",
+                  ticketTypeId: "adult",
+                  ticketTypeName: "Adult",
+                  price: 600.00,
+                  section: "orchestra",
+                  row: "A",
+                },
+              ],
+              seats: [
+                {
+                  fullId: "orchestra-A-12",
+                  seatId: "orchestra-A-12",
+                  label: "A12",
+                  section: "orchestra",
+                  row: "A",
+                  number: 12,
+                  tier: "standard",
+                  price: 600.00,
+                  status: "selected",
+                },
+                {
+                  fullId: "orchestra-A-13",
+                  seatId: "orchestra-A-13",
+                  label: "A13",
+                  section: "orchestra",
+                  row: "A",
+                  number: 13,
+                  tier: "standard",
+                  price: 600.00,
+                  status: "selected",
+                },
+              ],
+            },
+            _deprecationNotice: {
+              field: "seats",
+              message: "The 'seats' field is deprecated and will be removed in v2.0 (Q2 2025). Please use 'seatTickets' instead.",
+              migrationGuide: "https://api.wom.hk/docs/migration/seat-tickets",
+            },
+          },
+        },
+        VenueResponse: {
+          summary: "Successful venue response",
+          value: {
+            success: true,
+            message: "Venue retrieved successfully",
+            data: {
+              id: 1,
+              name: "Hong Kong Cultural Centre Concert Hall",
+              address: "10 Salisbury Road, Tsim Sha Tsui, Kowloon",
+              contact: "+852 2734 2009",
+              status: "active",
+              capacity: 2019,
+              facilities: ["Wheelchair Access", "Parking", "Restaurant", "Gift Shop"],
+              createdAt: "2023-01-15T08:00:00Z",
+            },
+          },
+        },
+        LoginSuccessResponse: {
+          summary: "Successful login",
+          value: {
+            success: true,
+            message: "Login successful",
+            data: {
+              user: {
+                id: "550e8400-e29b-41d4-a716-446655440000",
+                username: "johndoe",
+                email: "john.doe@example.com",
+                name: "John Doe",
+                role: "user",
+              },
+            },
+          },
+        },
+        RegisterSuccessResponse: {
+          summary: "Successful registration",
+          value: {
+            success: true,
+            message: "User registered successfully",
+            data: {
+              user: {
+                id: "550e8400-e29b-41d4-a716-446655440000",
+                username: "johndoe",
+                email: "john.doe@example.com",
+                name: "John Doe",
+                role: "user",
+              },
+            },
+          },
+        },
+        ValidationErrorUserInput: {
+          summary: "User input validation errors",
+          value: {
+            success: false,
+            message: "Validation failed",
+            code: "VALIDATION_ERROR",
+            errors: [
+              {
+                field: "email",
+                code: "INVALID_EMAIL",
+                message: "Email must be a valid email address",
+                hint: "Use format: user@example.com",
+                path: ["email"],
+                value: "invalid-email",
+                severity: "error",
+              },
+              {
+                field: "password",
+                code: "PASSWORD_TOO_SHORT",
+                message: "Password must be at least 8 characters long",
+                hint: "Use a combination of letters, numbers, and symbols",
+                path: ["password"],
+                value: "short",
+                context: { minLength: 8, actualLength: 5 },
+                severity: "error",
+              },
+              {
+                field: "username",
+                code: "USERNAME_TAKEN",
+                message: "Username is already taken",
+                hint: "Try a different username",
+                path: ["username"],
+                value: "johndoe",
+                severity: "error",
+              },
+            ],
+          },
+        },
+        ValidationErrorBookingInput: {
+          summary: "Booking validation errors",
+          value: {
+            success: false,
+            message: "Booking validation failed",
+            code: "BOOKING_VALIDATION_ERROR",
+            errors: [
+              {
+                field: "seatTickets[0]",
+                code: "SEAT_ALREADY_BOOKED",
+                message: "Selected seat is already reserved",
+                hint: "Choose a different seat or refresh availability",
+                path: ["seatTickets", 0],
+                value: { seatId: "orchestra-A-12", ticketTypeId: "adult" },
+                severity: "error",
+              },
+              {
+                field: "performanceId",
+                code: "PERFORMANCE_NOT_FOUND",
+                message: "Performance does not exist",
+                hint: "Verify the performance ID",
+                path: ["performanceId"],
+                value: "invalid-id",
+                severity: "error",
+              },
+            ],
+          },
+        },
+        UnauthorizedError: {
+          summary: "Authentication required",
+          value: {
+            success: false,
+            message: "Authentication required. Please log in.",
+            code: "UNAUTHORIZED",
+          },
+        },
+        ForbiddenError: {
+          summary: "Insufficient permissions",
+          value: {
+            success: false,
+            message: "You do not have permission to access this resource",
+            code: "FORBIDDEN",
+          },
+        },
+        NotFoundError: {
+          summary: "Resource not found",
+          value: {
+            success: false,
+            message: "The requested resource was not found",
+            code: "NOT_FOUND",
+          },
+        },
+        InvalidCredentialsError: {
+          summary: "Invalid login credentials",
+          value: {
+            success: false,
+            message: "Invalid username or password",
+            code: "INVALID_CREDENTIALS",
+          },
+        },
       },
       responses: {
         BadRequest: {
@@ -191,11 +1052,21 @@ const options = {
                   errors: { type: "array", items: { type: "object" } },
                 },
               },
+              examples: {
+                invalidRequest: {
+                  summary: "Invalid request format",
+                  value: {
+                    success: false,
+                    message: "Invalid request format",
+                    code: "BAD_REQUEST",
+                  },
+                },
+              },
             },
           },
         },
         Unauthorized: {
-          description: "Unauthorized",
+          description: "Unauthorized - Authentication required",
           content: {
             "application/json": {
               schema: {
@@ -203,13 +1074,22 @@ const options = {
                 properties: {
                   success: { type: "boolean", example: false },
                   message: { type: "string", example: "Unauthorized" },
+                  code: { type: "string" },
+                },
+              },
+              examples: {
+                notAuthenticated: {
+                  $ref: "#/components/examples/UnauthorizedError",
+                },
+                invalidCredentials: {
+                  $ref: "#/components/examples/InvalidCredentialsError",
                 },
               },
             },
           },
         },
         Forbidden: {
-          description: "Forbidden",
+          description: "Forbidden - Insufficient permissions",
           content: {
             "application/json": {
               schema: {
@@ -217,6 +1097,12 @@ const options = {
                 properties: {
                   success: { type: "boolean", example: false },
                   message: { type: "string", example: "Forbidden" },
+                  code: { type: "string" },
+                },
+              },
+              examples: {
+                insufficientPermissions: {
+                  $ref: "#/components/examples/ForbiddenError",
                 },
               },
             },
@@ -231,6 +1117,12 @@ const options = {
                 properties: {
                   success: { type: "boolean", example: false },
                   message: { type: "string", example: "Resource not found" },
+                  code: { type: "string" },
+                },
+              },
+              examples: {
+                resourceNotFound: {
+                  $ref: "#/components/examples/NotFoundError",
                 },
               },
             },
@@ -242,6 +1134,12 @@ const options = {
             "application/json": {
               schema: { $ref: "#/components/schemas/ValidationError422" },
               examples: {
+                userInputValidation: {
+                  $ref: "#/components/examples/ValidationErrorUserInput",
+                },
+                bookingValidation: {
+                  $ref: "#/components/examples/ValidationErrorBookingInput",
+                },
                 venueLayoutInvalid: {
                   summary: "Venue layout semantic errors",
                   value: {

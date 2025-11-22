@@ -1,25 +1,14 @@
 import { User } from "#models/index.js";
 import { hashPassword, comparePassword } from "#utils/hash.js";
-import { Op } from "sequelize";
+import { buildWhereClause } from "./helpers/filters.js";
+import { findEntityOrThrow, checkUniqueFields } from "./helpers/entityHelpers.js";
 
 export const getAllUsers = async (filters = {}) => {
-  const where = {};
-
-  if (filters.role) {
-    where.role = filters.role;
-  }
-
-  if (filters.status) {
-    where.status = filters.status;
-  }
-
-  if (filters.search) {
-    where[Op.or] = [
-      { name: { [Op.iLike]: `%${filters.search}%` } },
-      { email: { [Op.iLike]: `%${filters.search}%` } },
-      { username: { [Op.iLike]: `%${filters.search}%` } },
-    ];
-  }
+  const where = buildWhereClause(filters, {
+    statusField: "status",
+    searchFields: ["name", "email", "username"],
+    additionalFilters: (f) => (f.role ? { role: f.role } : {}),
+  });
 
   const users = await User.findAll({
     where,
@@ -45,15 +34,7 @@ export const getUserById = async (id) => {
 export const createUser = async (userData) => {
   const { email, username, password, ...rest } = userData;
 
-  const existingUser = await User.findOne({
-    where: {
-      [Op.or]: [{ email }, { username }],
-    },
-  });
-
-  if (existingUser) {
-    throw new Error("Email or username already exists");
-  }
+  await checkUniqueFields(User, { email, username });
 
   const hashedPassword = await hashPassword(password);
 
@@ -72,40 +53,22 @@ export const createUser = async (userData) => {
 };
 
 export const updateUser = async (id, updates) => {
-  const user = await User.findByPk(id);
-
-  if (!user) {
-    throw new Error("User not found");
-  }
+  const user = await findEntityOrThrow(User, id, "User not found");
 
   if (updates.password) {
     updates.password = await hashPassword(updates.password);
   }
 
+  const fieldsToCheck = {};
   if (updates.email && updates.email !== user.email) {
-    const existingUser = await User.findOne({
-      where: {
-        email: updates.email,
-        id: { [Op.ne]: id },
-      },
-    });
-
-    if (existingUser) {
-      throw new Error("Email already exists");
-    }
+    fieldsToCheck.email = updates.email;
+  }
+  if (updates.username && updates.username !== user.username) {
+    fieldsToCheck.username = updates.username;
   }
 
-  if (updates.username && updates.username !== user.username) {
-    const existingUser = await User.findOne({
-      where: {
-        username: updates.username,
-        id: { [Op.ne]: id },
-      },
-    });
-
-    if (existingUser) {
-      throw new Error("Username already exists");
-    }
+  if (Object.keys(fieldsToCheck).length > 0) {
+    await checkUniqueFields(User, fieldsToCheck, id);
   }
 
   await user.update(updates);
@@ -114,11 +77,7 @@ export const updateUser = async (id, updates) => {
 };
 
 export const deleteUser = async (id) => {
-  const user = await User.findByPk(id);
-
-  if (!user) {
-    throw new Error("User not found");
-  }
+  const user = await findEntityOrThrow(User, id, "User not found");
 
   await user.destroy();
 
@@ -126,11 +85,7 @@ export const deleteUser = async (id) => {
 };
 
 export const verifyAndDeleteUser = async (id, password) => {
-  const user = await User.findByPk(id);
-
-  if (!user) {
-    throw new Error("User not found");
-  }
+  const user = await findEntityOrThrow(User, id, "User not found");
 
   const isValid = await comparePassword(password, user.password);
   if (!isValid) {

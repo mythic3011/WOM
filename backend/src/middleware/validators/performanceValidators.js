@@ -24,12 +24,22 @@ export const createPerformanceValidator = [
   body("date")
     .notEmpty()
     .withMessage("Date is required")
-    .isISO8601()
+    .isISO8601({ strict: false })
     .withMessage("Date must be valid ISO 8601 format")
     .custom((value) => {
-      if (new Date(value) < new Date()) {
+      const inputDate = new Date(value);
+      const now = new Date();
+      
+      if (isNaN(inputDate.getTime())) {
+        throw new Error("Invalid date format");
+      }
+      
+      const minDate = new Date(now.getTime() - 60000);
+      
+      if (inputDate < minDate) {
         throw new Error("Date must be in the future");
       }
+      
       return true;
     }),
 
@@ -68,6 +78,68 @@ export const createPerformanceValidator = [
     .isArray()
     .withMessage("Pricing sections must be an array"),
 
+  // Validate pricing tiers
+  body("priceTiers")
+    .optional()
+    .isArray()
+    .withMessage("Price tiers must be an array"),
+
+  body("priceTiers.*.name")
+    .optional()
+    .isString()
+    .withMessage("Price tier name must be a string"),
+
+  body("priceTiers.*.basePrice")
+    .optional()
+    .isFloat({ min: 0 })
+    .withMessage("Base price must be a non-negative number"),
+
+  body("priceTiers.*.tier")
+    .optional()
+    .isString()
+    .withMessage("Tier must be a string"),
+
+  body("priceTiers.*.seatRefs")
+    .optional()
+    .isArray()
+    .withMessage("Seat refs must be an array"),
+
+  body("priceTiers.*.zoneRefs")
+    .optional()
+    .isArray()
+    .withMessage("Zone refs must be an array"),
+
+  // Validate pricing zones
+  body("pricingZones")
+    .optional()
+    .isArray()
+    .withMessage("Pricing zones must be an array"),
+
+  body("pricingZones.*.id")
+    .optional()
+    .isString()
+    .withMessage("Zone id must be a string"),
+
+  body("pricingZones.*.name")
+    .optional()
+    .isString()
+    .withMessage("Zone name must be a string"),
+
+  body("pricingZones.*.tier")
+    .optional()
+    .isString()
+    .withMessage("Zone tier must be a string"),
+
+  body("pricingZones.*.sections")
+    .optional()
+    .isArray()
+    .withMessage("Zone sections must be an array"),
+
+  body("pricingZones.*.rows")
+    .optional()
+    .isArray()
+    .withMessage("Zone rows must be an array"),
+
   body("tags").optional().isArray().withMessage("Tags must be an array"),
 
   body("totalSeats")
@@ -103,7 +175,19 @@ export const updatePerformanceValidator = [
     .isInt({ min: 1 })
     .withMessage("Venue ID must be a positive integer"),
 
-  body("date").optional().isISO8601().withMessage("Invalid date format"),
+  body("date")
+    .optional()
+    .isISO8601({ strict: false })
+    .withMessage("Invalid date format")
+    .custom((value) => {
+      if (value) {
+        const inputDate = new Date(value);
+        if (isNaN(inputDate.getTime())) {
+          throw new Error("Invalid date format");
+        }
+      }
+      return true;
+    }),
 
   body("duration")
     .optional()
@@ -122,6 +206,68 @@ export const updatePerformanceValidator = [
       "cancelled",
     ])
     .withMessage("Invalid status"),
+
+  // Validate pricing tiers
+  body("priceTiers")
+    .optional()
+    .isArray()
+    .withMessage("Price tiers must be an array"),
+
+  body("priceTiers.*.name")
+    .optional()
+    .isString()
+    .withMessage("Price tier name must be a string"),
+
+  body("priceTiers.*.basePrice")
+    .optional()
+    .isFloat({ min: 0 })
+    .withMessage("Base price must be a non-negative number"),
+
+  body("priceTiers.*.tier")
+    .optional()
+    .isString()
+    .withMessage("Tier must be a string"),
+
+  body("priceTiers.*.seatRefs")
+    .optional()
+    .isArray()
+    .withMessage("Seat refs must be an array"),
+
+  body("priceTiers.*.zoneRefs")
+    .optional()
+    .isArray()
+    .withMessage("Zone refs must be an array"),
+
+  // Validate pricing zones
+  body("pricingZones")
+    .optional()
+    .isArray()
+    .withMessage("Pricing zones must be an array"),
+
+  body("pricingZones.*.id")
+    .optional()
+    .isString()
+    .withMessage("Zone id must be a string"),
+
+  body("pricingZones.*.name")
+    .optional()
+    .isString()
+    .withMessage("Zone name must be a string"),
+
+  body("pricingZones.*.tier")
+    .optional()
+    .isString()
+    .withMessage("Zone tier must be a string"),
+
+  body("pricingZones.*.sections")
+    .optional()
+    .isArray()
+    .withMessage("Zone sections must be an array"),
+
+  body("pricingZones.*.rows")
+    .optional()
+    .isArray()
+    .withMessage("Zone rows must be an array"),
 ];
 
 export const getPerformanceValidator = [

@@ -1,8 +1,11 @@
+
+import Swal from "sweetalert2";
+
+import { SwalColors } from "@utils/colors.js";
+import { notify } from "@utils/ui/notification.js";
+
 import { VenueModel } from "./VenueModel.js";
 import { VenueView } from "./VenueView.js";
-import { notify } from "@utils/ui/notification.js";
-import { SwalColors } from "@utils/colors.js";
-import Swal from "sweetalert2";
 
 export class VenueController {
   constructor() {

@@ -1,13 +1,17 @@
-import { getCurrentUser } from "@utils/core/auth.js";
-import { FormComponents } from "@components/FormComponents.js";
-import { createEmptyState } from "@components/EmptyState.js";
-import { createLoadingState } from "@components/LoadingState.js";
-import { BookingCard } from "@components/BookingCard.js";
-import { bookingService } from "@services/bookingService.js";
-import { performanceService } from "@services/performanceService.js";
-import { handleApiError } from "@services/apiClient.js";
+
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
+
+import { BookingCard } from "@components/BookingCard.js";
+import { createEmptyState } from "@components/EmptyState.js";
+import { FormComponents } from "@components/FormComponents.js";
+import { createLoadingState } from "@components/LoadingState.js";
+import { handleApiError } from "@services/apiClient.js";
+import { bookingService } from "@services/bookingService.js";
+import { performanceService } from "@services/performanceService.js";
+import { downloadBookingCalendar } from "@utils/calendar.js";
+import { getCurrentUser } from "@utils/core/auth.js";
+import { notify } from "@utils/ui/notification.js";
 
 dayjs.extend(relativeTime);
 
@@ -28,6 +32,29 @@ export default {
 
   async afterRender() {
     await this.loadDashboard();
+    this.attachEventListeners();
+  },
+
+  attachEventListeners() {
+    // Calendar download buttons
+    $(document).on('click', '.add-to-calendar-btn', function (e) {
+      e.preventDefault();
+      const btn = $(this);
+      const bookingData = {
+        id: btn.data('booking-id'),
+        performanceTitle: btn.data('title'),
+        performanceDate: btn.data('date'),
+        venueName: btn.data('venue')
+      };
+
+      try {
+        downloadBookingCalendar(bookingData);
+        notify.success('Calendar event downloaded!');
+      } catch (error) {
+        console.error('Error downloading calendar:', error);
+        notify.error('Failed to download calendar event');
+      }
+    });
   },
 
   async loadDashboard() {
@@ -77,7 +104,7 @@ export default {
       })}
         ${FormComponents.statCard({
         title: "Total Spent",
-        value: `$${bookingStats.totalSpent}`,
+        value: `HKD ${Number(bookingStats.totalSpent || 0).toLocaleString()}`,
         icon: "fa-dollar-sign",
         bgColor: "bg-purple-500",
         subtitle: "All time",
@@ -239,6 +266,37 @@ export default {
     `;
   },
 
+  getMinPrice(performance) {
+    let minPrice = null;
+
+    // Check pricingSections
+    if (performance.pricingSections && Array.isArray(performance.pricingSections)) {
+      const prices = performance.pricingSections
+        .map(ps => ps.basePrice || ps.price)
+        .filter(price => price != null && price > 0);
+      if (prices.length > 0) {
+        minPrice = Math.min(...prices);
+      }
+    }
+
+    // Check ticketTypes
+    if (!minPrice && performance.ticketTypes && Array.isArray(performance.ticketTypes)) {
+      const prices = performance.ticketTypes
+        .map(tt => tt.price || tt.basePrice)
+        .filter(price => price != null && price > 0);
+      if (prices.length > 0) {
+        minPrice = Math.min(...prices);
+      }
+    }
+
+    // Fallback to direct price fields
+    if (!minPrice) {
+      minPrice = performance.price || performance.basePrice;
+    }
+
+    return minPrice ? `HKD ${minPrice.toLocaleString()}` : 'HKD 500';
+  },
+
   renderQuickActions() {
     const actions = this.getQuickActions();
     const helpLinks = this.getHelpLinks();
@@ -301,7 +359,7 @@ export default {
                       ${dayjs(perf.date).format("MMM D, YYYY")}
                     </p>
                     <div class="flex items-center justify-between">
-                      <span class="text-lg font-bold text-indigo-600">From $${perf.price
+                      <span class="text-lg font-bold text-indigo-600">${this.getMinPrice(perf)
               }</span>
                       <a href="/performances/${perf.id
               }" data-link class="px-3 py-1 bg-indigo-600 text-white text-sm rounded hover:bg-indigo-700 transition-colors">

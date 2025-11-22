@@ -37,10 +37,13 @@ export const Avatar = {
         const avatarId = userId ? `avatar-${userId}` : "avatar";
         const uploadId = `${avatarId}-upload`;
 
+        // Treat empty string as null
+        const hasValidSrc = src && src.trim() !== '';
+
         return `
       <div class="avatar-container relative inline-block ${className}">
         <div class="${sizeClass} ${roundedClass} overflow-hidden bg-gradient-to-br ${bgColor} flex items-center justify-center shadow-md border-2 border-white relative group">
-          ${src
+          ${hasValidSrc
                 ? `<img 
                   id="${avatarId}-img"
                   src="${src}" 
@@ -52,8 +55,8 @@ export const Avatar = {
             }
           <div 
             id="${avatarId}-initials"
-            class="w-full h-full flex items-center justify-center font-bold text-white ${src ? "hidden" : ""}"
-            style="display: ${src ? "none" : "flex"};"
+            class="w-full h-full flex items-center justify-center font-bold text-white ${hasValidSrc ? "hidden" : ""}"
+            style="display: ${hasValidSrc ? "none" : "flex"};"
           >
             ${initials || '<i class="fas fa-user"></i>'}
           </div>

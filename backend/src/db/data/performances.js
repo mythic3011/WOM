@@ -1,4 +1,5 @@
 import { faker } from "@faker-js/faker";
+import { generateRowLabels } from "../../utils/venueUtils.js";
 
 const generateFutureDate = (daysFromNow) => {
   const date = new Date();
@@ -73,10 +74,6 @@ const generateAdditionalPerformances = () => {
     const venueId = faker.number.int({ min: 1, max: 3 });
     const daysUntil = faker.number.int({ min: 10, max: 180 });
     const status = faker.helpers.arrayElement(statuses);
-    const capacity = venueId === 1 ? 2019 : venueId === 2 ? 1434 : 821;
-    const bookedPercentage = faker.number.float({ min: 0.1, max: 0.6 });
-    const bookedSeats = Math.floor(capacity * bookedPercentage);
-    const availableSeats = capacity - bookedSeats;
 
     const numSoloists = faker.number.int({ min: 1, max: 3 });
     const soloists = Array.from({ length: numSoloists }, () => ({
@@ -126,41 +123,55 @@ const generateAdditionalPerformances = () => {
               : venueId === 2
                 ? "Hong Kong City Hall Concert Hall"
                 : "Hong Kong Academy for Performing Arts Concert Hall",
-          available: availableSeats,
-          total: capacity,
           status,
           pricing: {
             sections: [
-              { sectionName: "Premium", sectionCode: "PR", basePrice, tier: "premium" },
+              {
+                sectionName: "Premium",
+                sectionCode: "PR",
+                basePrice,
+                tier: "premium",
+                rows: ["A", "B", "C", "D", "E", "F"]
+              },
               {
                 sectionName: "Standard",
                 sectionCode: "ST",
                 basePrice: Math.floor(basePrice * 0.7),
                 tier: "standard",
+                rows: ["G", "H", "I", "J", "K", "L"]
               },
               {
                 sectionName: "Economy",
                 sectionCode: "EC",
                 basePrice: Math.floor(basePrice * 0.4),
                 tier: "economy",
+                rows: ["M", "N", "O", "P"]
               },
             ],
           },
         },
       ],
       pricingSections: [
-        { sectionName: "Premium", sectionCode: "PR", basePrice, tier: "premium" },
+        {
+          sectionName: "Premium",
+          sectionCode: "PR",
+          basePrice,
+          tier: "premium",
+          rows: ["A", "B", "C", "D", "E", "F"]
+        },
         {
           sectionName: "Standard",
           sectionCode: "ST",
           basePrice: Math.floor(basePrice * 0.7),
           tier: "standard",
+          rows: ["G", "H", "I", "J", "K", "L"]
         },
         {
           sectionName: "Economy",
           sectionCode: "EC",
           basePrice: Math.floor(basePrice * 0.4),
           tier: "economy",
+          rows: ["M", "N", "O", "P"]
         },
       ],
       tags: [
@@ -173,9 +184,6 @@ const generateAdditionalPerformances = () => {
         { probability: 0.3 }
       ),
       dresscode: faker.helpers.arrayElement(["Formal", "Smart Casual", "Casual"]),
-      totalSeats: capacity,
-      availableSeats,
-      bookedSeats,
     });
   }
 
@@ -220,8 +228,6 @@ export const performancesData = [
         id: generateShowtimeId(1, 0),
         dateTime: generateFutureDate(30),
         venueName: "Hong Kong Cultural Centre Concert Hall",
-        available: 1800,
-        total: 2019,
         status: "on_sale",
         pricing: {
           sections: [
@@ -230,7 +236,7 @@ export const performancesData = [
               sectionCode: "OS",
               basePrice: 800,
               tier: "vip",
-              rows: 8,
+              rows: ["A", "B", "C", "D", "E", "F", "G", "H"],
               seatsPerRow: 26,
             },
             {
@@ -238,7 +244,7 @@ export const performancesData = [
               sectionCode: "DC",
               basePrice: 600,
               tier: "premium",
-              rows: 6,
+              rows: ["I", "J", "K", "L", "M", "N"],
               seatsPerRow: 30,
             },
             {
@@ -246,7 +252,7 @@ export const performancesData = [
               sectionCode: "GC",
               basePrice: 400,
               tier: "standard",
-              rows: 4,
+              rows: ["O", "P", "Q", "R"],
               seatsPerRow: 32,
             },
             {
@@ -254,7 +260,7 @@ export const performancesData = [
               sectionCode: "UC",
               basePrice: 200,
               tier: "economy",
-              rows: 3,
+              rows: ["S", "T", "U"],
               seatsPerRow: 28,
             },
           ],
@@ -267,7 +273,7 @@ export const performancesData = [
         sectionCode: "OS",
         basePrice: 800,
         tier: "vip",
-        rows: 8,
+        rows: ["A", "B", "C", "D", "E", "F", "G", "H"],
         seatsPerRow: 26,
       },
       {
@@ -275,7 +281,7 @@ export const performancesData = [
         sectionCode: "DC",
         basePrice: 600,
         tier: "premium",
-        rows: 6,
+        rows: ["I", "J", "K", "L", "M", "N"],
         seatsPerRow: 30,
       },
       {
@@ -283,7 +289,7 @@ export const performancesData = [
         sectionCode: "GC",
         basePrice: 400,
         tier: "standard",
-        rows: 4,
+        rows: ["O", "P", "Q", "R"],
         seatsPerRow: 32,
       },
       {
@@ -291,16 +297,13 @@ export const performancesData = [
         sectionCode: "UC",
         basePrice: 200,
         tier: "economy",
-        rows: 3,
+        rows: ["S", "T", "U"],
         seatsPerRow: 28,
       },
     ],
     tags: ["Beethoven", "Symphony", "Choral", "Orchestra", "Classical"],
     ageRestriction: null,
     dresscode: "Smart Casual",
-    totalSeats: 2019,
-    availableSeats: 1800,
-    bookedSeats: 219,
   },
   {
     id: 2,
@@ -335,8 +338,6 @@ export const performancesData = [
         id: generateShowtimeId(2, 0),
         dateTime: generateFutureDate(45),
         venueName: "Hong Kong Cultural Centre Concert Hall",
-        available: 2019,
-        total: 2019,
         status: "early_bird",
         pricing: {
           sections: [
@@ -345,7 +346,7 @@ export const performancesData = [
               sectionCode: "OS",
               basePrice: 900,
               tier: "vip",
-              rows: 8,
+              rows: ["A", "B", "C", "D", "E", "F", "G", "H"],
               seatsPerRow: 26,
             },
             {
@@ -353,7 +354,7 @@ export const performancesData = [
               sectionCode: "DC",
               basePrice: 700,
               tier: "premium",
-              rows: 6,
+              rows: ["I", "J", "K", "L", "M", "N"],
               seatsPerRow: 30,
             },
             {
@@ -361,7 +362,7 @@ export const performancesData = [
               sectionCode: "GC",
               basePrice: 500,
               tier: "standard",
-              rows: 4,
+              rows: ["O", "P", "Q", "R"],
               seatsPerRow: 32,
             },
             {
@@ -369,7 +370,7 @@ export const performancesData = [
               sectionCode: "UC",
               basePrice: 300,
               tier: "economy",
-              rows: 3,
+              rows: ["S", "T", "U"],
               seatsPerRow: 28,
             },
           ],
@@ -382,7 +383,7 @@ export const performancesData = [
         sectionCode: "OS",
         basePrice: 900,
         tier: "vip",
-        rows: 8,
+        rows: ["A", "B", "C", "D", "E", "F", "G", "H"],
         seatsPerRow: 26,
       },
       {
@@ -390,7 +391,7 @@ export const performancesData = [
         sectionCode: "DC",
         basePrice: 700,
         tier: "premium",
-        rows: 6,
+        rows: ["I", "J", "K", "L", "M", "N"],
         seatsPerRow: 30,
       },
       {
@@ -398,7 +399,7 @@ export const performancesData = [
         sectionCode: "GC",
         basePrice: 500,
         tier: "standard",
-        rows: 4,
+        rows: ["O", "P", "Q", "R"],
         seatsPerRow: 32,
       },
       {
@@ -406,16 +407,13 @@ export const performancesData = [
         sectionCode: "UC",
         basePrice: 300,
         tier: "economy",
-        rows: 3,
+        rows: ["S", "T", "U"],
         seatsPerRow: 28,
       },
     ],
     tags: ["Tchaikovsky", "Piano", "Concerto", "Romantic"],
     ageRestriction: null,
     dresscode: "Formal",
-    totalSeats: 2019,
-    availableSeats: 2019,
-    bookedSeats: 0,
   },
   {
     id: 3,
@@ -446,8 +444,6 @@ export const performancesData = [
         id: generateShowtimeId(3, 0),
         dateTime: generateFutureDate(15),
         venueName: "Hong Kong City Hall Concert Hall",
-        available: 1200,
-        total: 1434,
         status: "on_sale",
         pricing: {
           sections: [
@@ -456,7 +452,7 @@ export const performancesData = [
               sectionCode: "ST",
               basePrice: 500,
               tier: "premium",
-              rows: 17,
+              rows: generateRowLabels("A", 17),
               seatsPerRow: 34,
             },
             {
@@ -464,7 +460,7 @@ export const performancesData = [
               sectionCode: "CI",
               basePrice: 350,
               tier: "standard",
-              rows: 8,
+              rows: generateRowLabels("R", 8),
               seatsPerRow: 32,
             },
             {
@@ -472,7 +468,7 @@ export const performancesData = [
               sectionCode: "BA",
               basePrice: 200,
               tier: "economy",
-              rows: 4,
+              rows: generateRowLabels("Z", 4),
               seatsPerRow: 26,
             },
           ],
@@ -485,7 +481,7 @@ export const performancesData = [
         sectionCode: "ST",
         basePrice: 500,
         tier: "premium",
-        rows: 17,
+        rows: generateRowLabels("A", 17),
         seatsPerRow: 34,
       },
       {
@@ -493,7 +489,7 @@ export const performancesData = [
         sectionCode: "CI",
         basePrice: 350,
         tier: "standard",
-        rows: 8,
+        rows: generateRowLabels("R", 8),
         seatsPerRow: 32,
       },
       {
@@ -501,16 +497,13 @@ export const performancesData = [
         sectionCode: "BA",
         basePrice: 200,
         tier: "economy",
-        rows: 4,
+        rows: generateRowLabels("Z", 4),
         seatsPerRow: 26,
       },
     ],
     tags: ["Vivaldi", "Baroque", "Violin", "Four Seasons", "Family-Friendly"],
     ageRestriction: "6+",
     dresscode: "Smart Casual",
-    totalSeats: 1434,
-    availableSeats: 1200,
-    bookedSeats: 234,
   },
   ...generateAdditionalPerformances(),
 ];

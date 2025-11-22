@@ -1,14 +1,5 @@
 import { SeatNumberingSystem } from "../SeatNumberingSystem.js";
-
-function slugify(text) {
-  return (text || "")
-    .toString()
-    .toLowerCase()
-    .trim()
-    .replace(/\s+/g, "-")
-    .replace(/[^\w-]+/g, "")
-    .replace(/--+/g, "-");
-}
+import { slugify } from "../stringUtils.js";
 
 export function validateVenueLayoutSemantic(layout, helpers) {
   const errors = [];

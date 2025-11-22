@@ -136,7 +136,7 @@ module.exports = {
     await queryInterface.addIndex("performances", ["date"]);
   },
 
-  async down(queryInterface, Sequelize) {
+  async down(queryInterface, _Sequelize) {
     await queryInterface.dropTable("performances");
   },
 };

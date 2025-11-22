@@ -1,3 +1,7 @@
+/*
+This css files is support js lib that do not support the tailwindcss class
+so we need to add the class manually
+*/
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -73,29 +77,23 @@ svg g.interactive-seat text {
   pointer-events: none;
 }
 
-.os-theme-indigo > .os-scrollbar > .os-scrollbar-track > .os-scrollbar-handle {
+.os-theme-indigo>.os-scrollbar>.os-scrollbar-track>.os-scrollbar-handle {
   background: rgba(99, 102, 241, 0.4);
 }
 
-.os-theme-indigo
-  > .os-scrollbar:hover
-  > .os-scrollbar-track
-  > .os-scrollbar-handle {
+.os-theme-indigo>.os-scrollbar:hover>.os-scrollbar-track>.os-scrollbar-handle {
   background: rgba(99, 102, 241, 0.6);
 }
 
-.os-theme-indigo
-  > .os-scrollbar
-  > .os-scrollbar-track
-  > .os-scrollbar-handle.active {
+.os-theme-indigo>.os-scrollbar>.os-scrollbar-track>.os-scrollbar-handle.active {
   background: rgba(99, 102, 241, 0.8);
 }
 
-.os-theme-indigo > .os-scrollbar-vertical {
+.os-theme-indigo>.os-scrollbar-vertical {
   width: 8px;
 }
 
-.os-theme-indigo > .os-scrollbar-horizontal {
+.os-theme-indigo>.os-scrollbar-horizontal {
   height: 8px;
 }
 
@@ -110,4 +108,52 @@ svg g.interactive-seat:focus {
 
 .seats-transform-ease {
   transition: transform 150ms ease-out;
+}
+
+@layer components {
+
+  /* Wizard close svg 
+    Since the lib do not support the tailwindcss
+  */
+  .wizard-close-btn {
+    position: absolute !important;
+    top: 1rem !important;
+    right: 1rem !important;
+    width: 2.5rem !important;
+    height: 2.5rem !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    background: linear-gradient(to bottom right, rgb(239 68 68), rgb(220 38 38)) !important;
+    color: white !important;
+    border-radius: 0.75rem !important;
+    border: none !important;
+    cursor: pointer !important;
+    transition: all 0.2s ease !important;
+    box-shadow: 0 10px 15px -3px rgba(239, 68, 68, 0.3) !important;
+    z-index: 10000 !important;
+    font-size: 0 !important;
+  }
+}
+
+.wizard-close-btn:hover {
+  background: linear-gradient(to bottom right, rgb(220 38 38), rgb(185 28 28)) !important;
+  transform: scale(1.05) !important;
+  box-shadow: 0 20px 25px -5px rgba(239, 68, 68, 0.4) !important;
+}
+
+.wizard-close-btn:active {
+  transform: scale(0.95) !important;
+}
+
+.wizard-close-btn::before {
+  content: '×' !important;
+  font-size: 1.875rem !important;
+  line-height: 1 !important;
+  font-weight: 300 !important;
+  color: white !important;
+}
+
+.wizard-close-btn span {
+  display: none !important;
 }

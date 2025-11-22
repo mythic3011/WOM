@@ -1,6 +1,6 @@
-import { DataTypes, Op } from "sequelize";
-import sequelize from "#config/database.js";
 import bcrypt from "bcryptjs";
+import { DataTypes } from "sequelize";
+import sequelize from "#config/database.js";
 
 const User = sequelize.define(
   "User",
@@ -131,7 +131,38 @@ const User = sequelize.define(
 
 User.prototype.toSafeObject = function () {
   const { password: _password, ...safeUser } = this.toJSON();
+
+  Object.keys(safeUser).forEach(key => {
+    const value = safeUser[key];
+    if (typeof value === 'string' && value.trim() === '') {
+      delete safeUser[key];
+    }
+  });
+
   return safeUser;
+};
+
+/**
+ * Get user object without large fields (for localStorage storage)
+ * Excludes base64 images and other large data that exceed storage limits
+ */
+User.prototype.toStorageObject = function () {
+  const safeUser = this.toSafeObject();
+
+  // Remove large fields that shouldn't be stored in localStorage
+  const {
+    profileImage,
+    avatar,
+    photo,
+    ...storageUser
+  } = safeUser;
+
+  // Keep a flag to indicate if user has a profile image
+  if (profileImage || avatar || photo) {
+    storageUser.hasProfileImage = true;
+  }
+
+  return storageUser;
 };
 
 User.prototype.comparePassword = async function (password) {

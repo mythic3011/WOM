@@ -2,7 +2,7 @@ const bcrypt = require("bcryptjs");
 const { v4: uuidv4 } = require("uuid");
 
 module.exports = {
-  async up(queryInterface, Sequelize) {
+  async up(queryInterface, _Sequelize) {
     const now = new Date();
     const adminPass = await bcrypt.hash("adminpass", 10);
     const userPass = await bcrypt.hash("userpass", 10);
@@ -108,7 +108,7 @@ module.exports = {
     await queryInterface.bulkInsert("users", users);
   },
 
-  async down(queryInterface, Sequelize) {
+  async down(queryInterface, _Sequelize) {
     await queryInterface.bulkDelete("users", null, {});
   },
 };

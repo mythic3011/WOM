@@ -1,4 +1,4 @@
-import { APP_CONFIG } from "../config/config.js";
+import { APP_CONFIG } from "@config/config.js";
 
 const API_BASE = APP_CONFIG.apiBaseUrl;
 
@@ -64,6 +64,20 @@ export const authAPI = {
       method: "PUT",
       body: JSON.stringify(profileData),
     });
+  },
+
+  async getProfileImage() {
+    return apiRequest("/auth/profile-image");
+  },
+
+  async logout() {
+    return apiRequest("/auth/logout", {
+      method: "POST",
+    });
+  },
+
+  async checkSession() {
+    return apiRequest("/auth/check");
   },
 };
 

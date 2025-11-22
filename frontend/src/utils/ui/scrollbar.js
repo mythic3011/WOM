@@ -1,5 +1,5 @@
+
 import { OverlayScrollbars } from "overlayscrollbars";
-import "overlayscrollbars/overlayscrollbars.css";
 
 const defaultOptions = {
   scrollbars: {

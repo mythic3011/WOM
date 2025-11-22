@@ -46,7 +46,30 @@ router.get(
  * /api/ticket-types:
  *   post:
  *     tags: [Ticket Types]
- *     summary: Create ticket type
+ *     summary: Create new ticket type (Admin only)
+ *     description: |
+ *       Creates a new ticket type with pricing and discount information. Admin only.
+ *       
+ *       **Admin Only:**
+ *       - Requires authentication with admin role
+ *       
+ *       **Ticket Types:**
+ *       - Standard: Full price tickets
+ *       - Premium: Enhanced seating with amenities
+ *       - Student: Discounted for students
+ *       - Senior: Discounted for seniors
+ *       - Child: Discounted for children
+ *       - Group: Bulk purchase discounts
+ *       
+ *       **Pricing:**
+ *       - Base price set per performance
+ *       - Discount percentage applied to base price
+ *       - Final price = base price * (1 - discount)
+ *       
+ *       **Related Endpoints:**
+ *       - GET /api/ticket-types - List all ticket types
+ *       - PUT /api/ticket-types/{id} - Update ticket type
+ *       - POST /api/bookings - Use ticket type in booking
  *     security:
  *       - sessionAuth: []
  *     requestBody:
@@ -59,13 +82,60 @@ router.get(
  *             properties:
  *               id:
  *                 type: string
+ *                 description: Unique ticket type identifier
+ *                 example: student
  *               name:
  *                 type: string
+ *                 description: Display name
+ *                 example: Student
+ *               description:
+ *                 type: string
+ *                 description: Ticket type description
+ *                 example: Discounted ticket for students with valid ID
  *               discount:
  *                 type: number
+ *                 description: Discount percentage (0-1)
+ *                 example: 0.4
+ *               color:
+ *                 type: string
+ *                 description: Color code for UI display
+ *                 example: '#10B981'
+ *           examples:
+ *             studentTicket:
+ *               summary: Student ticket type
+ *               value:
+ *                 id: student
+ *                 name: Student
+ *                 description: Discounted ticket for students with valid ID
+ *                 discount: 0.4
+ *                 color: '#10B981'
+ *             seniorTicket:
+ *               summary: Senior ticket type
+ *               value:
+ *                 id: senior
+ *                 name: Senior
+ *                 description: Discounted ticket for seniors (65+)
+ *                 discount: 0.3
+ *                 color: '#8B5CF6'
  *     responses:
  *       201:
- *         description: Ticket type created
+ *         description: Ticket type created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   $ref: '#/components/schemas/TicketType'
+ *       401:
+ *         $ref: '#/components/responses/Unauthorized'
+ *       403:
+ *         $ref: '#/components/responses/Forbidden'
+ *       422:
+ *         $ref: '#/components/responses/UnprocessableEntity'
  */
 router.post(
   "/",

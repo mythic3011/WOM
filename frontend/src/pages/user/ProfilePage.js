@@ -1,12 +1,14 @@
-import { notify } from "@utils/ui/notification.js";
-import { getCurrentUser, logout } from "@utils/core/auth.js";
-import { phoneUtils } from "@utils/forms/phoneFormat.js";
-import { ResponseExtractor, userAPI, handleApiError, userService } from "@services/index.js";
+
+import dayjs from "dayjs";
+import Swal from "sweetalert2";
+
 import { Avatar } from "@components/common/Avatar.js";
 import { FormComponents } from "@components/FormComponents.js";
+import { ResponseExtractor, userAPI, handleApiError, userService } from "@services/index.js";
 import { SwalColors } from "@utils/colors.js";
-import Swal from "sweetalert2";
-import dayjs from "dayjs";
+import { getCurrentUser, logout } from "@utils/core/auth.js";
+import { phoneUtils } from "@utils/forms/phoneFormat.js";
+import { notify } from "@utils/ui/notification.js";
 
 export default {
   title: "Profile | User",
@@ -427,6 +429,13 @@ export default {
     await userAPI.update(user.id, {
       profileImage: imageData,
     });
+
+    // Clear profile image cache and refresh navbar
+    const { clearProfileImageCache } = await import('@services/profileImageService.js');
+    const { refreshNavbar } = await import('@components/layout/Navbar.js');
+
+    clearProfileImageCache(user.id);
+    await refreshNavbar();
   },
 
   setupEventListeners() {
@@ -568,8 +577,6 @@ export default {
       }
     }
 
-    const profileImageData = await getImageDataURL("profileImageInput");
-
     const updates = {
       title,
       name,
@@ -577,7 +584,6 @@ export default {
       gender,
       birthday,
       phone,
-      profileImage: profileImageData || user.profileImage,
     };
 
     if (newPassword) {

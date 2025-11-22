@@ -1,8 +1,46 @@
+
 import dayjs from "dayjs";
-import { getStatusBadge } from "@utils/status.js";
+
 import { performanceUtils } from "@utils/performanceUtils.js";
+import { getStatusBadge } from "@utils/status.js";
 
 export const PerformanceCard = {
+  /**
+   * Get the minimum price from performance data
+   * Checks ticketTypes, pricingSections, and basePrice
+   */
+  getMinPrice(performance) {
+    let minPrice = null;
+
+    // Check ticketTypes array
+    if (performance.ticketTypes && Array.isArray(performance.ticketTypes)) {
+      const prices = performance.ticketTypes
+        .map(tt => tt.price || tt.basePrice)
+        .filter(p => p != null && p > 0);
+      if (prices.length > 0) {
+        minPrice = Math.min(...prices);
+      }
+    }
+
+    // Check pricingSections array
+    if (performance.pricingSections && Array.isArray(performance.pricingSections)) {
+      const prices = performance.pricingSections
+        .map(ps => ps.basePrice || ps.price)
+        .filter(p => p != null && p > 0);
+      if (prices.length > 0) {
+        const sectionMin = Math.min(...prices);
+        minPrice = minPrice ? Math.min(minPrice, sectionMin) : sectionMin;
+      }
+    }
+
+    // Fallback to direct price or basePrice fields
+    if (!minPrice) {
+      minPrice = performance.price || performance.basePrice;
+    }
+
+    return minPrice || null;
+  },
+
   getDateDisplay(performance) {
     if (!performance.showtimes || performance.showtimes.length === 0) {
       return {
@@ -184,8 +222,7 @@ export const PerformanceCard = {
           <div class="flex items-center justify-between pt-4 border-t-2 border-gray-200">
             <div>
               <p class="text-xs text-gray-500 uppercase tracking-wide">From</p>
-              <p class="text-2xl font-bold text-indigo-600">HKD ${performance.price || 200
-      }</p>
+              <p class="text-2xl font-bold text-indigo-600">HKD ${(this.getMinPrice(performance) || 0).toLocaleString()}</p>
             </div>
             <a href="/performances/${performance.id
       }" data-link class="inline-flex items-center gap-2 px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-semibold shadow-md hover:shadow-lg">
@@ -314,8 +351,7 @@ export const PerformanceCard = {
             <div class="flex flex-wrap items-center gap-4">
               <div class="text-left">
                 <p class="text-xs text-gray-500 uppercase tracking-wide mb-1">From</p>
-                <p class="text-2xl font-bold text-indigo-600">HKD ${performance.price || 200
-      }</p>
+                <p class="text-2xl font-bold text-indigo-600">HKD ${(this.getMinPrice(performance) || 0).toLocaleString()}</p>
               </div>
               <div class="flex-1"></div>
               <a href="/performances/${performance.id

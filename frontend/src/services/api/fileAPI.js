@@ -1,10 +1,11 @@
+import { APP_CONFIG } from '@config/config.js';
+import { fileHandler } from '@utils/core/fileHandler.js';
+
 /**
  * File API Service
  * Handles file upload and download operations with the backend API
  */
 
-import { fileHandler } from '@utils/core/fileHandler.js';
-import { APP_CONFIG } from '@config/config.js';
 
 const API_BASE = APP_CONFIG.apiBaseUrl;
 

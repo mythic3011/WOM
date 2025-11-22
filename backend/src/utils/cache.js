@@ -62,8 +62,7 @@ setInterval(() => {
   cache.cleanup();
 }, 60000);
 
-export const cacheMiddleware = (ttl = 300000) => {
-  return (req, res, next) => {
+export const cacheMiddleware = (ttl = 300000) => (req, res, next) => {
     if (req.method !== "GET") {
       return next();
     }
@@ -83,4 +82,3 @@ export const cacheMiddleware = (ttl = 300000) => {
 
     next();
   };
-};

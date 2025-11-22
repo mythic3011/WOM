@@ -1,5 +1,7 @@
+
 import { APP_CONFIG } from "@config/config.js";
 import { notify } from "@utils/ui/notification.js";
+
 import { storage } from "./storageService.js";
 
 const API_BASE = APP_CONFIG.apiBaseUrl;
@@ -143,6 +145,10 @@ export const authAPI = {
 
   async checkSession() {
     return apiClient.get("/auth/check");
+  },
+
+  async getProfileImage() {
+    return apiClient.get("/auth/profile-image");
   },
 };
 

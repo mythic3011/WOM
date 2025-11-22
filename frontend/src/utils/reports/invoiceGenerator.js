@@ -1,25 +1,11 @@
+
 import dayjs from "dayjs";
-import { statsService } from "@services/statsService.js";
 import pdfMake from "pdfmake/build/pdfmake";
+
 import { COMPANY_INFO } from "@config/config.js";
+import { statsService } from "@services/statsService.js";
 import { getDisplayLabel } from "@utils/seatIdHelper.js";
-
-const initPdfMake = async () => {
-  try {
-    const pdfFonts = await import("pdfmake/build/vfs_fonts");
-    if (pdfFonts.pdfMake?.vfs) {
-      pdfMake.vfs = pdfFonts.pdfMake.vfs;
-    } else if (pdfFonts.default?.pdfMake?.vfs) {
-      pdfMake.vfs = pdfFonts.default.pdfMake.vfs;
-    } else if (pdfFonts.default?.vfs) {
-      pdfMake.vfs = pdfFonts.default.vfs;
-    }
-  } catch (error) {
-    console.error("Failed to load pdfMake fonts:", error);
-  }
-};
-
-initPdfMake();
+import "./pdfUtils.js";
 
 export const InvoiceGenerator = {
   generatePDFDefinition(booking, performance, customerInfo, showtime = null) {
@@ -99,9 +85,9 @@ export const InvoiceGenerator = {
     const paymentStatus = booking.status === "confirmed" ? "PAID" : "PENDING";
 
     const companyAddress = [
-      COMPANY_INFO.address.line1,
-      COMPANY_INFO.address.line2 ? COMPANY_INFO.address.line2 + "\n" : "",
-      COMPANY_INFO.address.city + "\n",
+      COMPANY_INFO.businessAddress.line1,
+      COMPANY_INFO.businessAddress.line2 ? COMPANY_INFO.businessAddress.line2 + "\n" : "",
+      COMPANY_INFO.businessAddress.city + "\n",
       `Tel: ${COMPANY_INFO.contact.phone}\n`,
       `Email: ${COMPANY_INFO.contact.email}`,
     ]

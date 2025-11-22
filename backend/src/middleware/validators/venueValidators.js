@@ -23,6 +23,91 @@ export const createVenueValidator = [
 
   body("layout").optional().isObject().withMessage("Layout must be an object"),
 
+  // Validate layout.sections array
+  body("layout.sections")
+    .optional()
+    .isArray()
+    .withMessage("Layout sections must be an array"),
+
+  // Validate horizontal aisles in sections
+  body("layout.sections.*.horizontalAisles")
+    .optional()
+    .isArray()
+    .withMessage("Horizontal aisles must be an array"),
+
+  body("layout.sections.*.horizontalAisles.*.afterRow")
+    .optional()
+    .isString()
+    .withMessage("Horizontal aisle afterRow must be a string"),
+
+  body("layout.sections.*.horizontalAisles.*.height")
+    .optional()
+    .isInt({ min: 1 })
+    .withMessage("Horizontal aisle height must be a positive integer"),
+
+  // Validate seat numbering configuration
+  body("layout.sections.*.seatNumbering")
+    .optional()
+    .isObject()
+    .withMessage("Seat numbering must be an object"),
+
+  body("layout.sections.*.seatNumbering.globalDirection")
+    .optional()
+    .isIn(["ltr", "rtl"])
+    .withMessage("Global direction must be 'ltr' or 'rtl'"),
+
+  body("layout.sections.*.seatNumbering.startNumber")
+    .optional()
+    .isInt({ min: 1 })
+    .withMessage("Start number must be a positive integer"),
+
+  body("layout.sections.*.seatNumbering.prefix")
+    .optional()
+    .isString()
+    .withMessage("Prefix must be a string"),
+
+  body("layout.sections.*.seatNumbering.suffix")
+    .optional()
+    .isString()
+    .withMessage("Suffix must be a string"),
+
+  body("layout.sections.*.seatNumbering.skipNumbers")
+    .optional()
+    .isArray()
+    .withMessage("Skip numbers must be an array"),
+
+  // Validate per-row overrides
+  body("layout.sections.*.rowsConfig")
+    .optional()
+    .isArray()
+    .withMessage("Rows config must be an array"),
+
+  body("layout.sections.*.rowsConfig.*.rowLabel")
+    .optional()
+    .isString()
+    .withMessage("Row label must be a string"),
+
+  body("layout.sections.*.rowsConfig.*.direction")
+    .optional()
+    .isIn(["ltr", "rtl"])
+    .withMessage("Row direction must be 'ltr' or 'rtl'"),
+
+  body("layout.sections.*.rowsConfig.*.pattern")
+    .optional()
+    .isString()
+    .matches(/^[SHE]+$/)
+    .withMessage("Pattern must contain only S, H, or E characters"),
+
+  body("layout.sections.*.rowsConfig.*.seatShapes")
+    .optional()
+    .isArray()
+    .withMessage("Seat shapes must be an array"),
+
+  body("layout.sections.*.rowsConfig.*.seatShapes.*.shape")
+    .optional()
+    .isIn(["standard", "wide", "accessible", "loveseat", "table"])
+    .withMessage("Invalid seat shape type"),
+
   body("contact")
     .optional()
     .trim()
@@ -60,6 +145,91 @@ export const updateVenueValidator = [
   body("facilities").optional().isArray().withMessage("Facilities must be an array"),
 
   body("layout").optional().isObject().withMessage("Layout must be an object"),
+
+  // Validate layout.sections array
+  body("layout.sections")
+    .optional()
+    .isArray()
+    .withMessage("Layout sections must be an array"),
+
+  // Validate horizontal aisles in sections
+  body("layout.sections.*.horizontalAisles")
+    .optional()
+    .isArray()
+    .withMessage("Horizontal aisles must be an array"),
+
+  body("layout.sections.*.horizontalAisles.*.afterRow")
+    .optional()
+    .isString()
+    .withMessage("Horizontal aisle afterRow must be a string"),
+
+  body("layout.sections.*.horizontalAisles.*.height")
+    .optional()
+    .isInt({ min: 1 })
+    .withMessage("Horizontal aisle height must be a positive integer"),
+
+  // Validate seat numbering configuration
+  body("layout.sections.*.seatNumbering")
+    .optional()
+    .isObject()
+    .withMessage("Seat numbering must be an object"),
+
+  body("layout.sections.*.seatNumbering.globalDirection")
+    .optional()
+    .isIn(["ltr", "rtl"])
+    .withMessage("Global direction must be 'ltr' or 'rtl'"),
+
+  body("layout.sections.*.seatNumbering.startNumber")
+    .optional()
+    .isInt({ min: 1 })
+    .withMessage("Start number must be a positive integer"),
+
+  body("layout.sections.*.seatNumbering.prefix")
+    .optional()
+    .isString()
+    .withMessage("Prefix must be a string"),
+
+  body("layout.sections.*.seatNumbering.suffix")
+    .optional()
+    .isString()
+    .withMessage("Suffix must be a string"),
+
+  body("layout.sections.*.seatNumbering.skipNumbers")
+    .optional()
+    .isArray()
+    .withMessage("Skip numbers must be an array"),
+
+  // Validate per-row overrides
+  body("layout.sections.*.rowsConfig")
+    .optional()
+    .isArray()
+    .withMessage("Rows config must be an array"),
+
+  body("layout.sections.*.rowsConfig.*.rowLabel")
+    .optional()
+    .isString()
+    .withMessage("Row label must be a string"),
+
+  body("layout.sections.*.rowsConfig.*.direction")
+    .optional()
+    .isIn(["ltr", "rtl"])
+    .withMessage("Row direction must be 'ltr' or 'rtl'"),
+
+  body("layout.sections.*.rowsConfig.*.pattern")
+    .optional()
+    .isString()
+    .matches(/^[SHE]+$/)
+    .withMessage("Pattern must contain only S, H, or E characters"),
+
+  body("layout.sections.*.rowsConfig.*.seatShapes")
+    .optional()
+    .isArray()
+    .withMessage("Seat shapes must be an array"),
+
+  body("layout.sections.*.rowsConfig.*.seatShapes.*.shape")
+    .optional()
+    .isIn(["standard", "wide", "accessible", "loveseat", "table"])
+    .withMessage("Invalid seat shape type"),
 
   body("contact")
     .optional()

@@ -1,8 +1,10 @@
-import { storage } from "./storageService.js";
+
 import { hashPassword } from "@utils/core/crypto.js";
 import { generateUUID } from "@utils/utils.js";
+
 import { bookingAPI, handleApiError, userAPI } from "./apiClient.js";
 import { ResponseExtractor } from "./responseExtractor.js";
+import { storage } from "./storageService.js";
 
 export const userService = {
   async getAllUsers() {
@@ -174,20 +176,7 @@ export const userService = {
 
   async updateUserProfile(userId, updates) {
     try {
-      const users = await userService.getAllUsers();
-      const userIndex = users.findIndex((u) => u.id === userId);
-
-      if (userIndex === -1) {
-        return { success: false, error: "User not found" };
-      }
-
       if (updates.email) {
-        const emailExists = users.some(
-          (u) => u.id !== userId && u.email === updates.email.toLowerCase()
-        );
-        if (emailExists) {
-          return { success: false, error: "Email already in use" };
-        }
         updates.email = updates.email.toLowerCase();
       }
 
@@ -199,22 +188,20 @@ export const userService = {
         updates.password = await hashPassword(updates.password);
       }
 
-      users[userIndex] = {
-        ...users[userIndex],
+      const updatedData = {
         ...updates,
         updatedAt: new Date().toISOString(),
       };
 
-      await userAPI.update(userId, users[userIndex]);
+      await userAPI.update(userId, updatedData);
 
       const currentUser = storage.getUser();
       if (currentUser && currentUser.id === userId) {
         const updatedSession = {
           ...currentUser,
-          username: users[userIndex].username,
-          name: users[userIndex].name,
-          email: users[userIndex].email,
-          profileImage: users[userIndex].profileImage,
+          name: updates.name || currentUser.name,
+          email: updates.email || currentUser.email,
+          profileImage: updates.profileImage !== undefined ? updates.profileImage : currentUser.profileImage,
         };
         storage.setUser(updatedSession);
       }

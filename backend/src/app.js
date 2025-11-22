@@ -12,9 +12,9 @@ import "./config/env.js";
 import { corsConfig } from "./config/cors.js";
 import { sessionConfig } from "./config/session.js";
 import { errorHandler, notFound } from "./middleware/errorHandler.js";
-import { apiLimiter, bookingLimiter } from "./middleware/rateLimiter.js";
+import { apiLimiter } from "./middleware/rateLimiter.js";
 import { openApiSpec } from "./config/openapi.js";
-import logger, { requestLogger } from "./config/logger.js";
+import { requestLogger } from "./config/logger.js";
 import { sanitizeAll } from "./middleware/sanitize.js";
 import { requestId } from "./middleware/requestId.js";
 import { performanceMonitor } from "./middleware/performance.js";
@@ -26,6 +26,7 @@ import bookingRoutes from "./routes/bookings.js";
 import venueRoutes from "./routes/venues.js";
 import ticketTypeRoutes from "./routes/ticketTypes.js";
 import statsRoutes from "./routes/stats.js";
+import constantsRoutes from "./routes/constants.js";
 import devToolsRoutes from "./routes/devTools.js";
 
 const app = express();
@@ -95,6 +96,7 @@ app.get("/", (req, res) => {
       venues: "/api/venues",
       ticketTypes: "/api/ticket-types",
       stats: "/api/stats",
+      constants: "/api/constants",
     },
   });
 });
@@ -143,11 +145,12 @@ app.use(
     layout: "modern",
   })
 );
-
+// return json for openapi docs
 app.get("/api/openapi.json", (req, res) => {
   res.json(openApiSpec);
 });
 
+// registered routes
 app.use("/api", apiLimiter);
 
 app.use("/api/auth", authRoutes);
@@ -157,6 +160,7 @@ app.use("/api/bookings", bookingRoutes);
 app.use("/api/venues", venueRoutes);
 app.use("/api/ticket-types", ticketTypeRoutes);
 app.use("/api/stats", statsRoutes);
+app.use("/api/constants", constantsRoutes);
 
 if (process.env.NODE_ENV === "development") {
   app.use("/api/dev-tools", devToolsRoutes);

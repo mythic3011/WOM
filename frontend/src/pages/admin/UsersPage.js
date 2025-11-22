@@ -1,22 +1,27 @@
-import { createEmptyState } from "@components/EmptyState.js";
-import { createLoadingState } from "@components/LoadingState.js";
-import { createDataTable } from "@components/DataTable.js";
-import { FormComponents } from "@components/FormComponents.js";
-import { statsService } from "@services/statsService.js";
-import { phoneUtils } from "@utils/forms/phoneFormat.js";
-import { notify } from "@utils/ui/notification.js";
-import { SwalColors } from "@utils/colors.js";
-import { scrollbarUtils } from "@utils/ui/scrollbar.js";
-import { Avatar } from "@components/common/Avatar.js";
-import { userAPI, handleApiError } from "@services/apiClient.js";
-import { adminUserService } from "@services/adminUserService.js";
-import { bookingService } from "@services/bookingService.js";
-import Swal from "sweetalert2";
+
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
 import Papa from "papaparse";
-import { userService } from "@services/userService.js";
+import Swal from "sweetalert2";
+
+import { Avatar } from "@components/common/Avatar.js";
+import { createDataTable } from "@components/DataTable.js";
+import { createEmptyState } from "@components/EmptyState.js";
+import { FormComponents } from "@components/FormComponents.js";
+import { initImageUpload, getImageDataURL } from "@components/ImageUpload.js";
+import { createLoadingState } from "@components/LoadingState.js";
+import { Toast } from "@components/Toast.js";
+import { adminUserService } from "@services/adminUserService.js";
+import { userAPI, handleApiError } from "@services/apiClient.js";
+import { bookingService } from "@services/bookingService.js";
+
 import { ResponseExtractor } from "@services/responseExtractor.js";
+import { statsService } from "@services/statsService.js";
+import { userService } from "@services/userService.js";
+import { SwalColors } from "@utils/colors.js";
+import { phoneUtils } from "@utils/forms/phoneFormat.js";
+import { notify } from "@utils/ui/notification.js";
+import { scrollbarUtils } from "@utils/ui/scrollbar.js";
 
 dayjs.extend(relativeTime);
 
@@ -49,18 +54,19 @@ export default {
           <div id="userStats" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
           </div>
 
+          <div class="flex items-center gap-3 mb-6">
             <button
               id="importUsers"
-              class="px-4 py-2 bg-cyan-600 text-white rounded-lg hover:bg-cyan-700 transition-colors flex items-center gap-2"
+              class="px-3 py-2 text-sm bg-cyan-600 text-white rounded-lg hover:bg-cyan-700 transition-colors flex items-center gap-2 shadow-sm"
             >
-              <i class="fas fa-upload"></i>
+              <i class="fas fa-upload text-sm"></i>
               <span>Import CSV</span>
             </button>
             <button
               id="exportUsers"
-              class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2"
+              class="px-3 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2 shadow-sm"
             >
-              <i class="fas fa-download"></i>
+              <i class="fas fa-download text-sm"></i>
               <span>Export CSV</span>
             </button>
           </div>
@@ -310,9 +316,10 @@ export default {
   },
 
   attachEventListeners() {
-    $("#importUsers").on("click", () => this.importUsers());
-    $("#exportUsers").on("click", () => this.exportUsers());
-    $("#addUser, #createUserBtn").on("click", () => this.addUser());
+    // Use event delegation to handle dynamically rendered buttons
+    $(document).off("click", "#importUsers").on("click", "#importUsers", () => this.importUsers());
+    $(document).off("click", "#exportUsers").on("click", "#exportUsers", () => this.exportUsers());
+    $(document).off("click", "#addUser, #createUserBtn").on("click", "#addUser, #createUserBtn", () => this.addUser());
 
     $(document)
       .off("click", ".user-action-btn, .user-action-btn *")
@@ -369,28 +376,27 @@ export default {
       notify.error("User not found");
       return;
     }
-    const bookings = await bookingService.getAll();
-    const totalSpent = bookings.reduce((sum, b) => sum + (b.amount || 0), 0);
+    const allBookings = await bookingService.getAll();
+    const bookings = allBookings.filter(b => b.userId === user.userId);
+    const totalSpent = bookings.reduce((sum, b) => sum + (parseFloat(b.amount) || 0), 0);
 
     await Swal.fire({
-      title: `
-        <div class="flex items-center gap-3">
-          ${Avatar.render({
-        src: user.profileImage,
+      html: `
+        <div class="text-left space-y-4">
+          <div class="flex items-center gap-3 pb-4 border-b border-gray-200">
+            ${Avatar.render({
+        src: user.profileImage || null,
         name: user.name || "User",
         size: "lg",
         editable: false,
       })}
-          <div>
-            <h3 class="text-lg font-bold text-gray-900">${user.title ? user.title + " " : ""
+            <div>
+              <h3 class="text-lg font-bold text-gray-900">${user.title ? user.title + " " : ""
         }${user.name}</h3>
-            <p class="text-sm text-gray-500">@${user.username} (ID: #${user.userId
+              <p class="text-sm text-gray-500">@${user.username} (ID: #${user.userId
         })</p>
+            </div>
           </div>
-        </div>
-      `,
-      html: `
-        <div class="text-left space-y-4 mt-4">
           <div class="grid grid-cols-2 gap-4">
             <div class="bg-blue-50 p-4 rounded-lg">
               <p class="text-xs text-blue-600 font-semibold uppercase">Email</p>
@@ -457,7 +463,7 @@ export default {
                 <p class="text-xs text-gray-600">Total Bookings</p>
               </div>
               <div class="bg-green-50 p-3 rounded-lg text-center">
-                <p class="text-2xl font-bold text-green-600">$${totalSpent}</p>
+                <p class="text-2xl font-bold text-green-600">$${totalSpent.toFixed(2)}</p>
                 <p class="text-xs text-gray-600">Total Spent</p>
               </div>
               <div class="bg-yellow-50 p-3 rounded-lg text-center">
@@ -478,7 +484,7 @@ export default {
   async editUser(userId) {
     const user = this.allUsers.find((u) => String(u.userId) === String(userId));
     if (!user) {
-      notify.error("User not found");
+      Toast.error("The requested user could not be found", "User Not Found");
       return;
     }
 
@@ -843,7 +849,7 @@ export default {
     const changes = this.detectUserChanges(originalUser, formValues);
 
     if (changes.length === 0) {
-      notify.info("No changes were made");
+      Toast.info("No changes were detected", "No Updates");
       return;
     }
 
@@ -869,15 +875,16 @@ export default {
       this.allUsers = this.allUsers.map((u) =>
         String(u.userId) === String(userId) ? { ...updatedUser } : u
       );
-      this.filterUsers();
+      this.renderDataTable();
       this.renderStats();
 
-      notify.saved(
-        `User ${formValues.name} updated! Changes: ${changes.join(", ")}`
+      Toast.success(
+        `${formValues.name}'s profile has been updated successfully`,
+        "User Updated"
       );
     } catch (error) {
       console.error("Update user error:", error);
-      handleApiError(error, "Failed to update user");
+      Toast.error("Failed to update user profile. Please try again.", "Update Failed");
       throw error;
     }
   },
@@ -907,7 +914,7 @@ export default {
   async toggleUserStatus(userId) {
     const user = this.allUsers.find((u) => String(u.userId) === String(userId));
     if (!user) {
-      notify.error("User not found");
+      Toast.error("The requested user could not be found", "User Not Found");
       return;
     }
 
@@ -945,7 +952,7 @@ export default {
         this.allUsers = this.allUsers.map((u) =>
           String(u.userId) === String(userId) ? { ...updatedUser } : u
         );
-        this.filterUsers();
+        this.renderDataTable();
         this.renderStats();
 
         notify.success(
@@ -1002,7 +1009,7 @@ export default {
         this.allUsers = this.allUsers.filter(
           (u) => String(u.userId) !== String(userId)
         );
-        this.filterUsers();
+        this.renderDataTable();
         this.renderStats();
 
         notify.deleted(`User ${user.username} deleted successfully!`);
@@ -1319,7 +1326,7 @@ export default {
       }
 
       this.allUsers.push({ ...createdUser });
-      this.filterUsers();
+      this.renderDataTable();
       this.renderStats();
 
       notify.confirm(`User ${createdUser.username} created successfully!`);
@@ -1425,7 +1432,7 @@ export default {
             );
 
             this.allUsers.push(...result.created);
-            this.filterUsers();
+            this.renderDataTable();
             this.renderStats();
 
             notify.dismiss(loadingNotif);

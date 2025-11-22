@@ -5,3 +5,7 @@ export { PerformanceWizard } from "./PerformanceWizard.js";
 export { PerformanceWizardHandler } from "./PerformanceWizardHandler.js";
 export { openQuickEdit } from "./QuickEditWizard.js";
 export { ShowtimeAvailabilityBadge } from "./ShowtimeAvailabilityBadge.js";
+export { VenueEditForm } from "./VenueEditForm.js";
+export { SeatMapPreview } from "./SeatMapPreview.js";
+export { SeatMapPreviewHandler } from "./SeatMapPreviewHandler.js";
+export { SeatMapPreviewExample } from "./SeatMapPreviewExample.js";

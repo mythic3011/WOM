@@ -1,8 +1,8 @@
-import { notify } from "@utils/ui/notification.js";
-import { navigate } from "@utils/core/navigation.js";
-import { login } from "@utils/core/auth.js";
-import { handleApiError } from "@services/apiClient.js";
+
 import { ROUTES } from "@config/routes.js";
+import { login } from "@utils/core/auth.js";
+import { navigate } from "@utils/core/navigation.js";
+import { Toast } from "@components/Toast.js";
 
 const REMEMBER_KEY = "wom_remembered_user";
 
@@ -11,13 +11,8 @@ export default {
 
   async render() {
     return `
-      <main class="min-h-screen relative flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-        <div class="absolute inset-0 z-0">
-          <img
-            src="/img/loginBg2.jpg"
-            alt="Concert Hall Background"
-            class="w-full h-full object-cover"
-          />
+      <main class="min-h-screen relative flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-indigo-900 via-purple-900 to-indigo-900">
+        <div class="absolute inset-0 z-0 bg-cover bg-center bg-no-repeat" style="background-image: url('/img/loginBg2.jpg');">
           <div class="absolute inset-0 bg-gradient-to-br from-indigo-900/80 via-purple-900/70 to-indigo-900/80"></div>
         </div>
 
@@ -33,6 +28,19 @@ export default {
               <p class="text-gray-600">
                 Sign in to book your orchestral experience
               </p>
+            </div>
+
+            <div id="loginAlert" class="hidden mb-4 p-4 rounded-lg border-l-4" role="alert">
+              <div class="flex items-center gap-3">
+                <i class="fas fa-exclamation-circle text-xl"></i>
+                <div class="flex-1">
+                  <p class="font-semibold text-sm" id="loginAlertTitle"></p>
+                  <p class="text-sm mt-1" id="loginAlertMessage"></p>
+                </div>
+                <button type="button" id="closeAlert" class="text-current opacity-70 hover:opacity-100 transition-opacity">
+                  <i class="fas fa-times"></i>
+                </button>
+              </div>
             </div>
 
             <form id="loginForm" class="space-y-6">
@@ -127,6 +135,16 @@ export default {
   },
 
   async afterRender() {
+    // Preload background image for better LCP
+    const preloadLink = document.createElement('link');
+    preloadLink.rel = 'preload';
+    preloadLink.as = 'image';
+    preloadLink.href = '/img/loginBg2.jpg';
+    preloadLink.fetchPriority = 'high';
+    if (!document.querySelector('link[href="/img/loginBg2.jpg"]')) {
+      document.head.appendChild(preloadLink);
+    }
+
     const rememberedUser = localStorage.getItem(REMEMBER_KEY);
     if (rememberedUser) {
       $("#username").val(rememberedUser);
@@ -136,12 +154,42 @@ export default {
     const urlParams = new URLSearchParams(window.location.search);
     const error = urlParams.get("error");
     if (error === "unauthorized") {
-      notify.warning("Please login to continue");
+      this.showAlert("Authentication Required", "Please login to continue", "warning");
     }
 
     $("#loginForm").on("submit", (e) => this.handleLogin(e));
-
     $("#togglePassword").on("click", () => this.togglePassword());
+    $("#closeAlert").on("click", () => this.hideAlert());
+  },
+
+  showAlert(title, message, type = "error") {
+    const $alert = $("#loginAlert");
+    const $title = $("#loginAlertTitle");
+    const $message = $("#loginAlertMessage");
+
+    $title.text(title);
+    $message.text(message);
+
+    $alert.removeClass("hidden bg-red-50 border-red-500 text-red-800 bg-yellow-50 border-yellow-500 text-yellow-800 bg-blue-50 border-blue-500 text-blue-800");
+
+    if (type === "error") {
+      $alert.addClass("bg-red-50 border-red-500 text-red-800");
+    } else if (type === "warning") {
+      $alert.addClass("bg-yellow-50 border-yellow-500 text-yellow-800");
+    } else if (type === "info") {
+      $alert.addClass("bg-blue-50 border-blue-500 text-blue-800");
+    }
+
+    $alert.removeClass("hidden").hide().slideDown(300);
+
+    // Show toast notification
+    Toast[type](message, title);
+  },
+
+  hideAlert() {
+    $("#loginAlert").slideUp(300, function () {
+      $(this).addClass("hidden");
+    });
   },
 
   togglePassword() {
@@ -178,6 +226,9 @@ export default {
     `);
 
     try {
+      // Hide any previous alerts
+      this.hideAlert();
+
       if (remember) {
         localStorage.setItem(REMEMBER_KEY, usernameOrEmail);
       } else {
@@ -186,7 +237,7 @@ export default {
 
       const user = await login(usernameOrEmail, password);
 
-      notify.success(`Welcome back, ${user.name}!`);
+      Toast.success(`Welcome back, ${user.name}!`, "Login Successful");
 
       const urlParams = new URLSearchParams(window.location.search);
       const redirect = urlParams.get("redirect");
@@ -202,14 +253,25 @@ export default {
       }, 500);
     } catch (error) {
       $btn.prop("disabled", false).html(originalHTML);
-      const errorMessage =
-        error.data?.message ||
-        (error.status >= 500
-          ? "Server error. Please try again later."
-          : error.status === 401
-            ? "Invalid username/email or password"
-            : "Login failed. Please try again.");
-      notify.error(errorMessage);
+
+      // Determine error message
+      let errorTitle = "Login Failed";
+      let errorMessage = "Please check your credentials and try again.";
+
+      if (error.message) {
+        errorMessage = error.message;
+      } else if (error.data?.message) {
+        errorMessage = error.data.message;
+      } else if (error.status >= 500) {
+        errorTitle = "Server Error";
+        errorMessage = "Our servers are experiencing issues. Please try again later.";
+      } else if (error.status === 401) {
+        errorMessage = "Invalid username/email or password. Please try again.";
+      }
+
+      // Show alert in UI
+      this.showAlert(errorTitle, errorMessage, "error");
+
       console.error("Login error:", error);
     }
   },

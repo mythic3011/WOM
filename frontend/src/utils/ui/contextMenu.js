@@ -1,5 +1,5 @@
+
 import ContextMenu from "vanilla-context-menu";
-import "vanilla-context-menu/dist/vanilla-context-menu.css";
 
 export class ContextMenuManager {
   constructor() {

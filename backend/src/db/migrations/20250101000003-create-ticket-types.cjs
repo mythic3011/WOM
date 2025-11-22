@@ -27,6 +27,12 @@ module.exports = {
         defaultValue: true,
         allowNull: false,
       },
+      minGroupSize: {
+        type: Sequelize.INTEGER,
+        allowNull: true,
+        defaultValue: null,
+        comment: "Minimum number of seats required for this ticket type (for group tickets)",
+      },
       createdAt: {
         type: Sequelize.DATE,
         allowNull: false,
@@ -40,7 +46,7 @@ module.exports = {
     await queryInterface.addIndex("ticket_types", ["isActive"]);
   },
 
-  async down(queryInterface, Sequelize) {
+  async down(queryInterface, _Sequelize) {
     await queryInterface.dropTable("ticket_types");
   },
 };

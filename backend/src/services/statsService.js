@@ -1,6 +1,11 @@
-import { User, Performance, Booking, Venue } from "#models/index.js";
 import { Op } from "sequelize";
-import sequelize from "#config/database.js";
+import { User, Performance, Booking, Venue } from "#models/index.js";
+import { findEntityOrThrow } from "./helpers/entityHelpers.js";
+import {
+  calculateTotalRevenue,
+  groupByField,
+  calculateOccupancyRate,
+} from "./helpers/statsHelpers.js";
 
 export const getDashboardStats = async () => {
   const totalUsers = await User.count();
@@ -8,11 +13,7 @@ export const getDashboardStats = async () => {
   const totalBookings = await Booking.count();
   const totalVenues = await Venue.count();
 
-  const totalRevenue = await Booking.sum("totalAmount", {
-    where: {
-      paymentStatus: "paid",
-    },
-  });
+  const totalRevenue = await calculateTotalRevenue(Booking, {});
 
   const recentBookings = await Booking.findAll({
     limit: 10,
@@ -54,7 +55,7 @@ export const getDashboardStats = async () => {
     totalPerformances,
     totalBookings,
     totalVenues,
-    totalRevenue: totalRevenue || 0,
+    totalRevenue,
     recentBookings,
     upcomingPerformances: upcomingPerformances.length,
   };
@@ -65,12 +66,7 @@ export const getUserStats = async (userId) => {
     where: { userId },
   });
 
-  const totalSpent = await Booking.sum("totalAmount", {
-    where: {
-      userId,
-      paymentStatus: "paid",
-    },
-  });
+  const totalSpent = await calculateTotalRevenue(Booking, { userId });
 
   const upcomingBookings = await Booking.count({
     where: {
@@ -92,17 +88,17 @@ export const getUserStats = async (userId) => {
 
   return {
     totalBookings,
-    totalSpent: totalSpent || 0,
+    totalSpent,
     upcomingBookings,
   };
 };
 
 export const getPerformanceStats = async (performanceId) => {
-  const performance = await Performance.findByPk(performanceId);
-
-  if (!performance) {
-    throw new Error("Performance not found");
-  }
+  const performance = await findEntityOrThrow(
+    Performance,
+    performanceId,
+    "Performance not found"
+  );
 
   const totalBookings = await Booking.count({
     where: { performanceId },
@@ -115,31 +111,18 @@ export const getPerformanceStats = async (performanceId) => {
     },
   });
 
-  const totalRevenue = await Booking.sum("totalAmount", {
-    where: {
-      performanceId,
-      paymentStatus: "paid",
-    },
-  });
+  const totalRevenue = await calculateTotalRevenue(Booking, { performanceId });
 
-  const bookingsByStatus = await Booking.findAll({
-    where: { performanceId },
-    attributes: ["status", [sequelize.fn("COUNT", sequelize.col("id")), "count"]],
-    group: ["status"],
-    raw: true,
-  });
+  const bookingsByStatus = await groupByField(Booking, { performanceId }, "status");
 
   return {
     totalBookings,
     confirmedBookings,
-    totalRevenue: totalRevenue || 0,
+    totalRevenue,
     bookingsByStatus,
     availableSeats: performance.availableSeats,
     bookedSeats: performance.bookedSeats,
     totalSeats: performance.totalSeats,
-    occupancyRate:
-      performance.totalSeats > 0
-        ? ((performance.bookedSeats / performance.totalSeats) * 100).toFixed(2)
-        : 0,
+    occupancyRate: calculateOccupancyRate(performance.bookedSeats, performance.totalSeats),
   };
 };

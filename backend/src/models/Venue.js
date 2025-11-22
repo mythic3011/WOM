@@ -1,5 +1,6 @@
 import { DataTypes } from "sequelize";
 import sequelize from "#config/database.js";
+import { buildSeatMapFromVenueLayout } from "#utils/seatMapBuilder.js";
 
 const Venue = sequelize.define(
   "Venue",
@@ -48,6 +49,27 @@ const Venue = sequelize.define(
   {
     tableName: "venues",
     timestamps: true,
+    hooks: {
+      afterUpdate: async (venue, options) => {
+        if (venue.changed('layout')) {
+          const { Performance } = await import("#models/index.js");
+
+          const performances = await Performance.findAll({
+            where: { venueId: venue.id }
+          });
+
+          for (const perf of performances) {
+            const newSeatMap = buildSeatMapFromVenueLayout(venue.layout);
+            await perf.update({
+              seatMap: newSeatMap,
+              totalSeats: newSeatMap.total,
+              availableSeats: Math.max(0, newSeatMap.total - (perf.bookedSeats || 0)),
+              seatMapVersion: (perf.seatMapVersion || 0) + 1
+            }, { hooks: false });
+          }
+        }
+      }
+    }
   }
 );
 

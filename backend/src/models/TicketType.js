@@ -29,6 +29,12 @@ const TicketType = sequelize.define(
       type: DataTypes.BOOLEAN,
       defaultValue: true,
     },
+    minGroupSize: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      defaultValue: null,
+      comment: "Minimum number of seats required for this ticket type (for group tickets)",
+    },
   },
   {
     tableName: "ticket_types",

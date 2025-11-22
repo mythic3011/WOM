@@ -20,6 +20,7 @@ export { VenueLayoutEditor } from "./VenueLayoutEditor.js";
 export { createZoneEditor, showZoneEditorDialog } from "./ZoneEditor.js";
 export { createTemplateSelector, initTemplateSelector } from "./TemplateSelector.js";
 export { FormComponents } from "./FormComponents.js";
+export { Toast } from "./Toast.js";
 // Layout components
 export {
     Navbar,
@@ -39,5 +40,4 @@ export {
 
 export * as admin from "./admin/index.js";
 export * as booking from "./booking/index.js";
-export * as devtools from "./devtools/index.js";
 export * as layout from "./layout/index.js";

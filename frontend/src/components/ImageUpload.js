@@ -1,5 +1,6 @@
-import { notify } from "@utils/ui/notification.js";
+
 import { fileHandler } from "@utils/core/fileHandler.js";
+import { notify } from "@utils/ui/notification.js";
 
 export function createImageUpload({
   id = "imageUpload",

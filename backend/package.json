@@ -29,8 +29,7 @@
     "db:seed:undo:all": "sequelize-cli db:seed:undo:all",
     "db:setup": "npm run db:migrate && npm run db:seed:all",
     "db:reset": "npm run db:migrate:undo:all && npm run db:migrate && npm run db:seed:all",
-    "db:fresh": "node src/db/seed.js",
-    "test": "node --experimental-vm-modules ./node_modules/jest/bin/jest.js --colors"
+    "db:fresh": "node src/db/seed.js"
   },
   "keywords": [
     "orchestral",
@@ -76,11 +75,14 @@
   "devDependencies": {
     "@eslint/js": "^9.0.0",
     "@jest/globals": "^29.7.0",
+    "ajv": "^8.17.1",
+    "commander": "^14.0.2",
     "eslint": "^9.0.0",
     "eslint-config-prettier": "^9.1.0",
     "eslint-import-resolver-alias": "^1.1.2",
     "eslint-plugin-import": "^2.32.0",
     "eslint-plugin-prettier": "^5.1.0",
+    "fast-check": "^4.3.0",
     "jest": "^29.7.0",
     "nodemon": "^3.0.2",
     "prettier": "^3.1.1",

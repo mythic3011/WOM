@@ -1,5 +1,7 @@
-import { calculationService } from "@utils/calculations.js";
+
 import dayjs from "dayjs";
+
+import { calculationService } from "@utils/calculations.js";
 
 export const bookingHelpers = {
   calculateTotalPrice(selectedSeats, pricing, ticketTypes) {
