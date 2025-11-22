@@ -1,0 +1,20 @@
+{
+  "name": "e2e-role-tests",
+  "version": "1.0.0",
+  "description": "Comprehensive UI role testing system with MCP Chrome DevTools",
+  "type": "module",
+  "main": "run-tests.js",
+  "scripts": {
+    "test": "node run-tests.js",
+    "test:admin": "node run-tests.js --role=admin",
+    "test:user": "node run-tests.js --role=user",
+    "test:guest": "node run-tests.js --role=guest"
+  },
+  "dependencies": {
+    "fast-check": "^3.15.0"
+  },
+  "devDependencies": {},
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

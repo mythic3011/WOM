@@ -35,8 +35,13 @@ lerna-debug.log*
 coverage/
 .nyc_output/
 .eslintcache
-e2e-role-tests/
 test-results/
+e2e-role-tests/node_modules/
+e2e-role-tests/playwright-report/
+e2e-role-tests/test-results/
+e2e-role-tests/reports/
+e2e-role-tests/screenshots/
+e2e-role-tests/logs/
 
 # IDE
 .kiro/*
