@@ -15,7 +15,7 @@ export class SeatMapViewer {
     this.enableTooltip = options.enableTooltip !== false;
     this.onSeatClick = options.onSeatClick || null;
     this.onSeatHover = options.onSeatHover || null;
-    
+
     this.seatStatusMap = null;
     this.seatDetails = null;
     this.panzoomInstance = null;
@@ -36,7 +36,7 @@ export class SeatMapViewer {
     }
 
     const seatMap = this.performance.seatMap;
-    
+
     this.seatStatusMap = buildSeatStatusMap(
       this.bookings,
       seatMap,
@@ -62,7 +62,7 @@ export class SeatMapViewer {
     } else {
       const rows = parseInt(seatMap.rows) || 0;
       const seatsPerRow = parseInt(seatMap.seatsPerRow || seatMap.seats) || 0;
-      
+
       if (rows === 0 || seatsPerRow === 0) {
         container.innerHTML = this.renderError("Invalid seat map configuration");
         return;
@@ -136,7 +136,7 @@ export class SeatMapViewer {
 
   attachSeatClickHandlers(container) {
     const seatElements = container.querySelectorAll(".seat, .interactive-seat");
-    
+
     seatElements.forEach(seatElement => {
       const fullId = seatElement.getAttribute("data-full-id");
       const status = seatElement.getAttribute("data-status");
@@ -147,7 +147,7 @@ export class SeatMapViewer {
 
       seatElement.addEventListener("click", (e) => {
         e.stopPropagation();
-        
+
         if (this.onSeatClick) {
           this.onSeatClick({
             seatId: fullId,

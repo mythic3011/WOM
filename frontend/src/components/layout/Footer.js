@@ -18,7 +18,6 @@ const FOOTER_LINKS = {
         { href: ROUTES.ADMIN.USERS, icon: "fa-users-cog", label: "User Management" },
         { href: ROUTES.ADMIN.BOOKINGS, icon: "fa-clipboard-list", label: "Bookings" },
         { href: ROUTES.ADMIN.SEAT_MANAGEMENT, icon: "fa-chair", label: "Seat Management" },
-        { href: ROUTES.PUBLIC.DEV_TOOLS, icon: "fa-code", label: "Dev Tools" },
     ],
     user: [
         { href: ROUTES.USER.DASHBOARD, icon: "fa-home", label: "Dashboard" },
@@ -30,7 +29,6 @@ const FOOTER_LINKS = {
         { href: ROUTES.PUBLIC.PERFORMANCES, icon: "fa-music", label: "Performances" },
         { href: ROUTES.AUTH.LOGIN, icon: "fa-sign-in-alt", label: "Login" },
         { href: ROUTES.AUTH.REGISTER, icon: "fa-user-plus", label: "Register" },
-        { href: ROUTES.PUBLIC.DEV_TOOLS, icon: "fa-code", label: "Dev Tools" },
     ],
 };
 

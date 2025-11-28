@@ -1,6 +1,6 @@
 import { faker } from "@faker-js/faker";
 import { hashPassword } from "#utils/hash.js";
-import { generateProfileImageUrl, generatePerformanceImageUrl } from "./mockImageUrls.js";
+import { generateProfileImageUrl, generatePerformanceImageUrl, generateRandomVenueImageUrl } from "./mockImageUrls.js";
 import { generateRowLabels } from "#utils/venueUtils.js";
 
 export const generateUser = async (options = {}) => {
@@ -54,20 +54,108 @@ export const generateVenue = (options = {}) => {
     capacity = faker.number.int({ min: 200, max: 2000 }),
   } = options;
 
-  const sections = options.sections || [
-    {
-      name: "Orchestra",
-      code: "OR",
-      rows: generateRowLabels("A", 10),
-      seatsPerRow: 20,
-    },
-    {
-      name: "Balcony",
-      code: "BA",
-      rows: generateRowLabels("K", 5),
-      seatsPerRow: 18,
-    },
-  ];
+  const generateAisles = (seatsPerRow) => {
+    const aisleCount = faker.number.int({ min: 0, max: 2 });
+    const aisles = [];
+    
+    for (let i = 0; i < aisleCount; i++) {
+      aisles.push({
+        type: "vertical",
+        mode: "afterSeat",
+        position: faker.number.int({ min: 5, max: seatsPerRow - 5 }),
+        width: faker.helpers.arrayElement([1.0, 1.5, 2.0]),
+        label: faker.helpers.arrayElement(["Left", "Center", "Right", "Main"])
+      });
+    }
+    
+    return aisles;
+  };
+
+  const generateSeatNumbering = () => {
+    const hasPrefix = faker.datatype.boolean(0.3);
+    const hasSkipNumbers = faker.datatype.boolean(0.2);
+    
+    return {
+      globalDirection: faker.helpers.arrayElement(["L_TO_R", "R_TO_L"]),
+      startNumber: faker.helpers.arrayElement([1, 100, 200]),
+      prefix: hasPrefix ? faker.helpers.arrayElement(["VIP", "P", "S", ""]) : "",
+      suffix: "",
+      skipNumbers: hasSkipNumbers ? [13, 14] : [],
+      skipSeatIndices: []
+    };
+  };
+
+  const generateRowsConfig = (rows, seatsPerRow) => {
+    const hasRowOverrides = faker.datatype.boolean(0.2);
+    
+    if (!hasRowOverrides) {
+      return [];
+    }
+    
+    const rowLabels = generateRowLabels("A", rows);
+    const overrideRow = faker.helpers.arrayElement(rowLabels);
+    
+    return [
+      {
+        rowLabel: overrideRow,
+        direction: faker.helpers.arrayElement(["L_TO_R", "R_TO_L"]),
+        startNumber: faker.number.int({ min: 1, max: 10 }),
+        prefix: faker.helpers.arrayElement(["VIP", "P", ""]),
+        suffix: "",
+        skipNumbers: [],
+        skipSeatIndices: [],
+        paddingStart: faker.number.int({ min: 0, max: 3 }),
+        paddingEnd: faker.number.int({ min: 0, max: 3 }),
+        emptySeatIndices: []
+      }
+    ];
+  };
+
+  const generateHorizontalAisles = (rows) => {
+    const hasHorizontalAisles = faker.datatype.boolean(0.3);
+    
+    if (!hasHorizontalAisles || rows < 5) {
+      return [];
+    }
+    
+    const rowLabels = generateRowLabels("A", rows);
+    const aisleAfterRow = faker.helpers.arrayElement(rowLabels.slice(2, -2));
+    
+    return [
+      {
+        afterRow: aisleAfterRow,
+        height: faker.helpers.arrayElement([1, 2, 3])
+      }
+    ];
+  };
+
+  const sectionCount = faker.number.int({ min: 2, max: 4 });
+  const sections = [];
+  
+  for (let i = 0; i < sectionCount; i++) {
+    const rows = faker.number.int({ min: 5, max: 20 });
+    const seatsPerRow = faker.number.int({ min: 15, max: 35 });
+    const startRow = String.fromCharCode(65 + (i * 10));
+    
+    sections.push({
+      name: faker.helpers.arrayElement([
+        "Orchestra Stalls",
+        "Dress Circle",
+        "Grand Circle",
+        "Upper Circle",
+        "Balcony",
+        "Gallery"
+      ]) + (i > 0 ? ` ${i + 1}` : ""),
+      rows,
+      seatsPerRow,
+      tier: faker.helpers.arrayElement(["vip", "premium", "standard", "economy"]),
+      startRow,
+      seatNumbering: generateSeatNumbering(),
+      aisles: generateAisles(seatsPerRow),
+      rowsConfig: generateRowsConfig(rows, seatsPerRow),
+      horizontalAisles: generateHorizontalAisles(rows)
+    });
+  }
 
   return {
     id,
@@ -80,12 +168,12 @@ export const generateVenue = (options = {}) => {
       ["Wheelchair Access", "Parking", "Restaurant", "Bar", "Coat Check"],
       { min: 2, max: 4 }
     ),
+    image: faker.helpers.maybe(
+      () => generateRandomVenueImageUrl(),
+      { probability: 0.7 }
+    ),
     layout: {
-      sections,
-      metadata: {
-        totalCapacity: capacity,
-        accessibilityFeatures: ["wheelchair_accessible", "hearing_loop"],
-      },
+      sections
     },
   };
 };

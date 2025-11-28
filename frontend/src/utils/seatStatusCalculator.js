@@ -90,11 +90,11 @@ export function buildSeatStatusMap(bookings, seatMap, showtimeId = null) {
   // Add blocked seats from seatMap
   if (seatMap && seatMap.blockedSeats && showtimeId) {
     const blockedSeatsForShowtime = seatMap.blockedSeats[showtimeId];
-    
+
     if (blockedSeatsForShowtime && Array.isArray(blockedSeatsForShowtime)) {
       for (let i = 0; i < blockedSeatsForShowtime.length; i++) {
         const seatId = blockedSeatsForShowtime[i];
-        
+
         // Only mark as blocked if not already booked/reserved
         if (!statusMap.has(seatId)) {
           statusMap.set(seatId, {
@@ -291,7 +291,7 @@ export function getBookedSeats(statusMap) {
 export function calculateBookingStatistics(statusMap, totalSeats) {
   const bookedSeats = getBookedSeats(statusMap);
   const bookedCount = bookedSeats.length;
-  
+
   let blockedCount = 0;
   if (statusMap) {
     statusMap.forEach((seatStatus) => {
@@ -300,7 +300,7 @@ export function calculateBookingStatistics(statusMap, totalSeats) {
       }
     });
   }
-  
+
   const availableCount = Math.max(0, totalSeats - bookedCount - blockedCount);
   const occupancyPercentage = totalSeats > 0
     ? Math.round(((bookedCount + blockedCount) / totalSeats) * 100)

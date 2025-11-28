@@ -36,7 +36,8 @@
     "db:init": "node src/db/cli.js init",
     "db:seed-only": "node src/db/cli.js seed",
     "db:setup-full": "node src/db/cli.js setup",
-    "db:reset-full": "node src/db/cli.js reset"
+    "db:reset-full": "node src/db/cli.js reset",
+    "download:mock-images": "node src/db/data/downloadMockImages.js"
   },
   "keywords": [
     "orchestral",

@@ -196,12 +196,12 @@ export const ZonePricing = {
     }
 
     return pricingSections.map((section) => ({
-      sectionName: section.sectionName,
-      tier: section.tier,
-      tierLabel: SEAT_TIER_LABELS[section.tier] || section.tier,
-      basePrice: section.basePrice,
+      sectionName: section.sectionName || "Unknown",
+      tier: section.tier || "standard",
+      tierLabel: section.tier ? (SEAT_TIER_LABELS[section.tier] || section.tier) : "Standard",
+      basePrice: section.basePrice || 0,
       rows: section.rows || 0,
-      rowsDisplay: section.rows ? `${section.rows} rows` : "N/A",
+      rowsDisplay: section.rows ? (Array.isArray(section.rows) ? `${section.rows.length} rows` : `${section.rows} rows`) : "N/A",
     }));
   },
 

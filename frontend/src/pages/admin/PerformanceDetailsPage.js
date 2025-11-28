@@ -136,7 +136,7 @@ const PerformanceDetailsPage = {
       ${this.renderSelectionToolbar()}
       
       <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8">
-        <div id="main-content" class="space-y-6 lg:space-y-8 max-w-7xl mx-auto ${this._selectedShowtimeId ? 'lg:pr-80' : ''}">
+        <div id="main-content" class="space-y-6 lg:space-y-8 max-w-7xl mx-auto ${this._selectedShowtimeId ? "lg:pr-80" : ""}">
           ${this.renderPerformanceInfo(performance, venue)}
           ${this.renderShowtimesList()}
           ${this.renderSeatMapViewer()}
@@ -149,8 +149,8 @@ const PerformanceDetailsPage = {
   },
 
   renderEditModeToolbar() {
-    const visibilityClass = this._selectedShowtimeId ? 'lg:block' : 'lg:hidden';
-    
+    const visibilityClass = this._selectedShowtimeId ? "lg:block" : "lg:hidden";
+
     return `
       <div id="edit-mode-toolbar" class="hidden ${visibilityClass} fixed top-20 right-6 z-50 bg-white rounded-xl shadow-xl border border-gray-200 p-4 space-y-3 w-72 transition-all">
         <div class="flex items-center gap-2 pb-3 border-b border-gray-200">
@@ -721,7 +721,7 @@ const PerformanceDetailsPage = {
 
   calculateStatistics(seatDetails) {
     const total = Object.keys(seatDetails).length;
-    
+
     let available = 0;
     let booked = 0;
     let reserved = 0;
@@ -730,7 +730,7 @@ const PerformanceDetailsPage = {
 
     Object.entries(seatDetails).forEach(([seatId, detail]) => {
       const status = detail.status || "available";
-      
+
       if (status === "available") {
         available++;
       } else if (status === "booked") {
@@ -3832,7 +3832,7 @@ const PerformanceDetailsPage = {
 
     const statistics = this.calculateStatistics(seatDetails);
     const hasSections = seatMap.sections && Array.isArray(seatMap.sections) && seatMap.sections.length > 0;
-    
+
     console.log("Statistics calculated:", statistics);
     console.log("Has sections:", hasSections);
 

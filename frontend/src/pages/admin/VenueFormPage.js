@@ -2,6 +2,8 @@
 import { venueAPI, handleApiError } from "@services/apiClient.js";
 import { ResponseExtractor } from "@services/responseExtractor.js";
 import { notify } from "@utils/ui/notification.js";
+import { VenueLayoutEditor } from "@components/VenueLayoutEditor.js";
+import { initSeatMapPanzoom } from "@utils/panzoomSeatMap.js";
 
 const COMMON_FACILITIES = [
   { id: "wifi", label: "WiFi", icon: "fa-wifi" },
@@ -22,6 +24,10 @@ export default {
   title: "Venue Form | Admin",
   venueId: null,
   venue: null,
+  layoutState: null,
+  currentSectionIndex: 0,
+  activeTab: "aisles",
+  zoomLevel: 1,
 
   async render() {
     this.venueId = new URLSearchParams(window.location.search).get("id");
@@ -247,14 +253,6 @@ export default {
               <div id="layoutContainer" class="space-y-4">
                 ${this.renderLayout()}
               </div>
-              <button
-                type="button"
-                id="addSectionBtn"
-                class="mt-4 inline-flex items-center gap-2 px-4 py-2.5 bg-purple-600 text-white rounded-lg hover:bg-purple-700 hover:shadow-lg transition-all font-medium shadow-md"
-              >
-                <i class="fas fa-plus-circle"></i>
-                Add Section
-              </button>
             </div>
 
             <div class="flex items-center justify-between gap-4 bg-white rounded-xl shadow-lg border border-gray-100 p-6">
@@ -373,115 +371,149 @@ export default {
   },
 
   renderLayout() {
-    const sections = this.venue?.layout?.sections || [];
-    if (sections.length === 0) {
-      return `
-        <div class="text-center py-8 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
-          <div class="w-16 h-16 mx-auto mb-3 rounded-full bg-purple-100 flex items-center justify-center">
-            <i class="fas fa-th-large text-purple-600 text-2xl"></i>
-          </div>
-          <p class="text-gray-600 font-medium">No sections configured</p>
-          <p class="text-gray-400 text-sm mt-1">Add seating sections to define your venue layout</p>
-        </div>
-      `;
+    const layoutConfig = this.venue?.layout || { sections: [], globalAisles: [] };
+
+    if (layoutConfig.sections.length === 0) {
+      layoutConfig.sections = [];
     }
-    return sections
-      .map(
-        (section, index) => `
-      <div class="border-2 border-gray-200 rounded-lg p-5 section-item hover:border-purple-300 transition-all bg-gray-50">
-        <div class="flex items-center justify-between mb-4">
-          <div class="flex items-center gap-2">
-            <div class="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center">
-              <span class="text-purple-600 font-bold text-sm">${index + 1}</span>
-            </div>
-            <h3 class="font-semibold text-gray-900">Section ${index + 1}</h3>
-          </div>
-          <button
-            type="button"
-            class="remove-section px-3 py-2.5 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 hover:shadow-md transition-all border border-red-200"
-            data-section-index="${index}"
-            title="Remove section"
-          >
-            <i class="fas fa-trash-alt mr-1"></i>Remove
-          </button>
-        </div>
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">Section Name</label>
-            <input
-              type="text"
-              value="${section.name || ""}"
-              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 text-gray-900"
-              data-section-index="${index}"
-              data-field="name"
-            />
-          </div>
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">Rows</label>
-            <input
-              type="number"
-              value="${section.rows || ""}"
-              min="1"
-              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 text-gray-900"
-              data-section-index="${index}"
-              data-field="rows"
-            />
-          </div>
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">Seats Per Row</label>
-            <input
-              type="number"
-              value="${section.seatsPerRow || ""}"
-              min="1"
-              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 text-gray-900"
-              data-section-index="${index}"
-              data-field="seatsPerRow"
-            />
-          </div>
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">Tier</label>
-            <select
-              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 text-gray-900 bg-white"
-              data-section-index="${index}"
-              data-field="tier"
-            >
-              <option value="vip" ${section.tier === "vip" ? "selected" : ""}>VIP</option>
-              <option value="premium" ${section.tier === "premium" ? "selected" : ""}>Premium</option>
-              <option value="standard" ${section.tier === "standard" ? "selected" : ""}>Standard</option>
-              <option value="economy" ${section.tier === "economy" ? "selected" : ""}>Economy</option>
-            </select>
-          </div>
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">Start Row</label>
-            <input
-              type="text"
-              value="${section.startRow || ""}"
-              maxlength="1"
-              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 text-gray-900"
-              data-section-index="${index}"
-              data-field="startRow"
-              placeholder="A"
-            />
-          </div>
-        </div>
-      </div>
-    `
-      )
-      .join("");
+
+    this.layoutState = layoutConfig;
+
+    return VenueLayoutEditor.create(layoutConfig, this.currentSectionIndex);
   },
 
   async afterRender() {
+    window.initSeatMapPanzoom = initSeatMapPanzoom;
+    
     this.setupEventListeners();
+    this.initializeLayoutState();
+    this.attachLayoutEditorHandlers();
     this.calculateCapacity();
+  },
+
+  initializeLayoutState() {
+    if (!this.layoutState) {
+      this.layoutState = this.venue?.layout || { sections: [], globalAisles: [] };
+    }
+
+    if (!this.layoutState.sections) {
+      this.layoutState.sections = [];
+    }
+
+    if (!this.layoutState.globalAisles) {
+      this.layoutState.globalAisles = [];
+    }
+  },
+
+  getStateManager() {
+    const self = this;
+    return {
+      getConfig() {
+        return self.layoutState;
+      },
+
+      getCurrentSection() {
+        if (!self.layoutState.sections || self.layoutState.sections.length === 0) {
+          return null;
+        }
+        return self.layoutState.sections[self.currentSectionIndex] || self.layoutState.sections[0];
+      },
+
+      getCurrentSectionIndex() {
+        return self.currentSectionIndex;
+      },
+
+      setCurrentSectionIndex(index) {
+        self.currentSectionIndex = index;
+      },
+
+      getActiveTab() {
+        return self.activeTab;
+      },
+
+      setActiveTab(tab) {
+        self.activeTab = tab;
+      },
+
+      addSection() {
+        const newSection = {
+          name: `Section ${self.layoutState.sections.length + 1}`,
+          rows: 10,
+          seatsPerRow: 20,
+          tier: "standard",
+          startRow: "A",
+          seatNumbering: {
+            globalDirection: "L_TO_R",
+            startNumber: 1,
+            prefix: "",
+            suffix: "",
+            skipNumbers: [],
+            skipSeatIndices: []
+          },
+          aisles: [],
+          rowsConfig: [],
+          horizontalAisles: []
+        };
+        self.layoutState.sections.push(newSection);
+        self.currentSectionIndex = self.layoutState.sections.length - 1;
+        self.calculateCapacity();
+      },
+
+      removeSection() {
+        if (self.layoutState.sections.length > 1) {
+          self.layoutState.sections.splice(self.currentSectionIndex, 1);
+          self.currentSectionIndex = Math.max(0, self.currentSectionIndex - 1);
+          self.calculateCapacity();
+        }
+      },
+
+      updatePreview() {
+        const section = this.getCurrentSection();
+        if (section) {
+          VenueLayoutEditor.updatePreviewSVG($("#layoutContainer"), section, self.zoomLevel, this);
+        }
+        self.calculateCapacity();
+      },
+
+      refreshAislesTab() {
+        const section = this.getCurrentSection();
+        if (section) {
+          const aislesTab = VenueLayoutEditor.createAislesTab(section);
+          $("#layoutContainer").find("#tab-content").html(aislesTab);
+        }
+      },
+
+      zoomIn() {
+        self.zoomLevel = Math.min(2, self.zoomLevel + 0.1);
+        this.updatePreview();
+      },
+
+      zoomOut() {
+        self.zoomLevel = Math.max(0.5, self.zoomLevel - 0.1);
+        this.updatePreview();
+      }
+    };
+  },
+
+  attachLayoutEditorHandlers() {
+    const stateManager = this.getStateManager();
+    VenueLayoutEditor.attachEventHandlers($("#layoutContainer"), stateManager);
+
+    setTimeout(() => {
+      stateManager.updatePreview();
+    }, 100);
   },
 
   calculateCapacity() {
     let totalCapacity = 0;
-    $(".section-item").each(function () {
-      const rows = parseInt($(this).find("[data-field=\"rows\"]").val()) || 0;
-      const seatsPerRow = parseInt($(this).find("[data-field=\"seatsPerRow\"]").val()) || 0;
-      totalCapacity += rows * seatsPerRow;
-    });
+
+    if (this.layoutState && this.layoutState.sections) {
+      this.layoutState.sections.forEach(section => {
+        const sectionCapacity = VenueLayoutEditor.calculateSectionCapacity(section);
+        totalCapacity += sectionCapacity;
+      });
+    }
+
     $("#venueCapacity").val(totalCapacity);
     return totalCapacity;
   },
@@ -489,20 +521,10 @@ export default {
   setupEventListeners() {
     $("#venueForm").on("submit", (e) => this.handleSubmit(e));
     $("#addCustomFacilityBtn").on("click", () => this.addCustomFacility());
-    $("#addSectionBtn").on("click", () => this.addSection());
 
     $(document).on("click", ".remove-custom-facility", (e) =>
       this.removeCustomFacility($(e.currentTarget).data("custom-facility-index"))
     );
-
-    $(document).on("click", ".remove-section", (e) => {
-      this.removeSection($(e.currentTarget).data("section-index"));
-      this.calculateCapacity();
-    });
-
-    $(document).on("input change", "[data-field=\"rows\"], [data-field=\"seatsPerRow\"]", () => {
-      this.calculateCapacity();
-    });
   },
 
   addCustomFacility() {
@@ -548,98 +570,7 @@ export default {
     }
   },
 
-  addSection() {
-    const $container = $("#layoutContainer");
-    const index = $container.find(".section-item").length;
 
-    if (index === 0) {
-      $container.empty();
-    }
-    const html = `
-      <div class="border-2 border-gray-200 rounded-lg p-5 section-item hover:border-purple-300 transition-all bg-gray-50">
-        <div class="flex items-center justify-between mb-4">
-          <div class="flex items-center gap-2">
-            <div class="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center">
-              <span class="text-purple-600 font-bold text-sm">${index + 1}</span>
-            </div>
-            <h3 class="font-semibold text-gray-900">Section ${index + 1}</h3>
-          </div>
-          <button
-            type="button"
-            class="remove-section px-3 py-2.5 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 hover:shadow-md transition-all border border-red-200"
-            data-section-index="${index}"
-            title="Remove section"
-          >
-            <i class="fas fa-trash-alt mr-1"></i>Remove
-          </button>
-        </div>
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">Section Name</label>
-            <input
-              type="text"
-              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 text-gray-900"
-              data-section-index="${index}"
-              data-field="name"
-              placeholder="Orchestra Stalls"
-            />
-          </div>
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">Rows</label>
-            <input
-              type="number"
-              min="1"
-              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 text-gray-900"
-              data-section-index="${index}"
-              data-field="rows"
-              placeholder="8"
-            />
-          </div>
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">Seats Per Row</label>
-            <input
-              type="number"
-              min="1"
-              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 text-gray-900"
-              data-section-index="${index}"
-              data-field="seatsPerRow"
-              placeholder="26"
-            />
-          </div>
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">Tier</label>
-            <select
-              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 text-gray-900 bg-white"
-              data-section-index="${index}"
-              data-field="tier"
-            >
-              <option value="vip">VIP</option>
-              <option value="premium">Premium</option>
-              <option value="standard">Standard</option>
-              <option value="economy">Economy</option>
-            </select>
-          </div>
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">Start Row</label>
-            <input
-              type="text"
-              maxlength="1"
-              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 text-gray-900"
-              data-section-index="${index}"
-              data-field="startRow"
-              placeholder="A"
-            />
-          </div>
-        </div>
-      </div>
-    `;
-    $container.append(html);
-    this.calculateCapacity();
-  },
-
-  removeSection(index) {
-    $(".section-item").eq(index).remove();
-  },
 
   async handleSubmit(e) {
     e.preventDefault();
@@ -664,21 +595,7 @@ export default {
       if (value) {facilities.push(value);}
     });
 
-    const sections = [];
-    $(".section-item").each(function () {
-      const section = {};
-      $(this)
-        .find("[data-field]")
-        .each(function () {
-          const field = $(this).data("field");
-          let value = $(this).val();
-          if (field === "rows" || field === "seatsPerRow") {
-            value = parseInt(value) || 0;
-          }
-          section[field] = value;
-        });
-      if (section.name) {sections.push(section);}
-    });
+    const layout = this.layoutState || { sections: [], globalAisles: [] };
 
     const capacity = this.calculateCapacity();
 
@@ -690,7 +607,7 @@ export default {
       status: $("#venueStatus").val(),
       image: $("#venueImage").val().trim() || null,
       facilities: facilities,
-      layout: { sections },
+      layout: layout,
     };
 
     try {

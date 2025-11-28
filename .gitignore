@@ -52,6 +52,12 @@ e2e-role-tests/test-results/
 e2e-role-tests/reports/
 e2e-role-tests/screenshots/
 e2e-role-tests/logs/
+*.test.js
+*.spec.js
+__tests__/
+**/__tests__/
+*.test.jsx
+*.spec.jsx
 
 # IDE
 .kiro/*
@@ -95,6 +101,7 @@ $RECYCLE.BIN/
 *.msm
 *.msp
 *.lnk
+*.example.md
 
 # Lock files
 package-lock.json

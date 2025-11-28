@@ -7,6 +7,7 @@ import { SeatLayoutEditor } from "@components/SeatLayoutEditor.js";
 import { SeatMap } from "@components/SeatMap.js";
 import { VenueLayoutEditor } from "@components/VenueLayoutEditor.js";
 import { SeatNumberingSystem } from "@utils/SeatNumberingSystem.js";
+import { getVenueImageUrl } from "@utils/imageUtils.js";
 
 export class VenueView {
   constructor() {
@@ -176,6 +177,10 @@ export class VenueView {
     $("#venuesStats").html(statsHtml);
   }
 
+  getVenueImageUrl(imageUrl) {
+    return getVenueImageUrl(imageUrl);
+  }
+
   renderVenueCard(venue, calculateCapacity) {
     const capacity = venue.capacity || calculateCapacity(venue.layout);
     const statusBadge = createBadge({
@@ -187,7 +192,7 @@ export class VenueView {
       <div class="venue-card bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-lg hover:border-indigo-200 transition-all duration-300 group">
         <div class="relative h-48 bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 overflow-hidden">
           ${venue.image
-        ? `<img src="${venue.image}" alt="${venue.name}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />`
+        ? `<img src="${this.getVenueImageUrl(venue.image)}" alt="${venue.name}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />`
         : `<div class="w-full h-full flex items-center justify-center">
                   <div class="text-center">
                     <i class="fas fa-building text-white text-6xl opacity-40 mb-2"></i>
