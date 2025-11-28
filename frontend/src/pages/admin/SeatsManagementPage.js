@@ -5,7 +5,7 @@ import { createModal, openModal, closeModal } from "@components/Modal.js";
 import { SeatMap } from "@components/SeatMap.js";
 import { performanceService } from "@services/performanceService.js";
 import { bookingService } from "@services/bookingService.js";
-import { getSeatColor, buildSeatDetails, buildSeatStatusMap } from "@utils/seatStatusCalculator.js";
+import { getSeatColor, buildSeatDetails, buildSeatStatusMap, formatBookingTooltip } from "@utils/seatStatusCalculator.js";
 import { getSeatStatusColor, getSectionColor } from "@utils/colors.js";
 import { attachSeatTooltipListeners } from "@utils/booking/seatTooltip.js";
 import { seatUtils } from "@utils/booking/seatUtils.js";
@@ -871,7 +871,15 @@ export default {
       document.getElementById("modal-selected-count").textContent = selectedSeats.length;
 
       setTimeout(() => {
-        attachSeatTooltipListeners("#interactive-map svg");
+        const container = document.querySelector("#interactive-map");
+        if (container) {
+          const seatMap = this.selectedPerformance?.seatMap;
+          const pricingSections = this.selectedPerformance?.pricingSections || [];
+          const statusMap = this.seatStatusMap || new Map();
+          const seatDetails = buildSeatDetails(seatMap, statusMap, pricingSections);
+
+          this.attachEnhancedTooltipHandlers(container, statusMap, seatDetails);
+        }
 
         if (modalPanzoomInstance) {
           modalPanzoomInstance.dispose();
@@ -1404,6 +1412,174 @@ export default {
     });
   },
 
+  attachEnhancedTooltipHandlers(container, seatStatusMap, seatDetails) {
+    if (!container) {return;}
+
+    let tooltip = document.getElementById("seat-tooltip-edit");
+    if (!tooltip) {
+      tooltip = document.createElement("div");
+      tooltip.id = "seat-tooltip-edit";
+      tooltip.className = "seat-tooltip";
+      tooltip.style.cssText = `
+        position: fixed;
+        display: none;
+        background: white;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        padding: 12px;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        z-index: 10000;
+        pointer-events: none;
+        max-width: 280px;
+      `;
+      document.body.appendChild(tooltip);
+    }
+
+    const seatElements = container.querySelectorAll(".seat, .interactive-seat");
+
+    seatElements.forEach(seatElement => {
+      const seatId = seatElement.getAttribute("data-seat-id");
+      const fullId = seatElement.getAttribute("data-full-id");
+      const status = seatElement.getAttribute("data-status");
+      const zone = seatElement.getAttribute("data-zone");
+      const price = seatElement.getAttribute("data-price");
+
+      seatElement.addEventListener("mouseenter", (e) => {
+        if (this._hoverDebounceTimer) {
+          clearTimeout(this._hoverDebounceTimer);
+        }
+
+        this._hoverDebounceTimer = setTimeout(() => {
+          let tooltipContent = "";
+
+          if (status === "booked" || status === "reserved") {
+            const seatStatus = seatStatusMap?.get(fullId) || seatStatusMap?.get(seatId);
+
+            if (seatStatus && seatStatus.booking) {
+              tooltipContent = formatBookingTooltip(seatStatus.booking, seatStatus.seatTicket);
+            } else {
+              tooltipContent = this.formatUnavailableTooltip(fullId || seatId, status);
+            }
+          } else if (status === "blocked") {
+            tooltipContent = this.formatUnavailableTooltip(fullId || seatId, status);
+          } else {
+            const seatDetail = seatDetails[fullId] || seatDetails[seatId];
+            tooltipContent = this.formatAvailableTooltip(
+              fullId || seatId,
+              zone || seatDetail?.section,
+              price || seatDetail?.price,
+              seatDetail?.tier
+            );
+          }
+
+          if (tooltipContent) {
+            tooltip.innerHTML = tooltipContent;
+            tooltip.style.display = "block";
+            this.positionTooltip(tooltip, e);
+          }
+        }, 150);
+      });
+
+      seatElement.addEventListener("mousemove", (e) => {
+        if (tooltip.style.display === "block") {
+          this.positionTooltip(tooltip, e);
+        }
+      });
+
+      seatElement.addEventListener("mouseleave", () => {
+        if (this._hoverDebounceTimer) {
+          clearTimeout(this._hoverDebounceTimer);
+          this._hoverDebounceTimer = null;
+        }
+
+        tooltip.style.display = "none";
+      });
+    });
+  },
+
+  formatAvailableTooltip(seatId, zone, price, tier) {
+    const priceValue = parseFloat(price);
+    const formattedPrice = !isNaN(priceValue) && priceValue > 0
+      ? `HKD ${priceValue.toFixed(2)}`
+      : "Price not set";
+    const seatLabel = seatId ? seatId.toUpperCase() : "Unknown";
+    const zoneName = zone || "Unknown Section";
+
+    return `
+      <div class="booking-tooltip text-left text-sm">
+        <div class="flex items-center gap-2 mb-2">
+          <div class="w-3 h-3 rounded-full bg-green-500"></div>
+          <div class="font-semibold text-green-700">Available</div>
+        </div>
+        <div class="text-xs space-y-1">
+          <div class="flex justify-between gap-3">
+            <span class="text-gray-500">Seat ID:</span>
+            <span class="font-medium">${seatLabel}</span>
+          </div>
+          <div class="flex justify-between gap-3">
+            <span class="text-gray-500">Section:</span>
+            <span class="font-medium">${zoneName}</span>
+          </div>
+          ${tier ? `
+          <div class="flex justify-between gap-3">
+            <span class="text-gray-500">Tier:</span>
+            <span class="font-medium">${tier}</span>
+          </div>
+          ` : ""}
+          <div class="flex justify-between gap-3">
+            <span class="text-gray-500">Price:</span>
+            <span class="font-semibold text-green-600">${formattedPrice}</span>
+          </div>
+        </div>
+      </div>
+    `.trim();
+  },
+
+  formatUnavailableTooltip(seatId, status) {
+    const seatLabel = seatId ? seatId.toUpperCase() : "Unknown";
+    const statusText = status === "blocked" ? "Blocked" : "Unavailable";
+    const statusColor = status === "blocked" ? "red" : "gray";
+
+    return `
+      <div class="booking-tooltip text-left text-sm">
+        <div class="flex items-center gap-2 mb-2">
+          <div class="w-3 h-3 rounded-full bg-${statusColor}-500"></div>
+          <div class="font-semibold text-${statusColor}-700">${statusText}</div>
+        </div>
+        <div class="text-xs space-y-1">
+          <div class="flex justify-between gap-3">
+            <span class="text-gray-500">Seat:</span>
+            <span class="font-medium">${seatLabel}</span>
+          </div>
+          <div class="text-gray-500 mt-2">
+            This seat is not available for selection.
+          </div>
+        </div>
+      </div>
+    `.trim();
+  },
+
+  positionTooltip(tooltip, event) {
+    const offset = 15;
+    const tooltipWidth = tooltip.offsetWidth;
+    const tooltipHeight = tooltip.offsetHeight;
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+
+    let x = event.clientX + offset;
+    let y = event.clientY + offset;
+
+    if (x + tooltipWidth > viewportWidth) {
+      x = event.clientX - tooltipWidth - offset;
+    }
+    if (y + tooltipHeight > viewportHeight) {
+      y = event.clientY - tooltipHeight - offset;
+    }
+
+    tooltip.style.left = `${x}px`;
+    tooltip.style.top = `${y}px`;
+  },
+
   cleanup() {
     if (this.unsubscribeURLChanges) {
       this.unsubscribeURLChanges();
@@ -1426,5 +1602,10 @@ export default {
     this.bookingsLoaded = false;
 
     keyboard.unbindAll();
+
+    const tooltip = document.getElementById("seat-tooltip-edit");
+    if (tooltip) {
+      tooltip.remove();
+    }
   },
 };
