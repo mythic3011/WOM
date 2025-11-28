@@ -20,6 +20,7 @@ import {
   FormComponents,
   admin,
 } from "@components/index.js";
+import { PerformanceFilter } from "@components/PerformanceFilter.js";
 import { getTierBadge } from "@config/tierConfig.js";
 import { ResponseExtractor, ticketTypeService, templateService, venueService, performanceAPI, venueAPI, handleApiError, storage } from "@services/index.js";
 import { attachSeatTooltipListeners } from "@utils/booking/seatTooltip.js";
@@ -69,6 +70,7 @@ export default {
   groupDiscounts: [],
   ticketTypes: [],
   venues: [],
+  performanceFilter: null,
 
   getVenueDisplay(performance) {
     return (
@@ -152,60 +154,7 @@ export default {
           </div>
         </div>
 
-        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
-          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-4">
-            <input
-              type="text"
-              id="searchInput"
-              placeholder="Search performances..."
-              class="text-gray-900 bg-white px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 placeholder:text-gray-400"
-            />
-            <select
-              id="statusFilter"
-              class="text-gray-900 bg-white px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
-            >
-              <option class="text-gray-900 bg-white" value="">All Status</option>
-              <option class="text-gray-900 bg-white" value="on_sale">On Sale</option>
-              <option class="text-gray-900 bg-white" value="upcoming">Upcoming</option>
-              <option class="text-gray-900 bg-white" value="sold_out">Sold Out</option>
-              <option class="text-gray-900 bg-white" value="early_bird">Early Bird</option>
-              <option class="text-gray-900 bg-white" value="pre_order">Pre-Order</option>
-            </select>
-            <select
-              id="availabilityFilter"
-              class="text-gray-900 bg-white px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
-            >
-              <option class="text-gray-900 bg-white" value="">All Availability</option>
-              <option class="text-gray-900 bg-white" value="high">High (>50%)</option>
-              <option class="text-gray-900 bg-white" value="medium">Limited (10-50%)</option>
-              <option class="text-gray-900 bg-white" value="low">Very Limited (<10%)</option>
-              <option class="text-gray-900 bg-white" value="sold_out">Sold Out</option>
-            </select>
-            <select
-              id="venueFilter"
-              class="text-gray-900 bg-white px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
-            >
-              <option class="text-gray-900 bg-white" value="">All Venues</option>
-            </select>
-            <input
-              type="date"
-              id="dateFilter"
-              class="text-gray-900 bg-white px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
-            />
-          </div>
-          <div class="flex items-center justify-between">
-            <button
-              id="clearFilters"
-              class="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-gray-600 bg-transparent border border-gray-300 rounded-lg hover:bg-gray-100 hover:text-gray-900 hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 active:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
-            >
-              <i class="fas fa-filter-circle-xmark"></i>
-              Clear Filters
-            </button>
-            <div class="text-sm text-gray-600">
-              <span id="resultCount">0</span> performance(s) found
-            </div>
-          </div>
-        </div>
+        <div id="performanceFilterContainer"></div>
 
         <div class="bg-white rounded-lg shadow-md overflow-x-auto overflow-y-visible">
           <table class="min-w-full divide-y divide-gray-200">
@@ -241,7 +190,25 @@ export default {
         "performances"
       );
       this.venues = ResponseExtractor.extract(venuesResponse, "venues");
-      this.populateVenueFilter();
+      
+      this.performanceFilter = new PerformanceFilter("#performanceFilterContainer", {
+        enableURLSync: true,
+        debounceDelay: 300,
+        showGenreFilter: false,
+        showStatusFilter: true,
+        showDateFilter: true,
+        showVenueFilter: true,
+        venues: this.venues,
+        performances: this.performances,
+      });
+      
+      this.performanceFilter.render();
+      
+      this.performanceFilter.onFilterChange((filters) => {
+        const filtered = this.performanceFilter.applyFilters(this.performances);
+        this.displayPerformances(filtered);
+      });
+      
       this.displayPerformances(this.performances);
       this.setupEventListeners();
     } catch (error) {
@@ -250,22 +217,7 @@ export default {
     }
   },
 
-  populateVenueFilter() {
-    const venues = new Set();
-    this.performances.forEach((p) => {
-      const venue = p.venueName || p.venue;
-      if (venue) {venues.add(venue);}
-    });
 
-    const $venueFilter = $("#venueFilter");
-    Array.from(venues)
-      .sort()
-      .forEach((venue) => {
-        $venueFilter.append(
-          `<option class="text-gray-900 bg-white" value="${venue}">${venue}</option>`
-        );
-      });
-  },
 
   displayPerformances(data) {
     const $tbody = $("#performancesTable");
@@ -540,73 +492,11 @@ export default {
       this.deletePerformance(perfId);
     });
 
-    const debouncedFilter = createDebounceSearch(
-      () => this.filterPerformances(),
-      300
-    );
-
-    $("#searchInput").on("input", debouncedFilter);
-    $("#statusFilter, #dateFilter, #availabilityFilter, #venueFilter").on(
-      "change",
-      () => this.filterPerformances()
-    );
-    $("#clearFilters").on("click", () => this.clearFilters());
     $("#quickCreateBtn").on("click", () => this.openQuickCreate());
     $("#addPerformanceBtn").on("click", () => this.openQuickCreate());
   },
 
-  filterPerformances() {
-    const search = $("#searchInput").val()?.toLowerCase() || "";
-    const status = $("#statusFilter").val();
-    const availability = $("#availabilityFilter").val();
-    const venue = $("#venueFilter").val();
-    const dateFilter = $("#dateFilter").val();
 
-    const filtered = this.performances.filter((p) => {
-      const matchesSearch =
-        !search ||
-        (p.title && p.title.toLowerCase().includes(search)) ||
-        (p.composer && p.composer.toLowerCase().includes(search)) ||
-        (p.conductor && p.conductor.toLowerCase().includes(search)) ||
-        (p.orchestra && p.orchestra.toLowerCase().includes(search));
-
-      const matchesStatus =
-        !status || performanceUtils.getPerformanceStatus(p) === status;
-
-      const matchesAvailability = performanceUtils.filterByAvailability(
-        p,
-        availability
-      );
-
-      const matchesVenue = !venue || performanceUtils.getVenueName(p) === venue;
-
-      let matchesDate = true;
-      if (dateFilter) {
-        const filterDate = new Date(dateFilter);
-        const perfDate = new Date(
-          p.showtimes?.[0]?.dateTime || p.date || new Date()
-        );
-        matchesDate = perfDate.toDateString() === filterDate.toDateString();
-      }
-
-      return (
-        matchesSearch &&
-        matchesStatus &&
-        matchesAvailability &&
-        matchesVenue &&
-        matchesDate
-      );
-    });
-
-    this.displayPerformances(filtered);
-  },
-
-  clearFilters() {
-    $(
-      "#searchInput, #dateFilter, #statusFilter, #availabilityFilter, #venueFilter"
-    ).val("");
-    this.displayPerformances(this.performances);
-  },
 
 
 
@@ -2818,6 +2708,13 @@ export default {
       $(`#seatPlan_${showtimeIndex}`).html(
         this.renderSeatPlanSVG(showtime, showtimeIndex)
       );
+    }
+  },
+
+  cleanup() {
+    if (this.performanceFilter) {
+      this.performanceFilter.destroy();
+      this.performanceFilter = null;
     }
   },
 };

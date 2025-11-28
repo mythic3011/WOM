@@ -1,0 +1,37 @@
+{
+  "baseURL": "http://localhost:5173",
+  "roles": {
+    "admin": {
+      "username": "admin",
+      "password": "adminpass"
+    },
+    "user": {
+      "username": "user",
+      "password": "userpass"
+    }
+  },
+  "workflows": {
+    "enabled": ["createBooking", "createPerformance", "manageUsers"],
+    "disabled": []
+  },
+  "errorThresholds": {
+    "critical": 0,
+    "high": 5,
+    "medium": 10,
+    "low": 20
+  },
+  "screenshots": {
+    "onError": true,
+    "onSuccess": false,
+    "quality": 80
+  },
+  "timeouts": {
+    "pageLoad": 30000,
+    "elementWait": 10000,
+    "networkIdle": 5000
+  },
+  "output": {
+    "directory": "./test-results",
+    "formats": ["html", "json", "markdown"]
+  }
+}

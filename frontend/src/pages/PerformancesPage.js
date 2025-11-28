@@ -2,6 +2,7 @@
 import dayjs from "dayjs";
 
 import { PerformanceCard } from "@components/PerformanceCard.js";
+import { PerformanceFilter } from "@components/PerformanceFilter.js";
 import { performanceService } from "@services/performanceService.js";
 import { createDebounceSearch } from "@utils/data/filters.js";
 import { renderEmptyState } from "@utils/data/table.js";
@@ -11,6 +12,8 @@ export default {
   title: "Performances | WOM",
   viewMode: "grid",
   sortBy: "date",
+  performanceFilter: null,
+  venues: [],
 
   async render() {
     return `
@@ -38,118 +41,7 @@ export default {
         <div class="container mx-auto px-4 py-8">
           <div id="statsBar" class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6"></div>
 
-          <div class="bg-white rounded-lg shadow-md border border-gray-200 mb-6">
-            <div class="p-6">
-              <div class="flex items-center justify-between mb-4">
-                <h3 class="text-lg font-semibold text-gray-900 flex items-center gap-2">
-                  <i class="fas fa-filter text-indigo-600"></i>
-                  Filters & Search
-                </h3>
-                <button
-                  id="toggleFilters"
-                  class="text-sm text-indigo-600 hover:text-indigo-700 font-medium flex items-center gap-2"
-                >
-                  <i class="fas fa-chevron-up"></i>
-                  <span>Collapse</span>
-                </button>
-              </div>
-
-              <div id="filtersContent">
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-4">
-                  <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">
-                      <i class="fas fa-search mr-1"></i>Search
-                    </label>
-            <input
-              type="text"
-              id="searchInput"
-                      placeholder="Title, composer, orchestra..."
-                      class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
-                    />
-                  </div>
-
-                  <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">
-                      <i class="fas fa-tag mr-1"></i>Status
-                    </label>
-            <select
-              id="statusFilter"
-                      class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
-            >
-              <option value="">All Status</option>
-              <option value="on_sale">On Sale</option>
-              <option value="upcoming">Upcoming</option>
-              <option value="sold_out">Sold Out</option>
-              <option value="early_bird">Early Bird</option>
-              <option value="pre_order">Pre-Order</option>
-            </select>
-                  </div>
-
-                  <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">
-                      <i class="fas fa-chair mr-1"></i>Availability
-                    </label>
-                    <select
-                      id="availabilityFilter"
-                      class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
-                    >
-                      <option value="">All Availability</option>
-                      <option value="high">High Availability (>50%)</option>
-                      <option value="medium">Limited (10-50%)</option>
-                      <option value="low">Very Limited (<10%)</option>
-                      <option value="sold_out">Sold Out</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">
-                      <i class="fas fa-sort mr-1"></i>Sort By
-                    </label>
-                    <select
-                      id="sortFilter"
-                      class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
-                    >
-                      <option value="date">Date (Earliest First)</option>
-                      <option value="date-desc">Date (Latest First)</option>
-                      <option value="title">Title (A-Z)</option>
-                      <option value="price">Price (Low to High)</option>
-                      <option value="price-desc">Price (High to Low)</option>
-                      <option value="availability">Availability (High to Low)</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">
-                      <i class="fas fa-dollar-sign mr-1"></i>Price Range
-                    </label>
-                    <select
-                      id="priceFilter"
-                      class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
-                    >
-                      <option value="">All Prices</option>
-                      <option value="0-200">Under HKD 200</option>
-                      <option value="200-500">HKD 200 - 500</option>
-                      <option value="500-1000">HKD 500 - 1000</option>
-                      <option value="1000+">Above HKD 1000</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div class="flex items-center justify-between pt-4 border-t border-gray-200">
-            <button
-              id="clearFilters"
-                    class="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors font-medium flex items-center gap-2"
-                  >
-                    <i class="fas fa-times-circle"></i>
-                    Clear All Filters
-                  </button>
-                  <div class="text-sm text-gray-600">
-                    <span id="resultCount">0</span> results found
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
+          <div id="performanceFilterContainer"></div>
 
           <div class="flex items-center justify-between mb-6">
             <div class="flex items-center gap-2 bg-white rounded-lg shadow-sm border border-gray-200 p-1">
@@ -181,7 +73,32 @@ export default {
 
   async afterRender() {
     try {
-      this.performances = await performanceService.getAll();
+      const [performances, venuesResponse] = await Promise.all([
+        performanceService.getAll(),
+        fetch("/api/venues").then((r) => r.json()),
+      ]);
+      
+      this.performances = performances;
+      this.venues = venuesResponse.data?.venues || [];
+      
+      this.performanceFilter = new PerformanceFilter("#performanceFilterContainer", {
+        enableURLSync: true,
+        debounceDelay: 300,
+        showGenreFilter: false,
+        showStatusFilter: true,
+        showDateFilter: true,
+        showVenueFilter: true,
+        venues: this.venues,
+        performances: this.performances,
+      });
+      
+      this.performanceFilter.render();
+      
+      this.performanceFilter.onFilterChange((filters) => {
+        const filtered = this.performanceFilter.applyFilters(this.performances);
+        this.displayPerformances(filtered);
+      });
+      
       this.renderStatsBar();
       this.displayPerformances(this.performances);
       this.setupEventListeners();
@@ -262,7 +179,6 @@ export default {
 
   displayPerformances(data) {
     const $container = $("#performancesList");
-    $("#resultCount").text(data.length);
 
     if (!data || data.length === 0) {
       renderEmptyState(
@@ -299,18 +215,6 @@ export default {
   },
 
   setupEventListeners() {
-    const debouncedFilter = createDebounceSearch(
-      () => this.filterPerformances(),
-      300
-    );
-
-    $("#searchInput").on("input", debouncedFilter);
-    $("#statusFilter, #sortFilter, #priceFilter, #availabilityFilter").on(
-      "change",
-      () => this.filterPerformances()
-    );
-    $("#clearFilters").on("click", () => this.clearFilters());
-
     $(".view-btn").on("click", (e) => {
       const $clicked = $(e.currentTarget);
       this.viewMode = $clicked.data("view");
@@ -329,65 +233,15 @@ export default {
         )
         .addClass("bg-indigo-600 text-white shadow-md");
 
-      this.filterPerformances();
-    });
-
-    $("#toggleFilters").on("click", () => {
-      const $content = $("#filtersContent");
-      const $icon = $("#toggleFilters i");
-      const $text = $("#toggleFilters span");
-
-      $content.slideToggle(300);
-      $icon.toggleClass("fa-chevron-up fa-chevron-down");
-      $text.text($content.is(":visible") ? "Collapse" : "Expand");
+      const filtered = this.performanceFilter.applyFilters(this.performances);
+      this.displayPerformances(filtered);
     });
   },
 
-  filterPerformances() {
-    const search = $("#searchInput").val().toLowerCase();
-    const status = $("#statusFilter").val();
-    const priceRange = $("#priceFilter").val();
-    const availability = $("#availabilityFilter").val();
-    const sortBy = $("#sortFilter").val();
-
-    const filters = {
-      search,
-      status,
-      availability,
-    };
-
-    if (priceRange) {
-      if (priceRange === "0-200") {
-        filters.priceMin = 0;
-        filters.priceMax = 200;
-      } else if (priceRange === "200-500") {
-        filters.priceMin = 200;
-        filters.priceMax = 500;
-      } else if (priceRange === "500-1000") {
-        filters.priceMin = 500;
-        filters.priceMax = 1000;
-      } else if (priceRange === "1000+") {
-        filters.priceMin = 1000;
-      }
+  cleanup() {
+    if (this.performanceFilter) {
+      this.performanceFilter.destroy();
+      this.performanceFilter = null;
     }
-
-    const filtered = performanceService.filterAndSort(
-      this.performances,
-      filters,
-      sortBy
-    );
-
-    this.displayPerformances(filtered);
-  },
-
-  sortPerformances(data, sortBy) {
-    return performanceService.sortPerformances(data, sortBy);
-  },
-
-  clearFilters() {
-    $("#searchInput, #statusFilter, #priceFilter, #availabilityFilter").val("");
-    $("#sortFilter").val("date");
-    this.sortBy = "date";
-    this.displayPerformances(this.performances);
   },
 };
