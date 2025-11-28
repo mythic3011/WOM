@@ -20,7 +20,7 @@ export const LoadingStates = {
           <div class="grid grid-cols-7 gap-4">
             ${Array(7)
                 .fill(0)
-                .map(() => '<div class="h-4 bg-gray-300 rounded"></div>')
+                .map(() => "<div class=\"h-4 bg-gray-300 rounded\"></div>")
                 .join("")}
           </div>
         </div>
@@ -152,8 +152,8 @@ export const LoadingStates = {
             <div class="text-xs text-gray-500">${progress}% complete</div>
           </div>
           ${progress === 100
-                ? '<i class="fas fa-check-circle text-green-500"></i>'
-                : '<i class="fas fa-circle-notch fa-spin text-indigo-600"></i>'
+                ? "<i class=\"fas fa-check-circle text-green-500\"></i>"
+                : "<i class=\"fas fa-circle-notch fa-spin text-indigo-600\"></i>"
             }
         </div>
         ${this.renderProgressBar(progress)}

@@ -1,5 +1,5 @@
-import { APP_CONFIG } from '@config/config.js';
-import { fileHandler } from '@utils/core/fileHandler.js';
+import { APP_CONFIG } from "@config/config.js";
+import { fileHandler } from "@utils/core/fileHandler.js";
 
 /**
  * File API Service
@@ -26,7 +26,7 @@ export const fileAPI = {
 
         return fileHandler.upload(file, `${API_BASE}/venues/${venueId}/image`, {
             maxSize: 5, // 5MB max for venue images
-            allowedTypes: ['image/*'],
+            allowedTypes: ["image/*"],
             additionalData: { venueId },
             onProgress
         });
@@ -45,7 +45,7 @@ export const fileAPI = {
 
         return fileHandler.upload(file, `${API_BASE}/users/${userId}/avatar`, {
             maxSize: 2, // 2MB max for avatars
-            allowedTypes: ['image/jpeg', 'image/png', 'image/gif', 'image/webp'],
+            allowedTypes: ["image/jpeg", "image/png", "image/gif", "image/webp"],
             additionalData: { userId },
             onProgress
         });
@@ -61,7 +61,7 @@ export const fileAPI = {
      */
     async downloadBookingReport(options = {}) {
         const {
-            format = 'csv',
+            format = "csv",
             filters = {},
             showProgress = false
         } = options;
@@ -73,7 +73,7 @@ export const fileAPI = {
         });
 
         const url = `${API_BASE}/bookings/export?${queryParams.toString()}`;
-        const filename = `bookings-${new Date().toISOString().split('T')[0]}.${format}`;
+        const filename = `bookings-${new Date().toISOString().split("T")[0]}.${format}`;
 
         return fileHandler.download(url, filename, { showProgress });
     },
@@ -90,17 +90,17 @@ export const fileAPI = {
         const { onProgress = null } = options;
 
         // Validate import type
-        const validTypes = ['users', 'venues', 'performances', 'bookings'];
+        const validTypes = ["users", "venues", "performances", "bookings"];
         if (!validTypes.includes(type)) {
             return {
                 success: false,
-                error: `Invalid import type. Must be one of: ${validTypes.join(', ')}`
+                error: `Invalid import type. Must be one of: ${validTypes.join(", ")}`
             };
         }
 
         return fileHandler.upload(file, `${API_BASE}/import/${type}`, {
             maxSize: 10, // 10MB max for CSV imports
-            allowedTypes: ['text/csv', '.csv'],
+            allowedTypes: ["text/csv", ".csv"],
             additionalData: { type },
             onProgress
         });

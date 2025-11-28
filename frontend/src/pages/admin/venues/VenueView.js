@@ -720,7 +720,7 @@ export class VenueView {
 
   showLoading() {
     $("#venuesList").html(
-      '<div class="col-span-3 flex justify-center items-center py-12"><i class="fas fa-spinner fa-spin text-4xl text-indigo-600"></i></div>'
+      "<div class=\"col-span-3 flex justify-center items-center py-12\"><i class=\"fas fa-spinner fa-spin text-4xl text-indigo-600\"></i></div>"
     );
   }
 

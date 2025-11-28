@@ -1,19 +1,19 @@
 export const validationService = {
   validateEmail(email) {
-    if (!email) return false;
+    if (!email) {return false;}
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return emailRegex.test(email.trim());
   },
 
   validatePhone(phone) {
-    if (!phone) return true;
+    if (!phone) {return true;}
     const cleanPhone = phone.replace(/\s+/g, "");
     const phoneRegex = /^[2-9][0-9]{7}$/;
     return phoneRegex.test(cleanPhone);
   },
 
   validatePassword(password) {
-    if (!password) return { valid: false, errors: ["Password is required"] };
+    if (!password) {return { valid: false, errors: ["Password is required"] };}
 
     const errors = [];
     if (password.length < 8) {
@@ -36,7 +36,7 @@ export const validationService = {
   },
 
   validateAge(birthdate) {
-    if (!birthdate) return false;
+    if (!birthdate) {return false;}
     const today = new Date();
     const birth = new Date(birthdate);
     const age = today.getFullYear() - birth.getFullYear();

@@ -3,6 +3,7 @@ import { Performance, Venue, Booking } from "#models/index.js";
 import { buildSeatMapFromVenueLayout } from "#utils/seatMapBuilder.js";
 import { buildWhereClause } from "./helpers/filters.js";
 import { findEntityOrThrow, checkRelatedEntitiesCount } from "./helpers/entityHelpers.js";
+import logger from "#config/logger.js";
 
 const availabilityCache = new Map();
 const CACHE_TTL = 30000;
@@ -27,13 +28,11 @@ export const getAllPerformances = async (filters = {}) => {
     order: [["date", "ASC"]],
   });
 
-  // Calculate availability per showtime
   const performancesWithAvailability = await Promise.all(
     performances.map(async (performance) => {
       const perfData = performance.toJSON();
 
       if (perfData.showtimes && Array.isArray(perfData.showtimes)) {
-        // Get all bookings for this performance
         const bookings = await Booking.findAll({
           where: {
             performanceId: performance.id,
@@ -42,17 +41,17 @@ export const getAllPerformances = async (filters = {}) => {
           attributes: ["showtimeId", "seats", "seatTickets"],
         });
 
-        // Calculate booked seats per showtime
         const showtimeBookings = {};
         for (const booking of bookings) {
           const showtimeId = booking.showtimeId;
-          if (!showtimeId) continue;
+          if (!showtimeId) {
+            continue;
+          }
 
           if (!showtimeBookings[showtimeId]) {
             showtimeBookings[showtimeId] = new Set();
           }
 
-          // Handle both old seats format and new seatTickets format
           const seats = booking.seatTickets && booking.seatTickets.length > 0
             ? booking.seatTickets
             : booking.seats || [];
@@ -65,7 +64,6 @@ export const getAllPerformances = async (filters = {}) => {
           }
         }
 
-        // Add availability to each showtime
         perfData.showtimes = perfData.showtimes.map((showtime) => {
           const bookedSeats = showtimeBookings[showtime.id]?.size || 0;
           const totalSeats = perfData.totalSeats || 0;
@@ -85,6 +83,84 @@ export const getAllPerformances = async (filters = {}) => {
   );
 
   return performancesWithAvailability;
+};
+
+export const filterPerformances = async (filters = {}) => {
+  const where = {};
+
+  if (filters.status) {
+    where.status = filters.status;
+  }
+
+  if (filters.genre) {
+    where.genre = { [Op.iLike]: `%${filters.genre}%` };
+  }
+
+  if (filters.venueId) {
+    where.venueId = filters.venueId;
+  }
+
+  if (filters.search) {
+    where[Op.or] = [
+      { title: { [Op.iLike]: `%${filters.search}%` } },
+      { composer: { [Op.iLike]: `%${filters.search}%` } },
+      { conductor: { [Op.iLike]: `%${filters.search}%` } },
+      { orchestra: { [Op.iLike]: `%${filters.search}%` } },
+    ];
+  }
+
+  if (filters.dateFrom) {
+    where.date = {
+      ...(where.date || {}),
+      [Op.gte]: new Date(filters.dateFrom),
+    };
+  }
+
+  if (filters.dateTo) {
+    where.date = {
+      ...(where.date || {}),
+      [Op.lte]: new Date(filters.dateTo),
+    };
+  }
+
+  const performances = await Performance.findAll({
+    where,
+    include: [
+      {
+        model: Venue,
+        as: "venue",
+        attributes: ["id", "name", "address", "capacity", "layout"],
+      },
+    ],
+    order: [["date", "ASC"]],
+  });
+
+  return performances.map((p) => p.toJSON());
+};
+
+export const autocompletePerformances = async (query) => {
+  const where = {
+    [Op.or]: [
+      { title: { [Op.iLike]: `%${query}%` } },
+      { composer: { [Op.iLike]: `%${query}%` } },
+    ],
+  };
+
+  const performances = await Performance.findAll({
+    where,
+    include: [
+      {
+        model: Venue,
+        as: "venue",
+        attributes: ["id", "name"],
+      },
+    ],
+    attributes: ["id", "title", "composer"],
+    limit: 10,
+    order: [["date", "DESC"]],
+  });
+
+  return performances.map((p) => p.toJSON());
 };
 
 export const getPerformanceById = async (id) => {
@@ -126,6 +202,15 @@ export const createPerformance = async (performanceData) => {
 export const updatePerformance = async (id, updates) => {
   const performance = await findEntityOrThrow(Performance, id, "Performance not found");
 
+  const preservedFields = preserveTimeFields(updates, performance);
+
+  if (updates.image === null || updates.image === "") {
+    if (performance.image && performance.image.startsWith("/uploads/")) {
+      await deletePerformanceImage(performance.image);
+    }
+    updates.image = null;
+  }
+
   if (updates.venueId && updates.venueId !== performance.venueId) {
     const venue = await findEntityOrThrow(Venue, updates.venueId, "Venue not found");
     updates.venueName = venue.name;
@@ -139,7 +224,81 @@ export const updatePerformance = async (id, updates) => {
 
   await performance.update(updates);
 
+  if (preservedFields.length > 0) {
+    logger.info("Time fields preserved during update", {
+      performanceId: id,
+      preservedFields,
+      action: "time_field_preservation",
+    });
+  }
+
   return performance;
+};
+
+const TIME_FIELDS = ["date"];
+
+const preserveTimeFields = (updates, existingRecord) => {
+  const preservedFields = [];
+
+  for (const field of TIME_FIELDS) {
+    if (!(field in updates) || updates[field] === undefined) {
+      continue;
+    }
+
+    if (updates[field] === "" || updates[field] === null) {
+      const existingValue = existingRecord[field];
+      if (existingValue !== null && existingValue !== undefined) {
+        updates[field] = existingValue;
+        preservedFields.push({
+          field,
+          preservedValue: existingValue,
+          reason: "empty_value_in_request",
+        });
+      }
+    }
+  }
+
+  if (updates.showtimes && Array.isArray(updates.showtimes)) {
+    const existingShowtimes = existingRecord.showtimes || [];
+
+    updates.showtimes = updates.showtimes.map((showtime, index) => {
+      const existingShowtime = existingShowtimes.find(
+        (es) => es.id === showtime.id
+      ) || existingShowtimes[index];
+
+      if (!existingShowtime) {
+        return showtime;
+      }
+
+      const preservedShowtime = { ...showtime };
+
+      if (showtime.date === "" || showtime.date === null || showtime.date === undefined) {
+        if (existingShowtime.date) {
+          preservedShowtime.date = existingShowtime.date;
+          preservedFields.push({
+            field: `showtimes[${index}].date`,
+            preservedValue: existingShowtime.date,
+            reason: "empty_value_in_request",
+          });
+        }
+      }
+
+      if (showtime.time === "" || showtime.time === null || showtime.time === undefined) {
+        if (existingShowtime.time) {
+          preservedShowtime.time = existingShowtime.time;
+          preservedFields.push({
+            field: `showtimes[${index}].time`,
+            preservedValue: existingShowtime.time,
+            reason: "empty_value_in_request",
+          });
+        }
+      }
+
+      return preservedShowtime;
+    });
+  }
+
+  return preservedFields;
 };
 
 export const deletePerformance = async (id) => {
@@ -150,6 +309,11 @@ export const deletePerformance = async (id) => {
     { performanceId: id, status: { [Op.in]: ["confirmed", "pending"] } },
     "Cannot delete performance with active bookings"
   );
+
+  // Delete associated image if it's an uploaded file
+  if (performance.image && performance.image.startsWith("/uploads/")) {
+    await deletePerformanceImage(performance.image);
+  }
 
   await performance.destroy();
 
@@ -238,6 +402,75 @@ export const updatePerformanceAvailability = async (performanceId) => {
   );
 
   return availability;
+};
+
+export const getSeatsWithBookingInfo = async (performanceId, showtimeId = null, userRole = "user") => {
+  const performance = await Performance.findByPk(performanceId);
+
+  if (!performance) {
+    throw new Error("Performance not found");
+  }
+
+  const bookingsWhere = {
+    performanceId,
+    status: { [Op.in]: ["confirmed", "pending"] },
+  };
+
+  if (showtimeId) {
+    bookingsWhere.showtimeId = showtimeId;
+  }
+
+  const bookings = await Booking.findAll({
+    where: bookingsWhere,
+    attributes: ["id", "seats", "seatTickets", "customerInfo", "createdAt", "userId"],
+  });
+
+  const seatDetailsMap = {};
+
+  for (const booking of bookings) {
+    const seats = booking.seatTickets || booking.seats || [];
+
+    for (const seat of seats) {
+      const seatId = typeof seat === "string" ? seat : seat.seatId;
+
+      if (seatId) {
+        const bookingInfo = {
+          id: booking.id,
+          orderId: booking.id,
+          bookedAt: booking.createdAt,
+        };
+
+        if (userRole === "admin") {
+          bookingInfo.customerName = booking.customerInfo?.name || "";
+          bookingInfo.phone = booking.customerInfo?.phone || "";
+        } else {
+          bookingInfo.customerName = maskName(booking.customerInfo?.name || "");
+          bookingInfo.phone = maskPhone(booking.customerInfo?.phone || "");
+        }
+
+        seatDetailsMap[seatId] = {
+          status: "booked",
+          booking: bookingInfo,
+        };
+      }
+    }
+  }
+
+  return seatDetailsMap;
+};
+
+const maskName = (name) => {
+  if (!name || name.length <= 2) {
+    return "***";
+  }
+  return `${name.charAt(0)}${"*".repeat(name.length - 2)}${name.charAt(name.length - 1)}`;
+};
+
+const maskPhone = (phone) => {
+  if (!phone || phone.length <= 4) {
+    return "****";
+  }
+  return `${phone.substring(0, 2)}****${phone.substring(phone.length - 2)}`;
 };
 
 export const rebuildSeatMap = async (id) => {
@@ -353,4 +586,64 @@ export const calculateSeatPrice = (seatId, performance) => {
 
   // 4. Fall back to default price
   return 500;
+};
+
+/**
+ * Uploads a performance image file
+ * @param {Object} file - Multer file object
+ * @returns {Promise<string>} Public URL for the uploaded image
+ */
+export const uploadPerformanceImage = async (file) => {
+  const { validateImage, processPerformanceImage, saveImage } = await import("#utils/imageProcessor.js");
+  const path = await import("path");
+  const { fileURLToPath } = await import("url");
+  const { dirname } = path;
+
+  // Validate the image file
+  validateImage(file);
+
+  // Process the image (resize and optimize)
+  const processedBuffer = await processPerformanceImage(file.buffer);
+
+  // Determine upload directory
+  const __filename = fileURLToPath(import.meta.url);
+  const __dirname = dirname(__filename);
+  const uploadDir = path.join(__dirname, "../../public/uploads/performances");
+
+  // Save the processed image
+  const { filename } = await saveImage(processedBuffer, uploadDir);
+
+  // Return the public URL
+  return `/uploads/performances/${filename}`;
+};
+
+/**
+ * Deletes a performance image file from the server
+ * @param {string} imageUrl - The image URL (e.g., /uploads/performances/abc123.jpg)
+ * @returns {Promise<boolean>} True if deleted successfully
+ */
+export const deletePerformanceImage = async (imageUrl) => {
+  try {
+    const { deleteImage } = await import("#utils/imageProcessor.js");
+    const path = await import("path");
+    const { fileURLToPath } = await import("url");
+    const { dirname } = path;
+
+    // Only delete if it's an uploaded file (not an external URL)
+    if (!imageUrl || !imageUrl.startsWith("/uploads/")) {
+      return false;
+    }
+
+    // Determine the file path
+    const __filename = fileURLToPath(import.meta.url);
+    const __dirname = dirname(__filename);
+    const filepath = path.join(__dirname, "../../public", imageUrl);
+
+    // Delete the file
+    return await deleteImage(filepath);
+  } catch (error) {
+    // Log error but don't throw - deletion failure shouldn't block the update
+    console.error(`Failed to delete image ${imageUrl}:`, error.message);
+    return false;
+  }
 };

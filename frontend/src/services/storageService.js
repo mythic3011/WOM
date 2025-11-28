@@ -117,8 +117,8 @@ class StorageService {
 
   get(key, defaultValue = null) {
     try {
-      let item = localStorage.getItem(this.getKey(key));
-      if (item === null) return defaultValue;
+      const item = localStorage.getItem(this.getKey(key));
+      if (item === null) {return defaultValue;}
 
       // Handle empty or whitespace-only values
       if (!item.trim()) {
@@ -127,7 +127,7 @@ class StorageService {
         return defaultValue;
       }
 
-      let parsed = JSON.parse(item);
+      const parsed = JSON.parse(item);
 
       if (parsed.compressed) {
         const decompressed = LZString.decompress(parsed.value);
@@ -136,7 +136,7 @@ class StorageService {
 
       if (parsed.encrypted) {
         // Validate encrypted value before attempting decryption
-        if (!parsed.value || (typeof parsed.value === 'string' && !parsed.value.trim())) {
+        if (!parsed.value || (typeof parsed.value === "string" && !parsed.value.trim())) {
           console.warn(`Empty encrypted value for key: ${key}, removing invalid entry`);
           this.remove(key);
           return defaultValue;
@@ -171,7 +171,7 @@ class StorageService {
         return false;
       }
 
-      if (typeof value === 'string' && !value.trim()) {
+      if (typeof value === "string" && !value.trim()) {
         console.warn(`Attempted to store empty string for key: ${key}`);
         return false;
       }
@@ -203,7 +203,7 @@ class StorageService {
         isEncrypted = true;
 
         // Validate encryption output
-        if (!processedValue || (typeof processedValue === 'string' && !processedValue.trim())) {
+        if (!processedValue || (typeof processedValue === "string" && !processedValue.trim())) {
           console.error(`Encryption produced invalid output for key: ${key}`);
           return false;
         }
@@ -277,7 +277,7 @@ class StorageService {
 
   getStorageSize() {
     let total = 0;
-    for (let key in localStorage) {
+    for (const key in localStorage) {
       if (localStorage.hasOwnProperty(key)) {
         total += localStorage[key].length + key.length;
       }
@@ -300,8 +300,8 @@ class StorageService {
   }
 
   isExpired(data) {
-    if (!data || typeof data !== "object") return false;
-    if (!data.expiresAt) return false;
+    if (!data || typeof data !== "object") {return false;}
+    if (!data.expiresAt) {return false;}
     return Date.now() > data.expiresAt;
   }
 
@@ -312,7 +312,7 @@ class StorageService {
     keys.forEach((fullKey) => {
       try {
         const item = localStorage.getItem(fullKey);
-        if (!item) return;
+        if (!item) {return;}
 
         const parsed = JSON.parse(item);
         if (this.isExpired(parsed)) {
@@ -407,7 +407,7 @@ class StorageService {
     // Remove empty string fields that can cause JSON parse errors
     Object.keys(sanitized).forEach(key => {
       const value = sanitized[key];
-      if (typeof value === 'string' && !value.trim()) {
+      if (typeof value === "string" && !value.trim()) {
         console.warn(`Removing empty field from user data: ${key}`);
         delete sanitized[key];
       }
@@ -524,7 +524,7 @@ class StorageService {
   }
 
   off(event, callback) {
-    if (!this.listeners.has(event)) return;
+    if (!this.listeners.has(event)) {return;}
     const callbacks = this.listeners.get(event);
     const index = callbacks.indexOf(callback);
     if (index > -1) {
@@ -533,7 +533,7 @@ class StorageService {
   }
 
   emit(event, data) {
-    if (!this.listeners.has(event)) return;
+    if (!this.listeners.has(event)) {return;}
     this.listeners.get(event).forEach((callback) => {
       try {
         callback(data);
@@ -545,7 +545,7 @@ class StorageService {
 
   validate(key, schema) {
     const value = this.get(key);
-    if (!value) return { valid: false, errors: ["Value not found"] };
+    if (!value) {return { valid: false, errors: ["Value not found"] };}
 
     const errors = [];
 
@@ -638,9 +638,9 @@ class StorageService {
           return;
         }
         const parsed = JSON.parse(item);
-        if (parsed.compressed) compressed++;
-        if (parsed.encrypted) encrypted++;
-        if (this.isExpired(parsed)) expired++;
+        if (parsed.compressed) {compressed++;}
+        if (parsed.encrypted) {encrypted++;}
+        if (this.isExpired(parsed)) {expired++;}
       } catch (error) {
         corrupted++;
         console.error(`Error analyzing key: ${fullKey}`, error);
@@ -670,9 +670,9 @@ class StorageService {
    * @returns {Object} Cleanup results with counts
    */
   forceCleanup() {
-    console.info('[StorageService] Starting force cleanup...');
+    console.info("[StorageService] Starting force cleanup...");
 
-    let cleaned = {
+    const cleaned = {
       corrupted: 0,
       expired: 0,
       legacy: 0,
@@ -680,7 +680,7 @@ class StorageService {
     };
 
     // Clean legacy keys (without namespace)
-    const legacyKeys = ['user', 'token', 'theme', 'language', 'preferences'];
+    const legacyKeys = ["user", "token", "theme", "language", "preferences"];
     legacyKeys.forEach(key => {
       if (localStorage.getItem(key) !== null) {
         localStorage.removeItem(key);
@@ -718,7 +718,7 @@ class StorageService {
       }
     });
 
-    console.info('[StorageService] Force cleanup complete:', cleaned);
+    console.info("[StorageService] Force cleanup complete:", cleaned);
     return cleaned;
   }
 
@@ -745,11 +745,11 @@ class StorageService {
     }
 
     // Check for legacy keys
-    const legacyKeys = ['user', 'token', 'theme', 'language', 'preferences'];
+    const legacyKeys = ["user", "token", "theme", "language", "preferences"];
     const foundLegacy = legacyKeys.filter(key => localStorage.getItem(key) !== null);
     if (foundLegacy.length > 0) {
       report.healthy = false;
-      report.issues.push(`Found ${foundLegacy.length} legacy keys: ${foundLegacy.join(', ')}`);
+      report.issues.push(`Found ${foundLegacy.length} legacy keys: ${foundLegacy.join(", ")}`);
     }
 
     // Check storage usage
@@ -769,7 +769,7 @@ class SessionStorageService {
   get(key, defaultValue = null) {
     try {
       const item = sessionStorage.getItem(key);
-      if (item === null) return defaultValue;
+      if (item === null) {return defaultValue;}
       return JSON.parse(item);
     } catch (error) {
       console.error(`Error reading from sessionStorage (${key}):`, error);

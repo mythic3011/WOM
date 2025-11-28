@@ -21,28 +21,6 @@ export const createPerformanceValidator = [
     .isInt({ min: 1 })
     .withMessage("Venue ID must be a positive integer"),
 
-  body("date")
-    .notEmpty()
-    .withMessage("Date is required")
-    .isISO8601({ strict: false })
-    .withMessage("Date must be valid ISO 8601 format")
-    .custom((value) => {
-      const inputDate = new Date(value);
-      const now = new Date();
-      
-      if (isNaN(inputDate.getTime())) {
-        throw new Error("Invalid date format");
-      }
-      
-      const minDate = new Date(now.getTime() - 60000);
-      
-      if (inputDate < minDate) {
-        throw new Error("Date must be in the future");
-      }
-      
-      return true;
-    }),
-
   body("duration")
     .optional()
     .isInt({ min: 1, max: 600 })
@@ -151,6 +129,40 @@ export const createPerformanceValidator = [
     .optional()
     .isInt({ min: 0 })
     .withMessage("Available seats must be non-negative"),
+
+  body("image")
+    .optional()
+    .customSanitizer((value) => {
+      // Decode HTML entities if present
+      if (typeof value === 'string') {
+        return value
+          .replace(/&#x2F;/g, '/')
+          .replace(/&#x5C;/g, '\\')
+          .replace(/&amp;/g, '&')
+          .replace(/&lt;/g, '<')
+          .replace(/&gt;/g, '>')
+          .replace(/&quot;/g, '"')
+          .replace(/&#x27;/g, "'");
+      }
+      return value;
+    })
+    .custom((value) => {
+      if (!value || value.length === 0) {
+        return true;
+      }
+      
+      const trimmedValue = typeof value === 'string' ? value.trim() : value;
+      
+      if (
+        trimmedValue.startsWith("http://") || 
+        trimmedValue.startsWith("https://") || 
+        trimmedValue.startsWith("/uploads/")
+      ) {
+        return true;
+      }
+      
+      throw new Error("Image must be a valid URL or upload path");
+    }),
 ];
 
 export const updatePerformanceValidator = [
@@ -268,6 +280,39 @@ export const updatePerformanceValidator = [
     .optional()
     .isArray()
     .withMessage("Zone rows must be an array"),
+
+  body("image")
+    .optional()
+    .customSanitizer((value) => {
+      if (typeof value === 'string') {
+        return value
+          .replace(/&#x2F;/g, '/')
+          .replace(/&#x5C;/g, '\\')
+          .replace(/&amp;/g, '&')
+          .replace(/&lt;/g, '<')
+          .replace(/&gt;/g, '>')
+          .replace(/&quot;/g, '"')
+          .replace(/&#x27;/g, "'");
+      }
+      return value;
+    })
+    .custom((value) => {
+      if (!value || value.length === 0) {
+        return true;
+      }
+      
+      const trimmedValue = typeof value === 'string' ? value.trim() : value;
+      
+      if (
+        trimmedValue.startsWith("http://") || 
+        trimmedValue.startsWith("https://") || 
+        trimmedValue.startsWith("/uploads/")
+      ) {
+        return true;
+      }
+      
+      throw new Error("Image must be a valid URL or upload path");
+    }),
 ];
 
 export const getPerformanceValidator = [

@@ -23,9 +23,9 @@ export const performanceUtils = {
   },
 
   getAvailabilityProgressColor(availabilityPercent) {
-    if (availabilityPercent === 0) return "bg-red-500";
-    if (availabilityPercent < 10) return "bg-orange-500";
-    if (availabilityPercent <= 50) return "bg-yellow-500";
+    if (availabilityPercent === 0) {return "bg-red-500";}
+    if (availabilityPercent < 10) {return "bg-orange-500";}
+    if (availabilityPercent <= 50) {return "bg-yellow-500";}
     return "bg-green-500";
   },
 
@@ -40,7 +40,7 @@ export const performanceUtils = {
   },
 
   filterByAvailability(performance, availabilityFilter) {
-    if (!availabilityFilter) return true;
+    if (!availabilityFilter) {return true;}
 
     const totalSeats =
       performance.totalSeats || performance.ticketingInfo?.totalSeats || 0;

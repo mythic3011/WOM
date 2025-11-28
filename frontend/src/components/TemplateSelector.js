@@ -47,7 +47,7 @@ export async function createTemplateSelector(onSelect) {
             <div class="flex items-start justify-between mb-2">
               <h4 class="font-semibold text-gray-900">${template.name}</h4>
               ${template.isDefault
-            ? '<span class="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">Default</span>'
+            ? "<span class=\"px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full\">Default</span>"
             : ""
           }
             </div>
@@ -137,7 +137,7 @@ export function initTemplateSelector(onSelect) {
         <div class="flex items-start justify-between mb-2">
           <h4 class="font-semibold text-gray-900">${template.name}</h4>
           ${template.isDefault
-            ? '<span class="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">Default</span>'
+            ? "<span class=\"px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full\">Default</span>"
             : ""
           }
         </div>
@@ -167,7 +167,7 @@ export function initTemplateSelector(onSelect) {
 
     $("#templateGrid").html(
       html ||
-      '<p class="text-gray-500 text-center col-span-3">No templates found</p>'
+      "<p class=\"text-gray-500 text-center col-span-3\">No templates found</p>"
     );
   }
 }

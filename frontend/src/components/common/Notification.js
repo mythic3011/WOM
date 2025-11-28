@@ -73,7 +73,7 @@ export const Notification = {
 
         let container = $("#notification-container");
         if (!container.length) {
-            $("body").append('<div id="notification-container" class="fixed top-4 right-4 z-[9999] w-96 max-w-full"></div>');
+            $("body").append("<div id=\"notification-container\" class=\"fixed top-4 right-4 z-[9999] w-96 max-w-full\"></div>");
             container = $("#notification-container");
         }
 

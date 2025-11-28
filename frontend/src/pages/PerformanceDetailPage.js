@@ -6,6 +6,7 @@ import { performanceService } from "@services/performanceService.js";
 import { ZonePricing } from "@utils/booking/zonePricing.js";
 import { getStatusBadge } from "@utils/status.js";
 import { notify } from "@utils/ui/notification.js";
+import { getPerformanceImageUrl, getImageFallbackSvg } from "@utils/imageUtils.js";
 
 export default {
   title: "Performance Details | WOM",
@@ -70,10 +71,10 @@ export default {
         <div class="bg-white rounded-lg shadow-lg overflow-hidden">
           <div class="w-full h-96 bg-gray-100">
             <img
-              src="${perf.imageUrl || "/img/default-performance.jpg"}"
+              src="${getPerformanceImageUrl(perf.imageUrl || perf.image)}"
               alt="${perf.title}"
               class="w-full h-96 object-cover"
-              onerror="this.onerror=null; this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 400 300%22%3E%3Crect fill=%22%23f3f4f6%22 width=%22400%22 height=%22300%22/%3E%3Ctext fill=%22%239ca3af%22 font-family=%22Arial, sans-serif%22 font-size=%2224%22 text-anchor=%22middle%22 x=%22200%22 y=%22140%22%3E%3Ctspan x=%22200%22 dy=%220%22%3E%F0%9F%8E%BC%3C/tspan%3E%3Ctspan x=%22200%22 dy=%2235%22%3EPerformance Image%3C/tspan%3E%3C/text%3E%3C/svg%3E';"
+              onerror="this.onerror=null; this.src='${getImageFallbackSvg()}';"
             />
           </div>
 
@@ -157,7 +158,7 @@ export default {
 
   renderShowtimes(showtimes, performanceId) {
     if (!showtimes || showtimes.length === 0) {
-      return '<p class="text-gray-500">No showtimes available yet</p>';
+      return "<p class=\"text-gray-500\">No showtimes available yet</p>";
     }
 
     return `

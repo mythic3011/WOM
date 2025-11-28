@@ -5,7 +5,7 @@ export const lazyLoadComponent = async (importFn, fallback = "Loading...") => {
   } catch (error) {
     console.error("Failed to load component:", error);
     return {
-      render: () => `<div class="text-red-600">Failed to load component</div>`,
+      render: () => "<div class=\"text-red-600\">Failed to load component</div>",
     };
   }
 };

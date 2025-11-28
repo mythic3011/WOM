@@ -19,25 +19,25 @@ export const userService = {
   },
 
   validateUsername(username) {
-    if (!username) return false;
+    if (!username) {return false;}
     const usernameRegex = /^[a-zA-Z0-9_-]{3,20}$/;
     return usernameRegex.test(username);
   },
 
   validateEmail(email) {
-    if (!email) return false;
+    if (!email) {return false;}
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return emailRegex.test(email);
   },
 
   validatePhone(phone) {
-    if (!phone) return true;
+    if (!phone) {return true;}
     const phoneRegex = /^[2-9][0-9]{7}$/;
     return phoneRegex.test(phone);
   },
 
   validateAge(birthdate) {
-    if (!birthdate) return false;
+    if (!birthdate) {return false;}
     const today = new Date();
     const birth = new Date(birthdate);
     const age = today.getFullYear() - birth.getFullYear();

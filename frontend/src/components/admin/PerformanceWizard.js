@@ -1,8 +1,6 @@
 
 import dayjs from "dayjs";
 
-import { FormComponents } from "@components/FormComponents.js";
-
 export const PerformanceWizard = {
   currentStep: 1,
   totalSteps: 4,
@@ -75,6 +73,30 @@ export const PerformanceWizard = {
         currentStep: this.currentStep,
         timestamp: new Date().toISOString(),
       };
+
+      // Handle image data separately for File objects
+      if (this.formData.imageData) {
+        const imageData = this.formData.imageData;
+
+        // Store image metadata
+        draft.imageData = {
+          type: imageData.type,
+          previewUrl: imageData.previewUrl
+        };
+
+        // For URL type, store the URL string
+        if (imageData.type === "url") {
+          draft.imageData.data = imageData.data;
+        }
+        // For upload type, we can't serialize File objects to localStorage
+        // Store a flag that there was an upload, but user will need to re-upload
+        else if (imageData.type === "upload") {
+          draft.imageData.data = null;
+          draft.imageData.uploadPending = true;
+          draft.imageData.fileName = imageData.data?.name || "uploaded-file";
+        }
+      }
+
       localStorage.setItem(draftKey, JSON.stringify(draft));
       this.lastSaved = new Date();
       this.isDirty = false;
@@ -89,7 +111,13 @@ export const PerformanceWizard = {
       const draftKey = "performance_draft";
       const draft = localStorage.getItem(draftKey);
       if (draft) {
-        return JSON.parse(draft);
+        const parsedDraft = JSON.parse(draft);
+
+        if (parsedDraft.imageData) {
+          parsedDraft.formData.imageData = parsedDraft.imageData;
+        }
+
+        return parsedDraft;
       }
     } catch (error) {
       console.error("Failed to load draft:", error);
@@ -107,7 +135,7 @@ export const PerformanceWizard = {
 
   updateAutoSaveStatus(status) {
     const statusEl = $("#autoSaveStatus");
-    if (!statusEl.length) return;
+    if (!statusEl.length) {return;}
 
     switch (status) {
       case "saving":
@@ -165,7 +193,7 @@ export const PerformanceWizard = {
                 : "bg-gray-300 text-gray-600"
             } w-12 h-12 rounded-full flex items-center justify-center font-bold transition-all duration-300 shadow-md">
                     ${isCompleted
-              ? '<i class="fas fa-check text-lg"></i>'
+              ? "<i class=\"fas fa-check text-lg\"></i>"
               : `<span class="text-lg">${step.number}</span>`
             }
                   </div>
@@ -301,6 +329,11 @@ export const PerformanceWizard = {
               </select>
               <p class="text-xs text-gray-500 mt-1">Musical category</p>
             </div>
+          </div>
+
+          <!-- Image Management Section -->
+          <div class="border-t pt-6 mt-6">
+            <div id="imageUploaderContainer"></div>
           </div>
         </div>
       </div>

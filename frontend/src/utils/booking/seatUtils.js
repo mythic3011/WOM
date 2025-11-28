@@ -97,7 +97,7 @@ export const calculateStats = (seatDetails) => {
         stats[seat.status]++;
       }
     }
-    if (seat.category === "wheelchair") stats.wheelchair++;
+    if (seat.category === "wheelchair") {stats.wheelchair++;}
   });
 
   return stats;
@@ -173,12 +173,12 @@ export const getCategoryIcon = (category) => {
 
 export const parseSeatId = (fullId) => {
   const parts = fullId.split("-");
-  if (parts.length < 2) return null;
+  if (parts.length < 2) {return null;}
 
   const rowAndSeat = parts[parts.length - 1];
   const rowMatch = rowAndSeat.match(/^([a-z]+)(\d+)$/i);
 
-  if (!rowMatch) return null;
+  if (!rowMatch) {return null;}
 
   const sectionSlug = parts.slice(0, -1).join("-");
   const rowLabel = rowMatch[1];
@@ -260,7 +260,7 @@ export const selectPattern = (seatDetails, layout, pattern) => {
     const rowLetter = String.fromCharCode(65 + i);
     for (let j = 1; j <= seatsPerRow; j++) {
       const seatId = `${rowLetter}${j}`;
-      if (!seatDetails[seatId]) continue;
+      if (!seatDetails[seatId]) {continue;}
 
       let shouldSelect = false;
 

@@ -85,7 +85,7 @@ export class VenueModel {
     try {
       const response = await venueAPI.getById(venueId);
       const venue = ResponseExtractor.extractSingle(response, "venue");
-      if (!venue) throw new Error("Venue not found");
+      if (!venue) {throw new Error("Venue not found");}
 
       const clonedData = {
         ...venue,
@@ -108,7 +108,7 @@ export class VenueModel {
     try {
       const response = await venueAPI.getById(venueId);
       const venue = ResponseExtractor.extractSingle(response, "venue");
-      if (!venue) throw new Error("Venue not found");
+      if (!venue) {throw new Error("Venue not found");}
 
       const dataStr = JSON.stringify(venue, null, 2);
       const dataBlob = new Blob([dataStr], { type: "application/json" });
@@ -153,7 +153,7 @@ export class VenueModel {
   }
 
   calculateCapacity(layout) {
-    if (!layout || !layout.sections) return 0;
+    if (!layout || !layout.sections) {return 0;}
 
     return layout.sections.reduce((total, section) => {
       const sectionCapacity = (section.rows || 0) * (section.seatsPerRow || 0);

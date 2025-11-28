@@ -66,7 +66,7 @@ export const venueService = {
   },
 
   calculateCapacity(layout) {
-    if (!layout?.sections) return 0;
+    if (!layout?.sections) {return 0;}
     return layout.sections.reduce((total, section) => {
       return total + section.rows * section.seatsPerRow;
     }, 0);
@@ -74,7 +74,7 @@ export const venueService = {
 
   async exportVenue(id) {
     const venue = await this.getById(id);
-    if (!venue) return null;
+    if (!venue) {return null;}
 
     const dataStr = JSON.stringify(venue, null, 2);
     const dataBlob = new Blob([dataStr], { type: "application/json" });

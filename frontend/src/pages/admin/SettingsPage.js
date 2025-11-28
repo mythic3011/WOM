@@ -121,8 +121,8 @@ export default {
 
   renderTicketTypeCard(type, index, isDefault) {
     const badge = isDefault
-      ? '<span class="bg-green-100 text-green-800 text-[10px] font-semibold px-2 py-0.5 rounded-full">Default</span>'
-      : '<span class="bg-yellow-100 text-yellow-800 text-[10px] font-semibold px-2 py-0.5 rounded-full flex items-center gap-1"><i class="fas fa-star text-[8px]"></i>Custom</span>';
+      ? "<span class=\"bg-green-100 text-green-800 text-[10px] font-semibold px-2 py-0.5 rounded-full\">Default</span>"
+      : "<span class=\"bg-yellow-100 text-yellow-800 text-[10px] font-semibold px-2 py-0.5 rounded-full flex items-center gap-1\"><i class=\"fas fa-star text-[8px]\"></i>Custom</span>";
 
     const discount = parseFloat(type.discount || 1.0);
     let pricingInfo = "";
@@ -148,15 +148,15 @@ export default {
 
     const statusBadge =
       type.isActive !== false
-        ? '<span class="text-green-600 text-xs"><i class="fas fa-check-circle"></i> Active</span>'
-        : '<span class="text-gray-400 text-xs"><i class="fas fa-pause-circle"></i> Inactive</span>';
+        ? "<span class=\"text-green-600 text-xs\"><i class=\"fas fa-check-circle\"></i> Active</span>"
+        : "<span class=\"text-gray-400 text-xs\"><i class=\"fas fa-pause-circle\"></i> Inactive</span>";
 
     const groupBadge = type.minGroupSize
       ? `<span class="flex items-center gap-1 text-purple-600">
           <i class="fas fa-users"></i>
           Min ${type.minGroupSize} seats
         </span>`
-      : '';
+      : "";
 
     return `
       <div class="ticket-type-item group bg-white border-2 border-gray-200 rounded-lg p-4 hover:border-indigo-400 hover:shadow-md transition-all" data-type-id="${type.id
@@ -190,20 +190,20 @@ export default {
         tooltip: "Duplicate",
         color: "green",
         dataAttributes: { id: type.id },
-      }).replace("<button", '<button class="duplicate-ticket-type-btn"')}
+      }).replace("<button", "<button class=\"duplicate-ticket-type-btn\"")}
             ${FormComponents.actionButton({
         icon: "fa-edit",
         tooltip: "Edit",
         color: "blue",
         dataAttributes: { id: type.id },
-      }).replace("<button", '<button class="edit-ticket-type-btn"')}
+      }).replace("<button", "<button class=\"edit-ticket-type-btn\"")}
             ${FormComponents.actionButton({
         icon: "fa-trash",
         tooltip: isDefault ? "Cannot delete default types" : "Delete",
         color: isDefault ? "gray" : "red",
         disabled: isDefault,
         dataAttributes: { id: type.id },
-      }).replace("<button", '<button class="delete-ticket-type-btn"')}
+      }).replace("<button", "<button class=\"delete-ticket-type-btn\"")}
           </div>
         </div>
       </div>
@@ -267,7 +267,7 @@ export default {
       "info",
       "fa-info-circle",
       "How It Works",
-      'Ticket types are used in pricing sections when creating performances. Add custom types like "Military", "Group", or "Family Pass" to fit your needs.'
+      "Ticket types are used in pricing sections when creating performances. Add custom types like \"Military\", \"Group\", or \"Family Pass\" to fit your needs."
     )}
                     ${this.renderInfoBox(
       "warning",
@@ -630,8 +630,8 @@ export default {
 
       const result = await Swal.fire({
         title: isEdit
-          ? '<div class="text-left"><h2 class="text-2xl font-bold text-gray-900">Edit Ticket Type</h2><p class="text-sm text-gray-600 mt-1">Update ticket type details and pricing</p></div>'
-          : '<div class="text-left"><h2 class="text-2xl font-bold text-gray-900">Create Ticket Type</h2><p class="text-sm text-gray-600 mt-1">Add a new ticket category for your performances</p></div>',
+          ? "<div class=\"text-left\"><h2 class=\"text-2xl font-bold text-gray-900\">Edit Ticket Type</h2><p class=\"text-sm text-gray-600 mt-1\">Update ticket type details and pricing</p></div>"
+          : "<div class=\"text-left\"><h2 class=\"text-2xl font-bold text-gray-900\">Create Ticket Type</h2><p class=\"text-sm text-gray-600 mt-1\">Add a new ticket category for your performances</p></div>",
         html: `
           <div class="text-left space-y-6 mt-6">
             ${!isEdit
@@ -739,15 +739,15 @@ export default {
         `,
         width: "650px",
         showCancelButton: true,
-        confirmButtonText: isEdit ? 'Save Changes' : 'Create Ticket Type',
-        cancelButtonText: 'Cancel',
+        confirmButtonText: isEdit ? "Save Changes" : "Create Ticket Type",
+        cancelButtonText: "Cancel",
         customClass: {
-          popup: 'rounded-xl shadow-2xl',
-          title: 'text-left p-6 pb-0',
-          htmlContainer: 'px-6 pb-2',
-          actions: 'px-6 pb-6 pt-4 gap-3',
-          confirmButton: 'px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg transition-colors shadow-sm',
-          cancelButton: 'px-6 py-3 bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold rounded-lg transition-colors'
+          popup: "rounded-xl shadow-2xl",
+          title: "text-left p-6 pb-0",
+          htmlContainer: "px-6 pb-2",
+          actions: "px-6 pb-6 pt-4 gap-3",
+          confirmButton: "px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg transition-colors shadow-sm",
+          cancelButton: "px-6 py-3 bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold rounded-lg transition-colors"
         },
         buttonsStyling: false,
         didOpen: () => {

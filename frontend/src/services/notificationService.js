@@ -3,10 +3,10 @@
  * Manages user notifications dynamically
  */
 
-import { ROUTES } from '@config/routes.js';
-import { storage } from './storageService.js';
+import { ROUTES } from "@config/routes.js";
+import { storage } from "./storageService.js";
 
-const STORAGE_KEY = 'notifications';
+const STORAGE_KEY = "notifications";
 const MAX_NOTIFICATIONS = 10;
 
 class NotificationService {
@@ -122,7 +122,7 @@ class NotificationService {
             try {
                 callback(this.getNotifications());
             } catch (error) {
-                console.error('Error in notification listener:', error);
+                console.error("Error in notification listener:", error);
             }
         });
     }
@@ -134,32 +134,32 @@ class NotificationService {
     getGuestNotifications() {
         return [
             {
-                id: 'guest-1',
-                icon: 'fa-star',
-                iconColor: 'text-yellow-500',
-                title: 'Welcome to WOM',
-                message: 'Sign up to book your first performance',
-                time: 'Just now',
+                id: "guest-1",
+                icon: "fa-star",
+                iconColor: "text-yellow-500",
+                title: "Welcome to WOM",
+                message: "Sign up to book your first performance",
+                time: "Just now",
                 link: ROUTES.AUTH.REGISTER,
                 read: false
             },
             {
-                id: 'guest-2',
-                icon: 'fa-music',
-                iconColor: 'text-indigo-500',
-                title: 'Featured This Month',
+                id: "guest-2",
+                icon: "fa-music",
+                iconColor: "text-indigo-500",
+                title: "Featured This Month",
                 message: "Mozart's Requiem - Now on sale",
-                time: '1 hour ago',
+                time: "1 hour ago",
                 link: ROUTES.PUBLIC.PERFORMANCES,
                 read: false
             },
             {
-                id: 'guest-3',
-                icon: 'fa-calendar',
-                iconColor: 'text-blue-500',
-                title: 'Upcoming Events',
-                message: '10 performances scheduled this month',
-                time: '2 hours ago',
+                id: "guest-3",
+                icon: "fa-calendar",
+                iconColor: "text-blue-500",
+                title: "Upcoming Events",
+                message: "10 performances scheduled this month",
+                time: "2 hours ago",
                 link: ROUTES.PUBLIC.PERFORMANCES,
                 read: false
             }
@@ -179,10 +179,10 @@ class NotificationService {
         const hours = Math.floor(diff / 3600000);
         const days = Math.floor(diff / 86400000);
 
-        if (minutes < 1) return 'Just now';
-        if (minutes < 60) return `${minutes} minute${minutes > 1 ? 's' : ''} ago`;
-        if (hours < 24) return `${hours} hour${hours > 1 ? 's' : ''} ago`;
-        return `${days} day${days > 1 ? 's' : ''} ago`;
+        if (minutes < 1) {return "Just now";}
+        if (minutes < 60) {return `${minutes} minute${minutes > 1 ? "s" : ""} ago`;}
+        if (hours < 24) {return `${hours} hour${hours > 1 ? "s" : ""} ago`;}
+        return `${days} day${days > 1 ? "s" : ""} ago`;
     }
 }
 
@@ -192,9 +192,9 @@ export const notificationService = new NotificationService();
 export const notificationHelpers = {
     bookingConfirmed(bookingId, performanceTitle, seatInfo) {
         return notificationService.addNotification({
-            icon: 'fa-ticket-alt',
-            iconColor: 'text-green-500',
-            title: 'Booking Confirmed',
+            icon: "fa-ticket-alt",
+            iconColor: "text-green-500",
+            title: "Booking Confirmed",
             message: `${performanceTitle} - ${seatInfo}`,
             link: ROUTES.USER.BOOKINGS,
         });
@@ -202,9 +202,9 @@ export const notificationHelpers = {
 
     bookingReminder(performanceTitle, showtime) {
         return notificationService.addNotification({
-            icon: 'fa-bell',
-            iconColor: 'text-orange-500',
-            title: 'Performance Reminder',
+            icon: "fa-bell",
+            iconColor: "text-orange-500",
+            title: "Performance Reminder",
             message: `${performanceTitle} starts ${showtime}`,
             link: ROUTES.USER.BOOKINGS,
         });
@@ -212,9 +212,9 @@ export const notificationHelpers = {
 
     newPerformance(performanceTitle) {
         return notificationService.addNotification({
-            icon: 'fa-music',
-            iconColor: 'text-blue-500',
-            title: 'New Performance Available',
+            icon: "fa-music",
+            iconColor: "text-blue-500",
+            title: "New Performance Available",
             message: `${performanceTitle} - Early bird tickets available`,
             link: ROUTES.PUBLIC.PERFORMANCES,
         });
@@ -222,8 +222,8 @@ export const notificationHelpers = {
 
     adminAlert(title, message, link = ROUTES.ADMIN.DASHBOARD) {
         return notificationService.addNotification({
-            icon: 'fa-exclamation-triangle',
-            iconColor: 'text-red-500',
+            icon: "fa-exclamation-triangle",
+            iconColor: "text-red-500",
             title,
             message,
             link,

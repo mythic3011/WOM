@@ -65,8 +65,7 @@ export const createBooking = async (bookingData, userId) => {
       if (price === undefined || price === null) {
         try {
           price = calculateSeatPrice(seatTicket.seatId, performance);
-        } catch (error) {
-          // If pricing calculation fails, fall back to provided amount divided by seats
+        } catch (_error) {
           price = amount ? (amount / seatTickets.length) : 500;
         }
       }
@@ -97,8 +96,7 @@ export const createBooking = async (bookingData, userId) => {
       let price;
       try {
         price = calculateSeatPrice(seat.fullId, performance);
-      } catch (error) {
-        // If pricing calculation fails, fall back to provided amount divided by seats
+      } catch (_error) {
         price = seat.price || (amount ? (amount / resolvedSeats.length) : 500);
       }
 

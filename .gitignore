@@ -10,6 +10,16 @@ dist-ssr/
 build/
 *.local
 
+# Uploads (keep directory structure but ignore uploaded files)
+backend/public/uploads/*
+!backend/public/uploads/.gitkeep
+!backend/public/uploads/performances/
+!backend/public/uploads/profiles/
+backend/public/uploads/performances/*
+backend/public/uploads/profiles/*
+!backend/public/uploads/performances/.gitkeep
+!backend/public/uploads/profiles/.gitkeep
+
 # Environment variables
 .env
 .env.local

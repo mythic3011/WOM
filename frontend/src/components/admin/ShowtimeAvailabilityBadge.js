@@ -43,11 +43,11 @@ export const ShowtimeAvailabilityBadge = {
     const percentage = total > 0 ? Math.round((available / total) * 100) : 0;
 
     let progressColor;
-    if (percentage >= 75) progressColor = "bg-green-600";
-    else if (percentage >= 50) progressColor = "bg-blue-600";
-    else if (percentage >= 25) progressColor = "bg-yellow-600";
-    else if (percentage > 0) progressColor = "bg-orange-600";
-    else progressColor = "bg-red-600";
+    if (percentage >= 75) {progressColor = "bg-green-600";}
+    else if (percentage >= 50) {progressColor = "bg-blue-600";}
+    else if (percentage >= 25) {progressColor = "bg-yellow-600";}
+    else if (percentage > 0) {progressColor = "bg-orange-600";}
+    else {progressColor = "bg-red-600";}
 
     return `
       <div class="space-y-2">
@@ -78,7 +78,7 @@ export const ShowtimeAvailabilityBadge = {
 
   renderCompact(showtimes) {
     if (!showtimes || showtimes.length === 0) {
-      return `<div class="text-xs text-gray-400">No showtimes</div>`;
+      return "<div class=\"text-xs text-gray-400\">No showtimes</div>";
     }
 
     let totalAvailable = 0;

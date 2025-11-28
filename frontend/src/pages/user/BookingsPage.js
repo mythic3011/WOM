@@ -229,22 +229,22 @@ export default {
     });
 
     // Calendar download buttons
-    $(document).on('click', '.add-to-calendar-btn', (e) => {
+    $(document).on("click", ".add-to-calendar-btn", (e) => {
       e.preventDefault();
       const btn = $(e.currentTarget);
       const bookingData = {
-        id: btn.data('booking-id'),
-        performanceTitle: btn.data('title'),
-        performanceDate: btn.data('date'),
-        venueName: btn.data('venue')
+        id: btn.data("booking-id"),
+        performanceTitle: btn.data("title"),
+        performanceDate: btn.data("date"),
+        venueName: btn.data("venue")
       };
 
       try {
         downloadBookingCalendar(bookingData);
-        notify.success('Calendar event downloaded!');
+        notify.success("Calendar event downloaded!");
       } catch (error) {
-        console.error('Error downloading calendar:', error);
-        notify.error('Failed to download calendar event');
+        console.error("Error downloading calendar:", error);
+        notify.error("Failed to download calendar event");
       }
     });
   },
@@ -312,7 +312,7 @@ export default {
     const booking = this.bookings.find(
       (b) => String(b.id) === String(bookingId)
     );
-    if (!booking) return;
+    if (!booking) {return;}
 
     const performance = this.performances.find(
       (p) => String(p.id) === String(booking.performanceId)
@@ -556,7 +556,7 @@ export default {
       width: "550px",
       showConfirmButton: true,
       showCancelButton: false,
-      confirmButtonText: '<i class="fas fa-times mr-2"></i>Close',
+      confirmButtonText: "<i class=\"fas fa-times mr-2\"></i>Close",
       confirmButtonColor: "#6366f1",
       customClass: {
         popup: "booking-details-modal",
@@ -569,7 +569,7 @@ export default {
     const booking = this.bookings.find(
       (b) => String(b.id) === String(bookingId)
     );
-    if (!booking) return;
+    if (!booking) {return;}
 
     const performance = this.performances.find(
       (p) => String(p.id) === String(booking.performanceId)
@@ -603,7 +603,7 @@ export default {
     const booking = this.bookings.find(
       (b) => String(b.id) === String(bookingId)
     );
-    if (!booking) return;
+    if (!booking) {return;}
 
     const performance = this.performances.find(
       (p) => String(p.id) === String(booking.performanceId)
@@ -637,7 +637,7 @@ export default {
     const booking = this.bookings.find(
       (b) => String(b.id) === String(bookingId)
     );
-    if (!booking) return;
+    if (!booking) {return;}
 
     const performance = this.performances.find(
       (p) => String(p.id) === String(booking.performanceId)
@@ -671,7 +671,7 @@ export default {
     const booking = this.bookings.find(
       (b) => String(b.id) === String(bookingId)
     );
-    if (!booking) return;
+    if (!booking) {return;}
 
     const performance = this.performances.find(
       (p) => String(p.id) === String(booking.performanceId)
@@ -705,7 +705,7 @@ export default {
     const booking = this.bookings.find(
       (b) => String(b.id) === String(bookingId)
     );
-    if (!booking) return;
+    if (!booking) {return;}
 
     const result = await Swal.fire({
       title: "Cancel Booking?",

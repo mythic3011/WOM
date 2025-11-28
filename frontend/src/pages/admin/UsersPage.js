@@ -162,7 +162,7 @@ export default {
 
   renderDataTable() {
     const container = document.getElementById("usersTable");
-    if (!container) return;
+    if (!container) {return;}
 
     this.dataTable = createDataTable("usersTable", {
       data: this.allUsers,
@@ -926,8 +926,8 @@ export default {
         <p class="text-gray-700">Are you sure you want to ${newStatus === "suspended" ? "suspend" : "activate"
         } <strong>${user.name}</strong> (@${user.username})?</p>
         ${newStatus === "suspended"
-          ? '<p class="text-sm text-red-600 mt-2">This user will not be able to log in or make bookings.</p>'
-          : '<p class="text-sm text-green-600 mt-2">This user will be able to log in and make bookings.</p>'
+          ? "<p class=\"text-sm text-red-600 mt-2\">This user will not be able to log in or make bookings.</p>"
+          : "<p class=\"text-sm text-green-600 mt-2\">This user will be able to log in and make bookings.</p>"
         }
       `,
       icon: "warning",

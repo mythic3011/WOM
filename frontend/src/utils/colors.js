@@ -240,8 +240,8 @@ export const VirtualizationColors = {
 };
 
 export function getVirtualizationThreshold(seatCount) {
-  if (seatCount < 400) return "threshold_low";
-  if (seatCount <= 1000) return "threshold_medium";
+  if (seatCount < 400) {return "threshold_low";}
+  if (seatCount <= 1000) {return "threshold_medium";}
   return "threshold_high";
 }
 

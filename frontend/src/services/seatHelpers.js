@@ -2,7 +2,7 @@ import { SeatNumberingSystem } from "@utils/SeatNumberingSystem.js";
 
 export const seatHelpers = {
   calculateCapacity(layoutConfig) {
-    if (!layoutConfig?.sections) return 0;
+    if (!layoutConfig?.sections) {return 0;}
 
     const sys = new SeatNumberingSystem(layoutConfig);
     let total = 0;
@@ -15,7 +15,7 @@ export const seatHelpers = {
   },
 
   calculateCapacityBySections(layoutConfig) {
-    if (!layoutConfig?.sections) return { totalCapacity: 0, sections: [] };
+    if (!layoutConfig?.sections) {return { totalCapacity: 0, sections: [] };}
 
     const sys = new SeatNumberingSystem(layoutConfig);
     let total = 0;
@@ -33,8 +33,8 @@ export const seatHelpers = {
   },
 
   canSelect(seat, maxSelection, currentSelection) {
-    if (!this.isAvailable(seat)) return false;
-    if (!maxSelection) return true;
+    if (!this.isAvailable(seat)) {return false;}
+    if (!maxSelection) {return true;}
     return currentSelection.length < maxSelection;
   },
 };

@@ -34,7 +34,7 @@ export const SEO = {
   },
 
   setMetaTag(name, content) {
-    if (!content) return;
+    if (!content) {return;}
 
     let $meta = $(`meta[name="${name}"]`);
     if ($meta.length === 0) {
@@ -44,7 +44,7 @@ export const SEO = {
   },
 
   setMetaProperty(property, content) {
-    if (!content) return;
+    if (!content) {return;}
 
     let $meta = $(`meta[property="${property}"]`);
     if ($meta.length === 0) {

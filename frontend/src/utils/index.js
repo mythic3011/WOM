@@ -42,6 +42,7 @@ export {
   redirect,
 } from "./core/navigation.js";
 export { fileHandler } from "./core/fileHandler.js";
+export { URLQueryManager } from "./core/URLQueryManager.js";
 
 export {
   animate,

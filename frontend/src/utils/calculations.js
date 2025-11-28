@@ -1,6 +1,6 @@
 export const calculationService = {
     calculateSeatCapacity(layout) {
-        if (!layout || !layout.sections) return 0;
+        if (!layout || !layout.sections) {return 0;}
 
         return layout.sections.reduce((total, section) => {
             const skipIndices = section.seatNumbering?.skipSeatIndices || [];
@@ -44,13 +44,13 @@ export const calculationService = {
     },
 
     calculatePercentage(value, total, decimals = 2) {
-        if (!total || total === 0) return 0;
+        if (!total || total === 0) {return 0;}
         const percentage = (value / total) * 100;
         return Number(percentage.toFixed(decimals));
     },
 
     calculateDiscount(price, discountRate) {
-        if (!price || !discountRate) return price;
+        if (!price || !discountRate) {return price;}
 
         if (discountRate <= 1) {
             return price * discountRate;
@@ -61,7 +61,7 @@ export const calculationService = {
     },
 
     formatCurrency(amount) {
-        if (amount === null || amount === undefined) return "$0.00";
+        if (amount === null || amount === undefined) {return "$0.00";}
 
         const formatted = Number(amount).toFixed(2);
         const parts = formatted.split(".");
@@ -160,17 +160,17 @@ export const calculationService = {
     },
 
     calculateOccupancyRate(bookedSeats, totalSeats) {
-        if (!totalSeats || totalSeats === 0) return 0;
+        if (!totalSeats || totalSeats === 0) {return 0;}
         return this.calculatePercentage(bookedSeats, totalSeats);
     },
 
     calculateAverageTicketPrice(totalRevenue, ticketsSold) {
-        if (!ticketsSold || ticketsSold === 0) return 0;
+        if (!ticketsSold || ticketsSold === 0) {return 0;}
         return totalRevenue / ticketsSold;
     },
 
     calculateGrowthRate(currentValue, previousValue) {
-        if (!previousValue || previousValue === 0) return 0;
+        if (!previousValue || previousValue === 0) {return 0;}
         const growth = ((currentValue - previousValue) / previousValue) * 100;
         return Number(growth.toFixed(2));
     },
@@ -184,7 +184,7 @@ export const calculationService = {
     },
 
     calculateMovingAverage(values, windowSize = 7) {
-        if (values.length < windowSize) return values;
+        if (values.length < windowSize) {return values;}
 
         const result = [];
         for (let i = 0; i <= values.length - windowSize; i++) {

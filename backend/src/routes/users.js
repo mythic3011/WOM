@@ -10,8 +10,77 @@ import {
   listUsersValidator,
   selfDeleteValidator,
 } from "#middleware/validators/userValidators.js";
+import { uploadSingle } from "#config/multer.js";
 
 const router = express.Router();
+
+/**
+ * @openapi
+ * /api/users/upload-profile-image:
+ *   post:
+ *     tags: [Users]
+ *     summary: Upload profile image
+ *     description: |
+ *       Uploads a profile image for the authenticated user. Returns a public URL for the uploaded image.
+ *       
+ *       **Authentication Required:**
+ *       - Must be logged in
+ *       - Users can only upload their own profile image
+ *       
+ *       **File Requirements:**
+ *       - Allowed types: JPEG, PNG, WebP
+ *       - Maximum size: 5MB
+ *       - Image will be processed and optimized
+ *       
+ *       **Processing:**
+ *       - Resized to 300x300 (cover fit)
+ *       - Compressed to JPEG format
+ *       - Stored with unique filename
+ *       
+ *       **Returns:**
+ *       - Public URL for the uploaded image
+ *       - Can be used in user profile updates
+ *     security:
+ *       - sessionAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               image:
+ *                 type: string
+ *                 format: binary
+ *                 description: Profile image file to upload
+ *     responses:
+ *       200:
+ *         description: Image uploaded successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     imageUrl:
+ *                       type: string
+ *                       example: /uploads/profiles/abc123.jpg
+ *       400:
+ *         description: Invalid file or validation error
+ *       401:
+ *         $ref: '#/components/responses/Unauthorized'
+ */
+router.post(
+  "/upload-profile-image",
+  isAuthenticated,
+  uploadSingle,
+  userController.uploadProfileImage
+);
 
 /**
  * @openapi

@@ -238,13 +238,13 @@ export const Navbar = {
   renderNotifications(role) {
     // Get notifications from service
     let notifications = [];
-    if (role === 'guest') {
+    if (role === "guest") {
       notifications = notificationService.getGuestNotifications();
     } else {
       notifications = notificationService.getNotifications();
     }
 
-    const notificationCount = role === 'guest' ? 0 : notificationService.getUnreadCount();
+    const notificationCount = role === "guest" ? 0 : notificationService.getUnreadCount();
 
     return `
       <button class="p-1 text-gray-200 hover:text-white focus:outline-none" id="notificationsBtn">
@@ -255,12 +255,12 @@ export const Navbar = {
         <div class="px-4 py-2 border-b border-gray-100">
           <div class="text-sm font-semibold text-gray-700">
             Notifications
-            ${role === "guest" ? '<span class="text-xs text-gray-500 ml-2">(Login to see your notifications)</span>' : ""}
+            ${role === "guest" ? "<span class=\"text-xs text-gray-500 ml-2\">(Login to see your notifications)</span>" : ""}
           </div>
         </div>
         <div class="max-h-96 overflow-y-auto">
           ${notifications.length > 0 ? notifications.map(notif => `
-            <a href="${notif.link}" data-link data-notification-id="${notif.id}" class="notification-item block px-4 py-3 hover:bg-gray-50 border-b border-gray-100 transition-colors ${notif.read ? 'bg-gray-50' : 'bg-white'}">
+            <a href="${notif.link}" data-link data-notification-id="${notif.id}" class="notification-item block px-4 py-3 hover:bg-gray-50 border-b border-gray-100 transition-colors ${notif.read ? "bg-gray-50" : "bg-white"}">
               <div class="flex items-start">
                 <div class="flex-shrink-0">
                   <i class="fas ${notif.icon} ${notif.iconColor} text-lg"></i>
@@ -268,11 +268,11 @@ export const Navbar = {
                 <div class="ml-3 flex-1">
                   <div class="flex items-start justify-between">
                     <p class="text-sm text-gray-900 font-medium">${notif.title}</p>
-                    ${!notif.read ? '<span class="w-2 h-2 bg-blue-500 rounded-full"></span>' : ''}
+                    ${!notif.read ? "<span class=\"w-2 h-2 bg-blue-500 rounded-full\"></span>" : ""}
                   </div>
                   <p class="text-xs text-gray-600 mt-0.5">${notif.message}</p>
                   <p class="text-xs text-gray-400 mt-1">
-                    <i class="far fa-clock mr-1"></i>${notif.time || (notif.timestamp ? notificationService.formatTime(notif.timestamp) : 'Just now')}
+                    <i class="far fa-clock mr-1"></i>${notif.time || (notif.timestamp ? notificationService.formatTime(notif.timestamp) : "Just now")}
                   </p>
                 </div>
               </div>
@@ -286,12 +286,12 @@ export const Navbar = {
         </div>
         <div class="px-4 py-2 text-center border-t border-gray-100 flex gap-2 justify-center">
           ${role === "guest"
-        ? '<a href="/login" data-link class="text-sm text-indigo-600 hover:text-indigo-800">Login to view all</a>'
+        ? "<a href=\"/login\" data-link class=\"text-sm text-indigo-600 hover:text-indigo-800\">Login to view all</a>"
         : `
-            ${notifications.length > 0 ? '<button id="markAllReadBtn" class="text-sm text-gray-600 hover:text-gray-800">Mark all read</button>' : ''}
+            ${notifications.length > 0 ? "<button id=\"markAllReadBtn\" class=\"text-sm text-gray-600 hover:text-gray-800\">Mark all read</button>" : ""}
             ${role === "admin"
-          ? '<a href="/admin/dashboard" data-link class="text-sm text-indigo-600 hover:text-indigo-800">Dashboard</a>'
-          : '<a href="/user/dashboard" data-link class="text-sm text-indigo-600 hover:text-indigo-800">Dashboard</a>'}
+          ? "<a href=\"/admin/dashboard\" data-link class=\"text-sm text-indigo-600 hover:text-indigo-800\">Dashboard</a>"
+          : "<a href=\"/user/dashboard\" data-link class=\"text-sm text-indigo-600 hover:text-indigo-800\">Dashboard</a>"}
           `}
         </div>
       </div>
@@ -310,7 +310,7 @@ export const Navbar = {
           }
           return `<a href="${crumb.path}" data-link class="text-gray-300 hover:text-white transition-colors">${crumb.label}</a>`;
         })
-        .join('<span class="text-gray-300 mx-2">/</span>');
+        .join("<span class=\"text-gray-300 mx-2\">/</span>");
 
       $("#breadcrumb").html(breadcrumbHTML);
     } else {
@@ -324,7 +324,7 @@ export const Navbar = {
    */
   async updateAvatar(userId, forceRefresh = true) {
     try {
-      console.log('[Navbar] Updating avatar for user:', userId);
+      console.log("[Navbar] Updating avatar for user:", userId);
       const profileImage = await getProfileImage(userId, forceRefresh);
       const userData = getCurrentUser();
       const role = userData?.role || "guest";
@@ -334,9 +334,9 @@ export const Navbar = {
       $("#userSection").html(this.renderUserSection(role, username, profileImage));
       $("#mobileSidebarContent").html(this.renderMobileSidebarContent(role, username, profileImage));
 
-      console.log('[Navbar] Avatar updated successfully');
+      console.log("[Navbar] Avatar updated successfully");
     } catch (error) {
-      console.error('[Navbar] Failed to update avatar:', error);
+      console.error("[Navbar] Failed to update avatar:", error);
     }
   },
 
@@ -350,24 +350,23 @@ export const Navbar = {
     const username = userData?.name;
     const userId = userData?.id;
 
-    console.log('[Navbar] Refreshing navbar for user:', userId || 'guest');
+    console.log("[Navbar] Refreshing navbar for user:", userId || "guest");
 
     let profileImage = null;
     if (userId) {
       try {
         profileImage = await getProfileImage(userId, true); // Force refresh
-        console.log('[Navbar] Profile image refreshed');
+        console.log("[Navbar] Profile image refreshed");
       } catch (error) {
-        console.warn('[Navbar] Failed to refresh profile image:', error);
+        console.warn("[Navbar] Failed to refresh profile image:", error);
       }
     }
 
-    // Re-render all sections
     $("#notificationsContainer").html(this.renderNotifications(role));
     $("#userSection").html(this.renderUserSection(role, username, profileImage));
     $("#mobileSidebarContent").html(this.renderMobileSidebarContent(role, username, profileImage));
 
-    console.log('[Navbar] Refresh complete');
+    console.log("[Navbar] Refresh complete");
   },
 
   async handleLogout() {
@@ -384,8 +383,8 @@ export const Navbar = {
         </div>
       `,
       showCancelButton: true,
-      confirmButtonText: '<i class="fas fa-sign-out-alt mr-2"></i>Yes, Logout',
-      cancelButtonText: '<i class="fas fa-times mr-2"></i>Cancel',
+      confirmButtonText: "<i class=\"fas fa-sign-out-alt mr-2\"></i>Yes, Logout",
+      cancelButtonText: "<i class=\"fas fa-times mr-2\"></i>Cancel",
       confirmButtonColor: SwalColors.danger,
       cancelButtonColor: SwalColors.secondary,
       reverseButtons: true,
@@ -404,13 +403,12 @@ export const Navbar = {
 
       await Swal.fire({
         title: "Logging Out...",
-        html: '<div class="text-center"><i class="fas fa-spinner fa-spin text-4xl text-indigo-600"></i><p class="mt-4 text-gray-600">Please wait</p></div>',
+        html: "<div class=\"text-center\"><i class=\"fas fa-spinner fa-spin text-4xl text-indigo-600\"></i><p class=\"mt-4 text-gray-600\">Please wait</p></div>",
         showConfirmButton: false,
         allowOutsideClick: false,
         timer: 800,
       });
 
-      // Reset initialization flag on logout
       isInitialized = false;
       currentUserId = null;
 
@@ -442,30 +440,30 @@ export const Navbar = {
     // Prevent duplicate initialization for the same user
     // Allow re-initialization if user changed or if guest
     if (isInitialized && !userChanged && userId) {
-      console.log('[Navbar] Already initialized for same user, skipping');
+      console.log("[Navbar] Already initialized for same user, skipping");
       return;
     }
 
     if (userChanged) {
-      console.log('[Navbar] User changed from', currentUserId || 'guest', 'to', userId || 'guest');
+      console.log("[Navbar] User changed from", currentUserId || "guest", "to", userId || "guest");
     }
 
-    console.log('[Navbar] Initializing for user:', userId || 'guest');
+    console.log("[Navbar] Initializing for user:", userId || "guest");
     isInitialized = true;
     currentUserId = userId;
 
     let profileImage = null;
     if (userId) {
       try {
-        console.log('[Navbar] Fetching profile image for user:', userId);
+        console.log("[Navbar] Fetching profile image for user:", userId);
         profileImage = await getProfileImage(userId);
         if (profileImage) {
-          console.log('[Navbar] Profile image loaded successfully');
+          console.log("[Navbar] Profile image loaded successfully");
         } else {
-          console.log('[Navbar] No profile image available for user');
+          console.log("[Navbar] No profile image available for user");
         }
       } catch (error) {
-        console.warn('[Navbar] Failed to load profile image:', error);
+        console.warn("[Navbar] Failed to load profile image:", error);
       }
     }
 
@@ -526,7 +524,7 @@ export const Navbar = {
     // Notification event listeners
     $(document).off("click", ".notification-item").on("click", ".notification-item", function (e) {
       const notificationId = $(this).data("notification-id");
-      if (notificationId && notificationId !== 'guest-1' && notificationId !== 'guest-2' && notificationId !== 'guest-3') {
+      if (notificationId && notificationId !== "guest-1" && notificationId !== "guest-2" && notificationId !== "guest-3") {
         notificationService.markAsRead(notificationId);
       }
     });

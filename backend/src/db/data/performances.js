@@ -1,5 +1,6 @@
 import { faker } from "@faker-js/faker";
 import { generateRowLabels } from "../../utils/venueUtils.js";
+import { generatePerformanceImageUrl } from "./mockImageUrls.js";
 
 const generateFutureDate = (daysFromNow) => {
   const date = new Date();
@@ -97,7 +98,7 @@ const generateAdditionalPerformances = () => {
             : "Hong Kong Academy for Performing Arts Concert Hall",
       date: generateFutureDate(daysUntil),
       duration: faker.number.int({ min: 60, max: 120 }),
-      image: null,
+      image: generatePerformanceImageUrl(i - 4),
       category: faker.helpers.arrayElement(categories),
       subcategory: faker.helpers.arrayElement(subcategories),
       status,
@@ -201,7 +202,7 @@ export const performancesData = [
     venueName: "Hong Kong Cultural Centre Concert Hall",
     date: generateFutureDate(30),
     duration: 75,
-    image: null,
+    image: generatePerformanceImageUrl(0),
     category: "Classical Music",
     subcategory: "Symphony",
     status: "on_sale",
@@ -315,7 +316,7 @@ export const performancesData = [
     venueName: "Hong Kong Cultural Centre Concert Hall",
     date: generateFutureDate(45),
     duration: 90,
-    image: null,
+    image: generatePerformanceImageUrl(1),
     category: "Classical Music",
     subcategory: "Concerto",
     status: "early_bird",
@@ -425,7 +426,7 @@ export const performancesData = [
     venueName: "Hong Kong City Hall Concert Hall",
     date: generateFutureDate(15),
     duration: 50,
-    image: null,
+    image: generatePerformanceImageUrl(2),
     category: "Classical Music",
     subcategory: "Baroque",
     status: "on_sale",

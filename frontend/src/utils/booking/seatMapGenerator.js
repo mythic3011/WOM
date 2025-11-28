@@ -263,7 +263,7 @@ export const seatMapGenerator = {
       let verticalAislesHTML = "";
       for (let i = 0; i < aislePattern.length - 1; i++) {
         let seatsBefore = 0;
-        for (let j = 0; j <= i; j++) seatsBefore += aislePattern[j];
+        for (let j = 0; j <= i; j++) {seatsBefore += aislePattern[j];}
         const priorAisleWidth = verticalAisleWidths
           .slice(0, i)
           .reduce((s, w) => s + w, 0);
@@ -308,10 +308,10 @@ export const seatMapGenerator = {
             startNumber: 1,
           };
           const skipIndices = numbering.skipSeatIndices || [];
-          if (skipIndices.includes(seatIndex)) continue;
+          if (skipIndices.includes(seatIndex)) {continue;}
           const seatNumber = seatIndex + 1;
           const seatLabel = this.computeSeatLabel(section, rowIndex, seatIndex);
-          if (!seatLabel) continue;
+          if (!seatLabel) {continue;}
           const seatId = `${rowLabel}${seatLabel}`;
           const fullId = generateFullId(
             section.name || `section-${sectionIndex}`,
@@ -340,9 +340,14 @@ export const seatMapGenerator = {
           const className = interactive
             ? `seat interactive-seat ${isBooked ? "occupied" : "available"}`
             : "seat";
+
+          const bookingAttrs = isBooked && seatDetail.booking
+            ? `data-customer-name="${this.escapeAttr(seatDetail.booking.customerName || "")}" data-order-id="${this.escapeAttr(seatDetail.booking.orderId || seatDetail.booking.id || "")}" data-phone="${this.escapeAttr(seatDetail.booking.phone || "")}" data-booked-at="${this.escapeAttr(seatDetail.booking.bookedAt || "")}"`
+            : "";
+
           html += `<g class="${className}" data-seat-id="${seatId}" data-full-id="${fullId}" data-section="${sectionIndex}" data-zone="${section.name
             }" data-price="${seatDetail.price || 0}" data-status="${isBooked ? "occupied" : isSelected ? "selected" : "available"
-            }" style="${isBooked
+            }" ${bookingAttrs} style="${isBooked
               ? "pointer-events: none; cursor: not-allowed;"
               : "pointer-events: all; cursor: pointer;"
             }">`;
@@ -352,7 +357,7 @@ export const seatMapGenerator = {
             }" stroke-width="${isSelected ? "2" : "1"}" />`;
           html += `<text class="seat-number" x="${seatX + seatSize / 2
             }" y="${rowCenterY}" fill="white" text-anchor="middle" dominant-baseline="middle" font-size="9" font-weight="bold">${seatNumber}</text>`;
-          html += `</g>`;
+          html += "</g>";
         }
       }
     });
@@ -392,7 +397,7 @@ export const seatMapGenerator = {
       let verticalAislesHTML = "";
       for (let i = 0; i < aislePattern.length - 1; i++) {
         let seatsBefore = 0;
-        for (let j = 0; j <= i; j++) seatsBefore += aislePattern[j];
+        for (let j = 0; j <= i; j++) {seatsBefore += aislePattern[j];}
         const priorAisleWidth = verticalAisleWidths
           .slice(0, i)
           .reduce((s, w) => s + w, 0);
@@ -496,11 +501,15 @@ export const seatMapGenerator = {
               ? `seat interactive-seat ${isBooked ? "occupied" : "available"}`
               : "seat";
 
+            const bookingAttrs = isBooked && seatDetail.booking
+              ? `data-customer-name="${this.escapeAttr(seatDetail.booking.customerName || "")}" data-order-id="${this.escapeAttr(seatDetail.booking.orderId || seatDetail.booking.id || "")}" data-phone="${this.escapeAttr(seatDetail.booking.phone || "")}" data-booked-at="${this.escapeAttr(seatDetail.booking.bookedAt || "")}"`
+              : "";
+
             html += `
               <g class="${className}" data-seat-id="${seatId}" data-full-id="${fullId}" data-section="${sectionIndex}" 
                 data-zone="${section.name}" data-price="${seatDetail.price || 0
               }" data-status="${isBooked ? "occupied" : isSelected ? "selected" : "available"
-              }" data-virtualized="false" style="${isBooked
+              }" ${bookingAttrs} data-virtualized="false" style="${isBooked
                 ? "pointer-events: none; cursor: not-allowed;"
                 : "pointer-events: all; cursor: pointer;"
               }">
@@ -523,7 +532,7 @@ export const seatMapGenerator = {
   },
 
   isRowInViewport(rowY, rowHeight, viewport, buffer = 0) {
-    if (!viewport) return true;
+    if (!viewport) {return true;}
     const rowBottom = rowY + rowHeight;
     return (
       rowBottom >= viewport.top - buffer && rowY <= viewport.bottom + buffer
@@ -843,7 +852,7 @@ export const seatMapGenerator = {
   },
 
   getCategoryIcon(seatDetail) {
-    if (!seatDetail?.category) return "";
+    if (!seatDetail?.category) {return "";}
 
     const icons = {
       wheelchair: "WC",
@@ -912,5 +921,15 @@ export const seatMapGenerator = {
 
   initializeSeatDetails(rows, seatsPerRow) {
     return initializeSeatDetails(rows, seatsPerRow);
+  },
+
+  escapeAttr(text) {
+    if (!text) {return "";}
+    return String(text)
+      .replace(/&/g, "&amp;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;");
   },
 };

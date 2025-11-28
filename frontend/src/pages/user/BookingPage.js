@@ -72,7 +72,7 @@ export default {
 
   applyZoomTransform() {
     const g = document.querySelector("#seatMap svg #seats-layer");
-    if (!g) return;
+    if (!g) {return;}
     const { scale, tx, ty } = this._zoom;
     g.setAttribute("transform", `translate(${tx},${ty}) scale(${scale})`);
   },
@@ -92,7 +92,7 @@ export default {
       if (showtimeId && showtimeId !== "undefined") {
         const performances = await performanceService.getAll();
         this.performanceData = performances.find((p) => {
-          if (!p.showtimes || !Array.isArray(p.showtimes)) return false;
+          if (!p.showtimes || !Array.isArray(p.showtimes)) {return false;}
           return p.showtimes.some((st) => st && st.id === showtimeId);
         });
 
@@ -151,7 +151,7 @@ export default {
 
   validateLuhn(number) {
     const cleaned = number.replace(/\s/g, "");
-    if (!/^\d+$/.test(cleaned)) return false;
+    if (!/^\d+$/.test(cleaned)) {return false;}
 
     let sum = 0;
     let isEven = false;
@@ -160,7 +160,7 @@ export default {
       let digit = parseInt(cleaned[i], 10);
       if (isEven) {
         digit *= 2;
-        if (digit > 9) digit -= 9;
+        if (digit > 9) {digit -= 9;}
       }
       sum += digit;
       isEven = !isEven;
@@ -335,7 +335,7 @@ export default {
 
           for (let row = 0; row < section.rows; row++) {
             for (let seat = 0; seat < section.seatsPerRow; seat++) {
-              if (skipIndices.includes(seat)) continue;
+              if (skipIndices.includes(seat)) {continue;}
 
               const rowLabel = this.computeRowLabel(section, row);
               const startNumber = Number(numbering.startNumber || 1);
@@ -579,10 +579,10 @@ export default {
                 pricingSections
               );
               if (!zone) {
-                return '<p class="text-xs text-gray-600 font-semibold">Standard Section</p>';
+                return "<p class=\"text-xs text-gray-600 font-semibold\">Standard Section</p>";
               }
 
-              const tierLabel = zone.tier ? zone.tier.charAt(0).toUpperCase() + zone.tier.slice(1) : 'Standard';
+              const tierLabel = zone.tier ? zone.tier.charAt(0).toUpperCase() + zone.tier.slice(1) : "Standard";
               const zoneColor =
                 zone.tier === "premium"
                   ? "text-purple-600"
@@ -1153,11 +1153,11 @@ export default {
         const fullId = $(this).attr("data-full-id");
         const seatStatus = $(this).attr("data-status");
 
-        if (!fullId) return;
+        if (!fullId) {return;}
 
         // Prevent selection of occupied seats
-        if (seatStatus === 'occupied') {
-          notify.error('This seat is already booked');
+        if (seatStatus === "occupied") {
+          notify.error("This seat is already booked");
           return;
         }
 
@@ -1167,15 +1167,15 @@ export default {
     $(document)
       .off("keydown", "g.interactive-seat")
       .on("keydown", "g.interactive-seat", function (e) {
-        if (e.key !== "Enter" && e.key !== " ") return;
+        if (e.key !== "Enter" && e.key !== " ") {return;}
         const fullId = $(this).attr("data-full-id");
         const seatStatus = $(this).attr("data-status");
 
-        if (!fullId) return;
+        if (!fullId) {return;}
 
         // Prevent selection of occupied seats
-        if (seatStatus === 'occupied') {
-          notify.error('This seat is already booked');
+        if (seatStatus === "occupied") {
+          notify.error("This seat is already booked");
           return;
         }
 
@@ -1199,14 +1199,14 @@ export default {
       .off("click", ".zoom-btn")
       .on("click", ".zoom-btn", function () {
         const action = $(this).data("zoom");
-        if (!self._pz) return;
-        if (action === "in") self._pz.smoothZoom(0, 0, 1.15);
-        if (action === "out") self._pz.smoothZoom(0, 0, 0.85);
+        if (!self._pz) {return;}
+        if (action === "in") {self._pz.smoothZoom(0, 0, 1.15);}
+        if (action === "out") {self._pz.smoothZoom(0, 0, 0.85);}
         if (action === "reset") {
-          if (self._pz._fit) self._pz._fit();
-          else if (self._pz._center) self._pz._center();
+          if (self._pz._fit) {self._pz._fit();}
+          else if (self._pz._center) {self._pz._center();}
         }
-        if (self._pz._clamp) setTimeout(() => self._pz._clamp(), 160);
+        if (self._pz._clamp) {setTimeout(() => self._pz._clamp(), 160);}
       });
 
     $(document)
@@ -1343,7 +1343,7 @@ export default {
     $(document)
       .off("input", "#cardNumber")
       .on("input", "#cardNumber", function (e) {
-        let value = $(this).val();
+        const value = $(this).val();
         const formatted = self.formatCardNumber(value);
         $(this).val(formatted);
 
@@ -1368,7 +1368,7 @@ export default {
     $(document)
       .off("input", "#expiryDate")
       .on("input", "#expiryDate", function (e) {
-        let value = $(this).val();
+        const value = $(this).val();
         const formatted = self.formatExpiryDate(value);
         $(this).val(formatted);
 
@@ -1390,7 +1390,7 @@ export default {
     $(document)
       .off("input", "#cvv")
       .on("input", "#cvv", function (e) {
-        let value = $(this).val().replace(/\D/g, "");
+        const value = $(this).val().replace(/\D/g, "");
         $(this).val(value);
 
         self.clearFieldError("cvv");
@@ -1414,7 +1414,7 @@ export default {
     $(document)
       .off("input", "#cardholderName")
       .on("input", "#cardholderName", function (e) {
-        let value = $(this).val().toUpperCase();
+        const value = $(this).val().toUpperCase();
         $(this).val(value);
 
         self.clearFieldError("cardholderName");
@@ -1443,7 +1443,7 @@ export default {
         if (!emailRegex.test(email)) {
           $(this).addClass("border-red-500");
           if (!$(this).next(".error-message").length) {
-            $(this).after('<p class="error-message text-xs text-red-600 mt-1"><i class="fas fa-exclamation-circle mr-1"></i>Please enter a valid email address</p>');
+            $(this).after("<p class=\"error-message text-xs text-red-600 mt-1\"><i class=\"fas fa-exclamation-circle mr-1\"></i>Please enter a valid email address</p>");
           }
         } else {
           $(this).removeClass("border-red-500").addClass("border-green-500");
@@ -1457,7 +1457,7 @@ export default {
       if (phone && phone.length < 8) {
         $(this).addClass("border-red-500");
         if (!$(this).next(".error-message").length) {
-          $(this).after('<p class="error-message text-xs text-red-600 mt-1"><i class="fas fa-exclamation-circle mr-1"></i>Please enter a valid phone number</p>');
+          $(this).after("<p class=\"error-message text-xs text-red-600 mt-1\"><i class=\"fas fa-exclamation-circle mr-1\"></i>Please enter a valid phone number</p>");
         }
       } else if (phone) {
         $(this).removeClass("border-red-500").addClass("border-green-500");
@@ -1470,7 +1470,7 @@ export default {
       if (name && name.length < 2) {
         $(this).addClass("border-red-500");
         if (!$(this).next(".error-message").length) {
-          $(this).after('<p class="error-message text-xs text-red-600 mt-1"><i class="fas fa-exclamation-circle mr-1"></i>Please enter your full name</p>');
+          $(this).after("<p class=\"error-message text-xs text-red-600 mt-1\"><i class=\"fas fa-exclamation-circle mr-1\"></i>Please enter your full name</p>");
         }
       } else if (name) {
         $(this).removeClass("border-red-500").addClass("border-green-500");
@@ -1503,16 +1503,16 @@ export default {
   async toggleSeat(seatId) {
     // Disable seat selection after step 1
     if (this.bookingStep !== 1) {
-      notify.warning('Please go back to seat selection to change your seats');
+      notify.warning("Please go back to seat selection to change your seats");
       return;
     }
 
     // Check if seat is occupied before allowing selection
     const seatElement = $(`#seatMap svg g.interactive-seat[data-full-id="${seatId}"]`);
-    const seatStatus = seatElement.attr('data-status');
+    const seatStatus = seatElement.attr("data-status");
 
-    if (seatStatus === 'occupied') {
-      notify.error('This seat is already booked and cannot be selected');
+    if (seatStatus === "occupied") {
+      notify.error("This seat is already booked and cannot be selected");
       return;
     }
 
@@ -1541,15 +1541,15 @@ export default {
       // Disable pointer events on steps 2+
       if (isSelectionDisabled) {
         $(this).css({
-          'pointer-events': 'none',
-          'cursor': 'not-allowed',
-          'opacity': '0.7'
+          "pointer-events": "none",
+          "cursor": "not-allowed",
+          "opacity": "0.7"
         });
       } else if (!isBooked) {
         $(this).css({
-          'pointer-events': 'auto',
-          'cursor': 'pointer',
-          'opacity': '1'
+          "pointer-events": "auto",
+          "cursor": "pointer",
+          "opacity": "1"
         });
       }
 
@@ -1732,8 +1732,8 @@ export default {
             ticketTypeName: String(ticket.name),
             price: Number(ticket.price),
             basePrice: Number(ticket.basePrice || ticket.price),
-            section: parsed?.section || extractSection(seatId) || '',
-            row: parsed?.row || extractRow(seatId) || ''
+            section: parsed?.section || extractSection(seatId) || "",
+            row: parsed?.row || extractRow(seatId) || ""
           };
         });
 
@@ -1747,7 +1747,7 @@ export default {
           customerInfo,
         };
 
-        console.log('Booking payload:', JSON.stringify(booking, null, 2));
+        console.log("Booking payload:", JSON.stringify(booking, null, 2));
 
         const createResp = await bookingAPI.create(booking);
         const createdBooking =
@@ -1790,7 +1790,7 @@ export default {
                   Please save your booking reference. You'll need it to view or manage your booking.
                 </p>
               </div>
-            ` : ''}
+            ` : ""}
           </div>
         `,
           icon: "success",
@@ -1903,7 +1903,7 @@ export default {
       selectedShowtime?.pricing?.sections ||
       this.performanceData.pricingSections ||
       [];
-    if (!sections.length) return "";
+    if (!sections.length) {return "";}
     const rows = ZonePricing.getZoneSummary(sections)
       .map((zone) => {
         const badge = getTierBadge(zone.tier);

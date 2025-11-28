@@ -79,7 +79,7 @@ export const CALENDAR_CONFIG = {
   calendarName: `${COMPANY_INFO.shortName} Performance`,
 
   // Default timezone
-  timezone: 'Asia/Hong_Kong',
+  timezone: "Asia/Hong_Kong",
 
   // Default event duration (in hours) if end time not specified
   defaultDuration: 2,
@@ -88,32 +88,32 @@ export const CALENDAR_CONFIG = {
   alarm: {
     enabled: true,
     minutesBefore: 60, // 1 hour before event
-    action: 'DISPLAY',
+    action: "DISPLAY",
   },
 
   // Event categories
-  categories: ['Performance', 'Entertainment', 'Booking'],
+  categories: ["Performance", "Entertainment", "Booking"],
 
   // Event status
-  status: 'CONFIRMED',
+  status: "CONFIRMED",
 
   // Transparency (OPAQUE = shows as busy, TRANSPARENT = shows as free)
-  transparency: 'OPAQUE',
+  transparency: "OPAQUE",
 
   // Event class (PUBLIC, PRIVATE, CONFIDENTIAL)
-  eventClass: 'PUBLIC',
+  eventClass: "PUBLIC",
 
   // Booking instructions
   instructions: {
     arrivalTime: 30, // minutes before performance
-    reminderText: 'Remember to bring your e-ticket or booking reference.',
+    reminderText: "Remember to bring your e-ticket or booking reference.",
   },
 
   // URL settings
   get baseUrl() {
-    return typeof window !== 'undefined' ? window.location.origin : '';
+    return typeof window !== "undefined" ? window.location.origin : "";
   },
-  bookingsPath: '/user/bookings',
+  bookingsPath: "/user/bookings",
 
   // Helper methods
   getBookingsUrl() {

@@ -13,7 +13,7 @@ const CACHE_MAX_SIZE = 100;
  * @param {string} rowLabel - Current row label (e.g., "A", "B")
  * @returns {Object} {x, y, width, height} coordinates and dimensions
  */
-export function calculateSeatPosition(rowIndex, seatIndex, section, rowSeats, rowLabel) {
+export function calculateSeatPosition(rowIndex, seatIndex, section, rowSeats, _rowLabel) {
   const SEAT_WIDTH = 40;
   const SEAT_HEIGHT = 40;
   const ROW_SPACING = 10;
@@ -109,8 +109,8 @@ export function buildSeatMapFromVenueLayout(layout = {}) {
             tier: section.tier || "standard",
             seatIndex: s.seatIndex,
             effectiveIndex: s.effectiveIndex,
-            position,  // NEW: x, y coordinates and dimensions
-            shape: s.shape  // NEW: seat shape configuration
+            position,  // x, y coordinates and dimensions
+            shape: s.shape  // seat shape configuration
           };
           indexMap[fullId.toLowerCase()] = seat;
           return seat;
@@ -121,7 +121,7 @@ export function buildSeatMapFromVenueLayout(layout = {}) {
       name: section.name,
       tier: section.tier || "standard",
       rows,
-      horizontalAisles: section.horizontalAisles || []  // NEW: Include horizontal aisle info
+      horizontalAisles: section.horizontalAisles || []  // horizontal aisle info
     };
   });
 

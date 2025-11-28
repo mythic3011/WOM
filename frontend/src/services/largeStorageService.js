@@ -129,7 +129,7 @@ class LargeStorageService {
   async getImage(key) {
     try {
       const blob = await this.getBlob(key);
-      if (!blob) return null;
+      if (!blob) {return null;}
       return await this.blobToDataURL(blob);
     } catch (error) {
       console.error(`Error getting image (${key}):`, error);

@@ -128,7 +128,7 @@ export class VenueController {
   async handleImportVenue() {
     const { value: file } = await Swal.fire({
       title: "Import Venue",
-      html: '<input type="file" id="venueImportFile" accept=".json" class="swal2-file">',
+      html: "<input type=\"file\" id=\"venueImportFile\" accept=\".json\" class=\"swal2-file\">",
       showCancelButton: true,
       confirmButtonText: "Import",
       confirmButtonColor: SwalColors.primary,

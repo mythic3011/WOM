@@ -40,7 +40,7 @@ export const ZonePricing = {
   calculateFinalPrice(basePrice, ticketType, discounts = {}) {
     // Validate base price
     if (!basePrice || basePrice <= 0) {
-      console.warn('Invalid base price:', basePrice);
+      console.warn("Invalid base price:", basePrice);
       return 0;
     }
 
@@ -120,8 +120,8 @@ export const ZonePricing = {
           ...type,
           price: 500,
           basePrice: 500,
-          zone: 'standard',
-          zoneName: 'Standard'
+          zone: "standard",
+          zoneName: "Standard"
         }));
     }
 

@@ -94,7 +94,7 @@ export function getStatusBadge(status) {
 }
 
 export function isPreOrderAvailable(performance) {
-  if (!performance.preOrderStartDate) return false;
+  if (!performance.preOrderStartDate) {return false;}
   const now = new Date();
   const startDate = new Date(performance.preOrderStartDate);
   return (
@@ -103,7 +103,7 @@ export function isPreOrderAvailable(performance) {
 }
 
 export function isEarlyBirdAvailable(performance) {
-  if (!performance.earlyBirdEndDate) return false;
+  if (!performance.earlyBirdEndDate) {return false;}
   const now = new Date();
   const endDate = new Date(performance.earlyBirdEndDate);
   return performance.status === PERFORMANCE_STATUS.EARLY_BIRD && now <= endDate;

@@ -33,11 +33,11 @@ export function getDisplayLabel(fullId) {
  * extractSection("balcony-b-5") // returns "balcony"
  */
 export function extractSection(seatId) {
-  if (!seatId || typeof seatId !== 'string') {
+  if (!seatId || typeof seatId !== "string") {
     return null;
   }
 
-  const parts = seatId.split('-');
+  const parts = seatId.split("-");
   if (parts.length < 2) {
     return null;
   }
@@ -54,7 +54,7 @@ export function extractSection(seatId) {
 
   // Format: section-rowNumber (e.g., "orchestra-a12")
   // Section is everything except the last part
-  return parts.slice(0, -1).join('-');
+  return parts.slice(0, -1).join("-");
 }
 
 /**
@@ -67,11 +67,11 @@ export function extractSection(seatId) {
  * extractRow("balcony-aa-5") // returns "aa"
  */
 export function extractRow(seatId) {
-  if (!seatId || typeof seatId !== 'string') {
+  if (!seatId || typeof seatId !== "string") {
     return null;
   }
 
-  const parts = seatId.split('-');
+  const parts = seatId.split("-");
   if (parts.length < 2) {
     return null;
   }
@@ -105,11 +105,11 @@ export function extractRow(seatId) {
  * parseSeatId("balcony-aa-5") // returns { section: "balcony", row: "aa", number: 5 }
  */
 export function parseSeatId(seatId) {
-  if (!seatId || typeof seatId !== 'string') {
+  if (!seatId || typeof seatId !== "string") {
     return null;
   }
 
-  const parts = seatId.split('-');
+  const parts = seatId.split("-");
   if (parts.length < 2) {
     return null;
   }
@@ -141,7 +141,7 @@ export function parseSeatId(seatId) {
     return null;
   }
 
-  const section = parts.slice(0, -1).join('-');
+  const section = parts.slice(0, -1).join("-");
   const row = match[1].toLowerCase();
   const number = parseInt(match[2], 10);
 

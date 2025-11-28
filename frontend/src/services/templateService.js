@@ -42,7 +42,7 @@ export const templateService = {
 
   async applyTemplate(templateId, showtime) {
     const template = await this.getById(templateId);
-    if (!template) return null;
+    if (!template) {return null;}
 
     return {
       ...showtime,
@@ -95,7 +95,7 @@ export const templateService = {
 
   async exportTemplate(id) {
     const template = await this.getById(id);
-    if (!template) return null;
+    if (!template) {return null;}
 
     const dataStr = JSON.stringify(template, null, 2);
     const dataBlob = new Blob([dataStr], { type: "application/json" });

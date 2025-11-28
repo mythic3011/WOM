@@ -1,5 +1,6 @@
 export { apiClient, authAPI, userAPI, performanceAPI, bookingAPI, venueAPI, ticketTypeAPI, statsAPI, handleApiError } from "./apiClient.js";
 export { fileAPI } from "./api/index.js";
+export { imageUploadService } from "./imageUploadService.js";
 export { userService } from "./userService.js";
 export { adminUserService } from "./adminUserService.js";
 export { performanceService } from "./performanceService.js";

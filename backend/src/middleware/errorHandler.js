@@ -1,10 +1,38 @@
 import logger from "#config/logger.js";
 import { AppError } from "#utils/errors.js";
+import EnvironmentValidator from "#config/EnvironmentValidator.js";
+
+const validator = new EnvironmentValidator();
+
+const sanitizeErrorMessage = (message) => {
+  const sensitiveKeys = validator.schema.sensitive;
+  let sanitized = message;
+  
+  for (const key of sensitiveKeys) {
+    const value = process.env[key];
+    if (value) {
+      const regex = new RegExp(value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "gi");
+      sanitized = sanitized.replace(regex, "***");
+    }
+  }
+  
+  return sanitized;
+};
+
+const sanitizeStack = (stack) => {
+  if (!stack) {
+    return stack;
+  }
+  return sanitizeErrorMessage(stack);
+};
 
 export const errorHandler = (err, req, res, _next) => {
+  const sanitizedMessage = sanitizeErrorMessage(err.message);
+  const sanitizedStack = sanitizeStack(err.stack);
+  
   logger.error("Error:", {
-    message: err.message,
-    stack: err.stack,
+    message: sanitizedMessage,
+    stack: sanitizedStack,
     url: req.originalUrl,
     method: req.method,
     name: err.name,
@@ -13,7 +41,7 @@ export const errorHandler = (err, req, res, _next) => {
   if (err instanceof AppError) {
     return res.status(err.statusCode).json({
       success: false,
-      message: err.message,
+      message: sanitizeErrorMessage(err.message),
       ...(err.code ? { code: err.code } : {}),
       ...(err.errors ? { errors: err.errors } : {}),
     });
@@ -48,14 +76,14 @@ export const errorHandler = (err, req, res, _next) => {
   }
 
   const statusCode = err.statusCode || 500;
-  const message = err.message || "Internal server error";
+  const message = sanitizeErrorMessage(err.message || "Internal server error");
 
   res.status(statusCode).json({
     success: false,
     message,
     ...(err.code ? { code: err.code } : {}),
     ...(err.errors ? { errors: err.errors } : {}),
-    ...(process.env.NODE_ENV === "development" && { stack: err.stack }),
+    ...(process.env.NODE_ENV === "development" && { stack: sanitizedStack }),
   });
 };
 

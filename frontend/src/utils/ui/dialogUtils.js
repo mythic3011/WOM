@@ -367,19 +367,19 @@ export const dialogUtils = {
       showCancelButton: selectable,
       showConfirmButton: selectable,
       preConfirm: () => {
-        if (!selectable) return null;
+        if (!selectable) {return null;}
 
         if (multiSelect) {
           const selected = [];
           document
-            .querySelectorAll('input[name="listItem"]:checked')
+            .querySelectorAll("input[name=\"listItem\"]:checked")
             .forEach((input) => {
               selected.push(parseInt(input.value));
             });
           return selected;
         } else {
           const selected = document.querySelector(
-            'input[name="listItem"]:checked'
+            "input[name=\"listItem\"]:checked"
           );
           return selected ? parseInt(selected.value) : null;
         }

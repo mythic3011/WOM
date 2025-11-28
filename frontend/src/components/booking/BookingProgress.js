@@ -25,7 +25,7 @@ export const BookingProgress = {
                   } w-12 h-12 rounded-full flex items-center justify-center font-bold transition-colors">
                     ${
                       isCompleted
-                        ? '<i class="fas fa-check"></i>'
+                        ? "<i class=\"fas fa-check\"></i>"
                         : `<i class="fas ${step.icon}"></i>`
                     }
                   </div>

@@ -30,12 +30,12 @@ export const fileHandler = {
 
         // Validation
         if (!this.validateFile(file, { maxSize, allowedTypes })) {
-            return { success: false, error: 'Validation failed' };
+            return { success: false, error: "Validation failed" };
         }
 
         // Create FormData
         const formData = new FormData();
-        formData.append('file', file);
+        formData.append("file", file);
 
         // Add additional data
         Object.entries(additionalData).forEach(([key, value]) => {
@@ -46,7 +46,7 @@ export const fileHandler = {
             // Use XMLHttpRequest for progress tracking
             return await this._uploadWithProgress(endpoint, formData, onProgress);
         } catch (error) {
-            notify.error('Upload failed: ' + error.message);
+            notify.error("Upload failed: " + error.message);
             return { success: false, error: error.message };
         }
     },
@@ -65,7 +65,7 @@ export const fileHandler = {
 
             // Progress tracking
             if (onProgress) {
-                xhr.upload.addEventListener('progress', (e) => {
+                xhr.upload.addEventListener("progress", (e) => {
                     if (e.lengthComputable) {
                         const percentComplete = (e.loaded / e.total) * 100;
                         onProgress(percentComplete, e.loaded, e.total);
@@ -74,7 +74,7 @@ export const fileHandler = {
             }
 
             // Success handler
-            xhr.addEventListener('load', () => {
+            xhr.addEventListener("load", () => {
                 if (xhr.status >= 200 && xhr.status < 300) {
                     try {
                         const response = JSON.parse(xhr.responseText);
@@ -88,16 +88,16 @@ export const fileHandler = {
             });
 
             // Error handlers
-            xhr.addEventListener('error', () => {
-                reject(new Error('Network error occurred'));
+            xhr.addEventListener("error", () => {
+                reject(new Error("Network error occurred"));
             });
 
-            xhr.addEventListener('abort', () => {
-                reject(new Error('Upload cancelled'));
+            xhr.addEventListener("abort", () => {
+                reject(new Error("Upload cancelled"));
             });
 
             // Send request
-            xhr.open('POST', endpoint);
+            xhr.open("POST", endpoint);
             xhr.withCredentials = true; // Include cookies
             xhr.send(formData);
         });
@@ -116,7 +116,7 @@ export const fileHandler = {
 
         // Check file exists
         if (!file) {
-            notify.error('No file selected');
+            notify.error("No file selected");
             return false;
         }
 
@@ -132,18 +132,18 @@ export const fileHandler = {
         // Check file type
         if (allowedTypes.length > 0) {
             const fileType = file.type;
-            const fileExt = file.name.split('.').pop().toLowerCase();
+            const fileExt = file.name.split(".").pop().toLowerCase();
 
             const isAllowed = allowedTypes.some((type) => {
-                if (type.includes('*')) {
+                if (type.includes("*")) {
                     // Handle wildcards like 'image/*'
-                    return fileType.startsWith(type.replace('*', ''));
+                    return fileType.startsWith(type.replace("*", ""));
                 }
-                return fileType === type || fileExt === type.replace('.', '');
+                return fileType === type || fileExt === type.replace(".", "");
             });
 
             if (!isAllowed) {
-                notify.error(`File type not allowed. Allowed: ${allowedTypes.join(', ')}`);
+                notify.error(`File type not allowed. Allowed: ${allowedTypes.join(", ")}`);
                 return false;
             }
         }
@@ -160,7 +160,7 @@ export const fileHandler = {
         return new Promise((resolve, reject) => {
             const reader = new FileReader();
             reader.onload = (e) => resolve(e.target.result);
-            reader.onerror = () => reject(new Error('Failed to read file'));
+            reader.onerror = () => reject(new Error("Failed to read file"));
             reader.readAsDataURL(file);
         });
     },
@@ -174,7 +174,7 @@ export const fileHandler = {
         return new Promise((resolve, reject) => {
             const reader = new FileReader();
             reader.onload = (e) => resolve(e.target.result);
-            reader.onerror = () => reject(new Error('Failed to read file'));
+            reader.onerror = () => reject(new Error("Failed to read file"));
             reader.readAsText(file);
         });
     },
@@ -188,7 +188,7 @@ export const fileHandler = {
         return new Promise((resolve, reject) => {
             const reader = new FileReader();
             reader.onload = (e) => resolve(e.target.result);
-            reader.onerror = () => reject(new Error('Failed to read file'));
+            reader.onerror = () => reject(new Error("Failed to read file"));
             reader.readAsArrayBuffer(file);
         });
     },
@@ -210,15 +210,15 @@ export const fileHandler = {
             if (showProgress) {
                 blob = await this._downloadWithProgress(url);
             } else {
-                const response = await fetch(url, { credentials: 'include' });
-                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const response = await fetch(url, { credentials: "include" });
+                if (!response.ok) {throw new Error(`HTTP ${response.status}`);}
                 blob = await response.blob();
             }
 
             this.downloadBlob(blob, filename);
             return { success: true };
         } catch (error) {
-            notify.error('Download failed: ' + error.message);
+            notify.error("Download failed: " + error.message);
             return { success: false, error: error.message };
         }
     },
@@ -232,16 +232,16 @@ export const fileHandler = {
     async _downloadWithProgress(url) {
         return new Promise((resolve, reject) => {
             const xhr = new XMLHttpRequest();
-            xhr.responseType = 'blob';
+            xhr.responseType = "blob";
 
-            xhr.addEventListener('progress', (e) => {
+            xhr.addEventListener("progress", (e) => {
                 if (e.lengthComputable) {
                     const percentComplete = (e.loaded / e.total) * 100;
                     console.log(`Download progress: ${percentComplete.toFixed(2)}%`);
                 }
             });
 
-            xhr.addEventListener('load', () => {
+            xhr.addEventListener("load", () => {
                 if (xhr.status >= 200 && xhr.status < 300) {
                     resolve(xhr.response);
                 } else {
@@ -249,11 +249,11 @@ export const fileHandler = {
                 }
             });
 
-            xhr.addEventListener('error', () => {
-                reject(new Error('Network error'));
+            xhr.addEventListener("error", () => {
+                reject(new Error("Network error"));
             });
 
-            xhr.open('GET', url);
+            xhr.open("GET", url);
             xhr.withCredentials = true;
             xhr.send();
         });
@@ -266,10 +266,10 @@ export const fileHandler = {
      */
     downloadBlob(blob, filename) {
         const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
+        const link = document.createElement("a");
         link.href = url;
         link.download = filename;
-        link.style.display = 'none';
+        link.style.display = "none";
 
         document.body.appendChild(link);
         link.click();
@@ -286,7 +286,7 @@ export const fileHandler = {
      */
     downloadJSON(data, filename) {
         const json = JSON.stringify(data, null, 2);
-        const blob = new Blob([json], { type: 'application/json' });
+        const blob = new Blob([json], { type: "application/json" });
         this.downloadBlob(blob, filename);
     },
 
@@ -296,7 +296,7 @@ export const fileHandler = {
      * @param {string} filename - Filename for download
      */
     downloadCSV(data, filename) {
-        const blob = new Blob([data], { type: 'text/csv;charset=utf-8;' });
+        const blob = new Blob([data], { type: "text/csv;charset=utf-8;" });
         this.downloadBlob(blob, filename);
     },
 
@@ -306,7 +306,7 @@ export const fileHandler = {
      * @param {string} filename - Filename for download
      * @param {string} mimeType - MIME type (default: 'text/plain')
      */
-    downloadText(text, filename, mimeType = 'text/plain') {
+    downloadText(text, filename, mimeType = "text/plain") {
         const blob = new Blob([text], { type: mimeType });
         this.downloadBlob(blob, filename);
     },
@@ -317,7 +317,7 @@ export const fileHandler = {
      * @returns {string} File extension (lowercase)
      */
     getExtension(filename) {
-        return filename.split('.').pop().toLowerCase();
+        return filename.split(".").pop().toLowerCase();
     },
 
     /**
@@ -326,11 +326,11 @@ export const fileHandler = {
      * @returns {string} Formatted file size (e.g., "1.5 MB")
      */
     formatFileSize(bytes) {
-        if (bytes === 0) return '0 Bytes';
+        if (bytes === 0) {return "0 Bytes";}
         const k = 1024;
-        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+        const sizes = ["Bytes", "KB", "MB", "GB"];
         const i = Math.floor(Math.log(bytes) / Math.log(k));
-        return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + ' ' + sizes[i];
+        return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + " " + sizes[i];
     },
 
     /**
@@ -339,7 +339,7 @@ export const fileHandler = {
      * @returns {boolean} True if image, false otherwise
      */
     isImage(file) {
-        return file.type.startsWith('image/');
+        return file.type.startsWith("image/");
     },
 
     /**
@@ -348,7 +348,7 @@ export const fileHandler = {
      * @returns {boolean} True if PDF, false otherwise
      */
     isPDF(file) {
-        return file.type === 'application/pdf';
+        return file.type === "application/pdf";
     },
 
     /**
@@ -357,6 +357,6 @@ export const fileHandler = {
      * @returns {boolean} True if CSV, false otherwise
      */
     isCSV(file) {
-        return file.type === 'text/csv' || this.getExtension(file.name) === 'csv';
+        return file.type === "text/csv" || this.getExtension(file.name) === "csv";
     }
 };

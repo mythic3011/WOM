@@ -51,14 +51,14 @@ export const registerGlobalShortcuts = () => {
   keyboard.bind("ctrl+s, command+s", (e) => {
     e.preventDefault();
     const saveBtn = document.querySelector("[data-shortcut='save']");
-    if (saveBtn) saveBtn.click();
+    if (saveBtn) {saveBtn.click();}
   });
 
   keyboard.bind("esc", () => {
     const closeBtn = document.querySelector(
       ".swal2-close, [data-shortcut='close']"
     );
-    if (closeBtn) closeBtn.click();
+    if (closeBtn) {closeBtn.click();}
   });
 
   keyboard.bind("ctrl+/, command+/", (e) => {
@@ -66,7 +66,7 @@ export const registerGlobalShortcuts = () => {
     const searchInput = document.querySelector(
       "input[type='search'], #searchInput"
     );
-    if (searchInput) searchInput.focus();
+    if (searchInput) {searchInput.focus();}
   });
 
   keyboard.bind("ctrl+k, command+k", (e) => {

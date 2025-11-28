@@ -138,7 +138,7 @@ class CustomSVGPanZoom {
       }
     }
 
-    if (!this.isPanning) return;
+    if (!this.isPanning) {return;}
 
     const dx = e.clientX - this.dragStart.x;
     const dy = e.clientY - this.dragStart.y;
@@ -224,7 +224,7 @@ class CustomSVGPanZoom {
       Math.min(this.maxZoom, calculatedScale)
     );
 
-    if (Math.abs(newScale - this.scale) < 0.001) return;
+    if (Math.abs(newScale - this.scale) < 0.001) {return;}
 
     const scaleChange = newScale / this.scale;
     const offsetX = x - this.panX;
@@ -298,7 +298,7 @@ class CustomSVGPanZoom {
       return;
     }
 
-    if (this.pendingUpdate) return;
+    if (this.pendingUpdate) {return;}
 
     this.pendingUpdate = true;
     requestAnimationFrame(() => {
@@ -454,16 +454,28 @@ class CustomSVGPanZoom {
   }
 }
 
-export function initSeatMapPanzoom() {
-  const $svg = $("#seatMap svg");
-  if (!$svg.length) return null;
+export function initSeatMapPanzoom(containerSelector = "#seatMap") {
+  const $container = $(containerSelector);
+  if (!$container.length) {
+    const $fallback = $("#seatMapContainer");
+    if (!$fallback.length) {
+      return null;
+    }
+  }
+
+  const $svg = $container.length ? $container.find("svg").first() : $("#seatMapContainer svg").first();
+  if (!$svg.length) {
+    return null;
+  }
 
   let $layer = $svg.find("#content-layer");
   if (!$layer.length) {
     $layer = $svg.find("#seats-layer");
     if (!$layer.length) {
-      console.warn("content-layer/seats-layer not found in SVG");
-      return null;
+      $layer = $svg.find("g").first();
+      if (!$layer.length) {
+        return null;
+      }
     }
   }
 

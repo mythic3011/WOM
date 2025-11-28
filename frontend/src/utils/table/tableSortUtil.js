@@ -2,7 +2,7 @@ import dayjs from "dayjs";
 
 export const TableSortUtil = {
   sortData(data, column, direction = "asc", type = "auto") {
-    if (!data || !Array.isArray(data) || data.length === 0) return data;
+    if (!data || !Array.isArray(data) || data.length === 0) {return data;}
 
     const sortedData = [...data];
     const detectedType = type === "auto" ? this.detectType(data, column) : type;
@@ -36,8 +36,8 @@ export const TableSortUtil = {
   },
 
   sortByMultiple(data, sortConfigs) {
-    if (!data || !Array.isArray(data) || data.length === 0) return data;
-    if (!sortConfigs || sortConfigs.length === 0) return data;
+    if (!data || !Array.isArray(data) || data.length === 0) {return data;}
+    if (!sortConfigs || sortConfigs.length === 0) {return data;}
 
     const sortedData = [...data];
 
@@ -69,7 +69,7 @@ export const TableSortUtil = {
         }
 
         const result = direction === "asc" ? comparison : -comparison;
-        if (result !== 0) return result;
+        if (result !== 0) {return result;}
       }
       return 0;
     });
@@ -81,7 +81,7 @@ export const TableSortUtil = {
     const samples = data.slice(0, 10).map((row) => this.getNestedValue(row, column));
     const nonNull = samples.filter((val) => val !== null && val !== undefined);
 
-    if (nonNull.length === 0) return "string";
+    if (nonNull.length === 0) {return "string";}
 
     if (nonNull.every((val) => typeof val === "boolean")) {
       return "boolean";
@@ -99,7 +99,7 @@ export const TableSortUtil = {
   },
 
   isDateString(value) {
-    if (typeof value !== "string") return false;
+    if (typeof value !== "string") {return false;}
     const datePatterns = [
       /^\d{4}-\d{2}-\d{2}$/,
       /^\d{4}\/\d{2}\/\d{2}$/,
@@ -111,12 +111,12 @@ export const TableSortUtil = {
   },
 
   getNestedValue(obj, path) {
-    if (!path) return obj;
+    if (!path) {return obj;}
     const keys = path.split(".");
     let value = obj;
     for (const key of keys) {
       value = value?.[key];
-      if (value === undefined) return null;
+      if (value === undefined) {return null;}
     }
     return value;
   },
@@ -130,18 +130,18 @@ export const TableSortUtil = {
   compareNumbers(a, b) {
     const aNum = parseFloat(a);
     const bNum = parseFloat(b);
-    if (isNaN(aNum) && isNaN(bNum)) return 0;
-    if (isNaN(aNum)) return 1;
-    if (isNaN(bNum)) return -1;
+    if (isNaN(aNum) && isNaN(bNum)) {return 0;}
+    if (isNaN(aNum)) {return 1;}
+    if (isNaN(bNum)) {return -1;}
     return aNum - bNum;
   },
 
   compareDates(a, b) {
     const aDate = dayjs(a);
     const bDate = dayjs(b);
-    if (!aDate.isValid() && !bDate.isValid()) return 0;
-    if (!aDate.isValid()) return 1;
-    if (!bDate.isValid()) return -1;
+    if (!aDate.isValid() && !bDate.isValid()) {return 0;}
+    if (!aDate.isValid()) {return 1;}
+    if (!bDate.isValid()) {return -1;}
     return aDate.valueOf() - bDate.valueOf();
   },
 

@@ -1,10 +1,10 @@
 /**
  * SeatMapPreviewHandler
- * 
+ *
  * Event handlers and real-time update logic for SeatMapPreview component
  */
 
-import { SeatMapPreview } from './SeatMapPreview.js';
+import { SeatMapPreview } from "./SeatMapPreview.js";
 
 export const SeatMapPreviewHandler = {
     previewContainer: null,
@@ -35,32 +35,32 @@ export const SeatMapPreviewHandler = {
      * Attach zoom control handlers
      */
     attachZoomControls() {
-        const zoomInBtn = document.getElementById('preview-zoom-in-btn');
-        const zoomOutBtn = document.getElementById('preview-zoom-out-btn');
-        const resetViewBtn = document.getElementById('preview-reset-view-btn');
+        const zoomInBtn = document.getElementById("preview-zoom-in-btn");
+        const zoomOutBtn = document.getElementById("preview-zoom-out-btn");
+        const resetViewBtn = document.getElementById("preview-reset-view-btn");
 
         if (zoomInBtn) {
-            zoomInBtn.addEventListener('click', () => {
+            zoomInBtn.addEventListener("click", () => {
                 SeatMapPreview.zoomIn();
             });
         }
 
         if (zoomOutBtn) {
-            zoomOutBtn.addEventListener('click', () => {
+            zoomOutBtn.addEventListener("click", () => {
                 SeatMapPreview.zoomOut();
             });
         }
 
         if (resetViewBtn) {
-            resetViewBtn.addEventListener('click', () => {
+            resetViewBtn.addEventListener("click", () => {
                 SeatMapPreview.resetView();
             });
         }
 
         // Mouse wheel zoom
-        const canvas = document.getElementById('seat-map-canvas-container');
+        const canvas = document.getElementById("seat-map-canvas-container");
         if (canvas) {
-            canvas.addEventListener('wheel', (e) => {
+            canvas.addEventListener("wheel", (e) => {
                 e.preventDefault();
                 if (e.deltaY < 0) {
                     SeatMapPreview.zoomIn();
@@ -75,8 +75,8 @@ export const SeatMapPreviewHandler = {
      * Attach pan control handlers
      */
     attachPanControls() {
-        const container = document.getElementById('seat-map-canvas-container');
-        if (!container) return;
+        const container = document.getElementById("seat-map-canvas-container");
+        if (!container) {return;}
 
         let isDragging = false;
         let startX = 0;
@@ -84,17 +84,17 @@ export const SeatMapPreviewHandler = {
         let initialOffsetX = 0;
         let initialOffsetY = 0;
 
-        container.addEventListener('mousedown', (e) => {
+        container.addEventListener("mousedown", (e) => {
             isDragging = true;
             startX = e.clientX;
             startY = e.clientY;
             initialOffsetX = SeatMapPreview.offsetX;
             initialOffsetY = SeatMapPreview.offsetY;
-            container.style.cursor = 'grabbing';
+            container.style.cursor = "grabbing";
         });
 
-        document.addEventListener('mousemove', (e) => {
-            if (!isDragging) return;
+        document.addEventListener("mousemove", (e) => {
+            if (!isDragging) {return;}
 
             const deltaX = e.clientX - startX;
             const deltaY = e.clientY - startY;
@@ -104,10 +104,10 @@ export const SeatMapPreviewHandler = {
             SeatMapPreview.updateTransform();
         });
 
-        document.addEventListener('mouseup', () => {
+        document.addEventListener("mouseup", () => {
             if (isDragging) {
                 isDragging = false;
-                container.style.cursor = 'grab';
+                container.style.cursor = "grab";
             }
         });
     },
@@ -116,32 +116,32 @@ export const SeatMapPreviewHandler = {
      * Attach seat interaction handlers
      */
     attachSeatInteractions() {
-        const canvas = document.getElementById('seat-map-canvas');
-        if (!canvas) return;
+        const canvas = document.getElementById("seat-map-canvas");
+        if (!canvas) {return;}
 
         // Hover handler
-        canvas.addEventListener('mouseover', (e) => {
-            const seatGroup = e.target.closest('.seat-group');
+        canvas.addEventListener("mouseover", (e) => {
+            const seatGroup = e.target.closest(".seat-group");
             if (seatGroup) {
-                const seatId = seatGroup.getAttribute('data-seat-id');
+                const seatId = seatGroup.getAttribute("data-seat-id");
                 SeatMapPreview.handleSeatHover(seatId);
                 this.refreshSeatHighlight();
             }
         });
 
-        canvas.addEventListener('mouseout', (e) => {
-            const seatGroup = e.target.closest('.seat-group');
-            if (seatGroup && !e.relatedTarget?.closest('.seat-group')) {
+        canvas.addEventListener("mouseout", (e) => {
+            const seatGroup = e.target.closest(".seat-group");
+            if (seatGroup && !e.relatedTarget?.closest(".seat-group")) {
                 SeatMapPreview.hideSeatDetails();
                 this.refreshSeatHighlight();
             }
         });
 
         // Click handler
-        canvas.addEventListener('click', (e) => {
-            const seatGroup = e.target.closest('.seat-group');
+        canvas.addEventListener("click", (e) => {
+            const seatGroup = e.target.closest(".seat-group");
             if (seatGroup) {
-                const seatId = seatGroup.getAttribute('data-seat-id');
+                const seatId = seatGroup.getAttribute("data-seat-id");
                 SeatMapPreview.handleSeatClick(seatId);
                 this.refreshSeatHighlight();
             }
@@ -152,9 +152,9 @@ export const SeatMapPreviewHandler = {
      * Attach refresh button handler
      */
     attachRefreshButton() {
-        const refreshBtn = document.getElementById('preview-refresh-btn');
+        const refreshBtn = document.getElementById("preview-refresh-btn");
         if (refreshBtn) {
-            refreshBtn.addEventListener('click', () => {
+            refreshBtn.addEventListener("click", () => {
                 this.refreshPreview();
             });
         }
@@ -166,15 +166,15 @@ export const SeatMapPreviewHandler = {
     watchVenueChanges() {
         // Watch for changes in form inputs
         const formInputs = document.querySelectorAll(
-            '.venue-edit-form input, .venue-edit-form select, .venue-edit-form textarea'
+            ".venue-edit-form input, .venue-edit-form select, .venue-edit-form textarea"
         );
 
         formInputs.forEach(input => {
-            input.addEventListener('input', () => {
+            input.addEventListener("input", () => {
                 this.scheduleUpdate();
             });
 
-            input.addEventListener('change', () => {
+            input.addEventListener("change", () => {
                 this.scheduleUpdate();
             });
         });
@@ -184,7 +184,7 @@ export const SeatMapPreviewHandler = {
             this.scheduleUpdate();
         });
 
-        const sectionsContainer = document.getElementById('sections-container');
+        const sectionsContainer = document.getElementById("sections-container");
         if (sectionsContainer) {
             observer.observe(sectionsContainer, {
                 childList: true,
@@ -237,11 +237,11 @@ export const SeatMapPreviewHandler = {
         // For now, we'll use a simplified version
 
         const sections = [];
-        const sectionElements = document.querySelectorAll('[data-section-index]');
+        const sectionElements = document.querySelectorAll("[data-section-index]");
 
         const sectionIndices = new Set();
         sectionElements.forEach(el => {
-            const index = parseInt(el.getAttribute('data-section-index'));
+            const index = parseInt(el.getAttribute("data-section-index"));
             if (!isNaN(index)) {
                 sectionIndices.add(index);
             }
@@ -259,8 +259,8 @@ export const SeatMapPreviewHandler = {
                     name: nameInput.value || `Section ${index + 1}`,
                     rows: parseInt(rowsInput.value) || 10,
                     seatsPerRow: parseInt(seatsInput.value) || 20,
-                    tier: tierSelect?.value || 'standard',
-                    startRow: startRowInput?.value || 'A',
+                    tier: tierSelect?.value || "standard",
+                    startRow: startRowInput?.value || "A",
                     horizontalAisles: this.getHorizontalAisles(index),
                     seatNumbering: this.getSeatNumbering(index),
                     rowsConfig: this.getRowsConfig(index)
@@ -326,7 +326,7 @@ export const SeatMapPreviewHandler = {
             `[data-skip-container][data-section-index="${sectionIndex}"]`
         );
         if (skipContainer) {
-            const skipSpans = skipContainer.querySelectorAll('span');
+            const skipSpans = skipContainer.querySelectorAll("span");
             skipSpans.forEach(span => {
                 const text = span.textContent.trim();
                 const num = parseInt(text);
@@ -337,10 +337,10 @@ export const SeatMapPreviewHandler = {
         }
 
         return {
-            globalDirection: directionSelect?.value || 'ltr',
+            globalDirection: directionSelect?.value || "ltr",
             startNumber: parseInt(startNumberInput?.value) || 1,
-            prefix: prefixInput?.value || '',
-            suffix: suffixInput?.value || '',
+            prefix: prefixInput?.value || "",
+            suffix: suffixInput?.value || "",
             skipNumbers
         };
     },
@@ -361,7 +361,7 @@ export const SeatMapPreviewHandler = {
      */
     refreshSeatHighlight() {
         // Re-render the SVG with updated hover/selection state
-        const canvas = document.getElementById('seat-map-canvas');
+        const canvas = document.getElementById("seat-map-canvas");
         if (canvas) {
             const svgContent = SeatMapPreview.renderSeatMapSVG();
             // Update only the seat elements to avoid full re-render

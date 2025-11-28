@@ -3,7 +3,7 @@
  * Supports Google Calendar, Apple Calendar, Outlook, and other iCal-compatible apps
  */
 
-import { CALENDAR_CONFIG } from '@config/config.js';
+import { CALENDAR_CONFIG } from "@config/config.js";
 
 /**
  * Escape special characters for iCalendar format
@@ -11,13 +11,13 @@ import { CALENDAR_CONFIG } from '@config/config.js';
  * @returns {string} Escaped text
  */
 function escapeICalText(text) {
-    if (!text) return '';
+    if (!text) {return "";}
     return text
-        .replace(/\\/g, '\\\\')
-        .replace(/;/g, '\\;')
-        .replace(/,/g, '\\,')
-        .replace(/\n/g, '\\n')
-        .replace(/\r/g, '');
+        .replace(/\\/g, "\\\\")
+        .replace(/;/g, "\\;")
+        .replace(/,/g, "\\,")
+        .replace(/\n/g, "\\n")
+        .replace(/\r/g, "");
 }
 
 /**
@@ -26,18 +26,18 @@ function escapeICalText(text) {
  * @returns {string} Folded line
  */
 function foldLine(line) {
-    if (line.length <= 75) return line;
+    if (line.length <= 75) {return line;}
 
     const result = [];
     let currentLine = line;
 
     while (currentLine.length > 75) {
         result.push(currentLine.substring(0, 75));
-        currentLine = ' ' + currentLine.substring(75);
+        currentLine = " " + currentLine.substring(75);
     }
     result.push(currentLine);
 
-    return result.join('\r\n');
+    return result.join("\r\n");
 }
 
 /**
@@ -48,11 +48,11 @@ function foldLine(line) {
 export function generateICalendar(event) {
     const {
         title,
-        description = '',
-        location = '',
+        description = "",
+        location = "",
         startDate,
         endDate,
-        url = '',
+        url = "",
         organizer = CALENDAR_CONFIG.organizer.name,
         alarm = CALENDAR_CONFIG.alarm.enabled,
         alarmMinutes = CALENDAR_CONFIG.alarm.minutesBefore,
@@ -62,7 +62,7 @@ export function generateICalendar(event) {
     // Format dates to iCalendar format (YYYYMMDDTHHMMSSZ)
     const formatDate = (date) => {
         const d = new Date(date);
-        return d.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+        return d.toISOString().replace(/[-:]/g, "").split(".")[0] + "Z";
     };
 
     // Calculate end date using config default duration if not provided
@@ -73,15 +73,15 @@ export function generateICalendar(event) {
 
     // Build event lines
     const lines = [
-        'BEGIN:VCALENDAR',
-        'VERSION:2.0',
+        "BEGIN:VCALENDAR",
+        "VERSION:2.0",
         `PRODID:${CALENDAR_CONFIG.prodId}`,
-        'CALSCALE:GREGORIAN',
-        'METHOD:PUBLISH',
+        "CALSCALE:GREGORIAN",
+        "METHOD:PUBLISH",
         `X-WR-CALNAME:${CALENDAR_CONFIG.calendarName}`,
         `X-WR-TIMEZONE:${CALENDAR_CONFIG.timezone}`,
-        'BEGIN:VEVENT',
-        `UID:${Date.now()}-${Math.random().toString(36).substring(2, 11)}@${CALENDAR_CONFIG.organizer.email.split('@')[1]}`,
+        "BEGIN:VEVENT",
+        `UID:${Date.now()}-${Math.random().toString(36).substring(2, 11)}@${CALENDAR_CONFIG.organizer.email.split("@")[1]}`,
         `DTSTAMP:${formatDate(new Date())}`,
         `DTSTART:${formatDate(start)}`,
         `DTEND:${formatDate(end)}`,
@@ -110,31 +110,31 @@ export function generateICalendar(event) {
 
     // Add categories
     if (categories && categories.length > 0) {
-        lines.push(`CATEGORIES:${categories.map(escapeICalText).join(',')}`);
+        lines.push(`CATEGORIES:${categories.map(escapeICalText).join(",")}`);
     }
 
     // Add status and other properties from config
     lines.push(
         `STATUS:${CALENDAR_CONFIG.status}`,
         `TRANSP:${CALENDAR_CONFIG.transparency}`,
-        'SEQUENCE:0',
+        "SEQUENCE:0",
         `CLASS:${CALENDAR_CONFIG.eventClass}`
     );
 
     // Add alarm/reminder
     if (alarm) {
         lines.push(
-            'BEGIN:VALARM',
+            "BEGIN:VALARM",
             `TRIGGER:${CALENDAR_CONFIG.getAlarmTrigger()}`,
             `ACTION:${CALENDAR_CONFIG.alarm.action}`,
             foldLine(`DESCRIPTION:Reminder: ${escapeICalText(title)}`),
-            'END:VALARM'
+            "END:VALARM"
         );
     }
 
-    lines.push('END:VEVENT', 'END:VCALENDAR');
+    lines.push("END:VEVENT", "END:VCALENDAR");
 
-    return lines.join('\r\n');
+    return lines.join("\r\n");
 }
 
 /**
@@ -142,10 +142,10 @@ export function generateICalendar(event) {
  * @param {Object} event - Event details
  * @param {string} filename - Optional filename
  */
-export function downloadICalendar(event, filename = 'event.ics') {
+export function downloadICalendar(event, filename = "event.ics") {
     const icsContent = generateICalendar(event);
-    const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
-    const link = document.createElement('a');
+    const blob = new Blob([icsContent], { type: "text/calendar;charset=utf-8" });
+    const link = document.createElement("a");
     link.href = URL.createObjectURL(blob);
     link.download = filename;
     document.body.appendChild(link);
@@ -164,13 +164,13 @@ export function generateBookingCalendar(booking) {
 
     // Build detailed description
     const descriptionParts = [
-        `Performance: ${booking.performanceTitle || 'Event'}`,
-        '',
+        `Performance: ${booking.performanceTitle || "Event"}`,
+        "",
         `Booking Reference: ${booking.bookingReference || booking.id}`,
     ];
 
     if (seatLabels.length > 0) {
-        descriptionParts.push(`Seats: ${seatLabels.join(', ')}`);
+        descriptionParts.push(`Seats: ${seatLabels.join(", ")}`);
     }
 
     if (booking.amount) {
@@ -178,18 +178,18 @@ export function generateBookingCalendar(booking) {
     }
 
     descriptionParts.push(
-        '',
-        'Manage your booking:',
+        "",
+        "Manage your booking:",
         CALENDAR_CONFIG.getBookingsUrl(),
-        '',
+        "",
         `IMPORTANT: Please arrive ${CALENDAR_CONFIG.instructions.arrivalTime} minutes before the performance starts.`,
         CALENDAR_CONFIG.instructions.reminderText
     );
 
     return generateICalendar({
-        title: booking.performanceTitle || 'Performance',
-        description: descriptionParts.join('\n'),
-        location: booking.venueName || booking.venue?.name || booking.venue || 'Venue TBA',
+        title: booking.performanceTitle || "Performance",
+        description: descriptionParts.join("\n"),
+        location: booking.venueName || booking.venue?.name || booking.venue || "Venue TBA",
         startDate: booking.performanceDate,
         url: CALENDAR_CONFIG.getBookingsUrl(),
         organizer: CALENDAR_CONFIG.organizer.name,
@@ -206,18 +206,18 @@ export function generateBookingCalendar(booking) {
 export function downloadBookingCalendar(booking) {
     // Create a clean filename
     const date = new Date(booking.performanceDate);
-    const dateStr = date.toISOString().split('T')[0];
-    const titleSlug = (booking.performanceTitle || 'event')
+    const dateStr = date.toISOString().split("T")[0];
+    const titleSlug = (booking.performanceTitle || "event")
         .toLowerCase()
-        .replace(/[^a-z0-9]+/g, '-')
-        .replace(/^-+|-+$/g, '')
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, "")
         .substring(0, 30);
 
     const filename = `wom-${titleSlug}-${dateStr}.ics`;
 
     const icsContent = generateBookingCalendar(booking);
-    const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
-    const link = document.createElement('a');
+    const blob = new Blob([icsContent], { type: "text/calendar;charset=utf-8" });
+    const link = document.createElement("a");
     link.href = URL.createObjectURL(blob);
     link.download = filename;
     document.body.appendChild(link);
@@ -242,7 +242,7 @@ function extractSeatLabels(booking) {
     if (booking.seats) {
         const seatArray = Array.isArray(booking.seats) ? booking.seats : [booking.seats];
         return {
-            seatLabels: seatArray.map(s => typeof s === 'string' ? s : s.fullId || s.seatId || s),
+            seatLabels: seatArray.map(s => typeof s === "string" ? s : s.fullId || s.seatId || s),
             isNewFormat: false
         };
     }

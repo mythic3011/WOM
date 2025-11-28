@@ -2,7 +2,7 @@ let $tooltip = null;
 let currentSeat = null;
 
 function createTooltip() {
-  if ($tooltip && $tooltip.length) return;
+  if ($tooltip && $tooltip.length) {return;}
 
   const html = `
     <div id="seatTooltip" class="fixed bg-gray-900/95 text-white px-3 py-2 rounded-lg shadow-xl text-xs pointer-events-none z-[10000] hidden transition-opacity duration-200 backdrop-blur-sm border border-gray-700">
@@ -68,7 +68,7 @@ function getStatusInfo(data) {
 }
 
 function updateTooltipContent(data) {
-  if (!$tooltip) return;
+  if (!$tooltip) {return;}
 
   const statusInfo = getStatusInfo(data);
   const priceValue = parseFloat(data.price) || 0;
@@ -84,7 +84,7 @@ function updateTooltipContent(data) {
 }
 
 function positionTooltip(event) {
-  if (!$tooltip) return;
+  if (!$tooltip) {return;}
 
   const offset = 15;
   const tooltipWidth = $tooltip.outerWidth();
@@ -109,7 +109,7 @@ function positionTooltip(event) {
 }
 
 function showTooltip($seat, event) {
-  if (!$tooltip) createTooltip();
+  if (!$tooltip) {createTooltip();}
 
   const data = getSeatData($seat);
   updateTooltipContent(data);
@@ -120,7 +120,7 @@ function showTooltip($seat, event) {
 }
 
 function hideTooltip() {
-  if (!$tooltip) return;
+  if (!$tooltip) {return;}
 
   $tooltip.removeClass("opacity-100").addClass("opacity-0");
   setTimeout(() => {
@@ -138,7 +138,7 @@ export function initSeatTooltip() {
 }
 
 export function getSeatTooltip() {
-  if (!$tooltip) createTooltip();
+  if (!$tooltip) {createTooltip();}
   return { $tooltip, currentSeat };
 }
 

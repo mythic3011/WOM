@@ -60,7 +60,7 @@ export class VirtualizationManager {
   }
 
   attachScrollListener() {
-    if (!this.svg) return;
+    if (!this.svg) {return;}
 
     const container =
       this.svg.closest(".overflow-y-auto, .overflow-auto") ||
@@ -107,7 +107,7 @@ export class VirtualizationManager {
   }
 
   updateViewport() {
-    if (!this.svg) return;
+    if (!this.svg) {return;}
 
     const svgRect = this.svg.getBoundingClientRect();
     const transform = this.seatsLayer.getAttribute("transform");
@@ -142,7 +142,7 @@ export class VirtualizationManager {
 
   checkVisiblePlaceholders() {
     this.placeholders.forEach((placeholders, key) => {
-      if (placeholders.length === 0) return;
+      if (placeholders.length === 0) {return;}
 
       const firstPlaceholder = placeholders[0];
       const y = parseFloat(firstPlaceholder.getAttribute("y"));
@@ -158,7 +158,7 @@ export class VirtualizationManager {
   }
 
   async processRenderQueue() {
-    if (this.isProcessing || this.renderQueue.length === 0) return;
+    if (this.isProcessing || this.renderQueue.length === 0) {return;}
 
     this.isProcessing = true;
     const startTime = performance.now();
@@ -180,7 +180,7 @@ export class VirtualizationManager {
 
   async loadRowSeats(key) {
     const placeholders = this.placeholders.get(key);
-    if (!placeholders || placeholders.length === 0) return;
+    if (!placeholders || placeholders.length === 0) {return;}
 
     const firstPlaceholder = placeholders[0];
     const section = parseInt(firstPlaceholder.getAttribute("data-section"));

@@ -53,7 +53,7 @@ export const SeatMap = {
     interactive = false
   ) {
     const getSeatColorFn = (seatDetail) => {
-      if (!seatDetail) return getSeatStatusColor("available");
+      if (!seatDetail) {return getSeatStatusColor("available");}
 
       if (seatDetail.sectionIndex !== undefined) {
         return getSectionColor(seatDetail.sectionIndex);
@@ -81,26 +81,31 @@ export const SeatMap = {
   },
 
   createLegend(sections, showSystemColors = true) {
-    let legendItems = [];
+    const legendItems = [];
 
     if (showSystemColors) {
       legendItems.push(
-        { label: "Available", colorClass: "bg-green-500" },
-        { label: "Selected", colorClass: "bg-yellow-500" },
-        { label: "Blocked", colorClass: "bg-red-500" },
-        { label: "Reserved", colorClass: "bg-amber-500" }
+        { label: "Available", color: "#10b981", useInlineStyle: true },
+        { label: "Selected", color: "#eab308", useInlineStyle: true },
+        { label: "Blocked", color: "#ef4444", useInlineStyle: true },
+        { label: "Reserved", color: "#f59e0b", useInlineStyle: true }
       );
     }
 
     if (sections && sections.length > 0) {
-      sections.forEach((section, idx) => {
-        const color = getSectionColor(idx);
-        legendItems.push({
-          label: `${section.section} (${section.sectionCode})`,
-          color: color,
-          useInlineStyle: true,
+      sections
+        .filter(section => section && (section.sectionName || section.section || section.name))
+        .forEach((section, idx) => {
+          const color = getSectionColor(idx);
+          const sectionName = section.sectionName || section.section || section.name || `Section ${idx + 1}`;
+          const sectionCode = section.sectionCode || section.tier || "";
+          const label = sectionCode ? `${sectionName} (${sectionCode})` : sectionName;
+          legendItems.push({
+            label: label,
+            color: color,
+            useInlineStyle: true,
+          });
         });
-      });
     }
 
     return `
@@ -125,7 +130,7 @@ export const SeatMap = {
   createSeatPlanWithStats(rows, seats, seatDetails, sections) {
     const totalSeats = rows * seats;
     const getSeatColorFn = (seatDetail) => {
-      if (!seatDetail) return getSeatStatusColor("available");
+      if (!seatDetail) {return getSeatStatusColor("available");}
       if (seatDetail.sectionIndex !== undefined) {
         return getSectionColor(seatDetail.sectionIndex);
       }

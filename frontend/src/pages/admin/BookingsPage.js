@@ -242,7 +242,7 @@ export default {
   async loadBookings() {
     try {
       $("#bookingsTableContainer").html(
-        '<div class="text-center py-12"><i class="fas fa-spinner fa-spin text-4xl text-indigo-600"></i><p class="mt-4 text-gray-600">Loading bookings...</p></div>'
+        "<div class=\"text-center py-12\"><i class=\"fas fa-spinner fa-spin text-4xl text-indigo-600\"></i><p class=\"mt-4 text-gray-600\">Loading bookings...</p></div>"
       );
 
       const [allBookings, allPerformances, usersResponse] = await Promise.all([
@@ -357,7 +357,7 @@ export default {
   },
 
   matchesSearch(booking, searchTerm) {
-    if (!searchTerm) return true;
+    if (!searchTerm) {return true;}
 
     const performance = this.getPerformanceById(booking.performanceId);
     const customer = this.getCustomerData(booking);
@@ -455,7 +455,7 @@ export default {
   getTableSubtitle(filteredCount, totalCount) {
     const filterBadge =
       filteredCount < totalCount
-        ? ` <span class="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full">Filtered</span>`
+        ? " <span class=\"px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full\">Filtered</span>"
         : "";
     return `Showing <span class="font-semibold text-indigo-600">${filteredCount}</span> of <span class="font-semibold">${totalCount}</span> bookings${filterBadge}`;
   },
@@ -532,7 +532,7 @@ export default {
         ${seatLabels.length} seat${seatLabels.length > 1 ? "s" : ""}
       </span>
       <div class="text-xs text-gray-500 mt-1 font-mono">${seatLabels.join(", ")}</div>
-      ${isNewFormat ? '<div class="text-xs text-green-600 mt-1"><i class="fas fa-check-circle"></i> Optimized</div>' : ''}
+      ${isNewFormat ? "<div class=\"text-xs text-green-600 mt-1\"><i class=\"fas fa-check-circle\"></i> Optimized</div>" : ""}
     `;
   },
 
@@ -675,7 +675,7 @@ export default {
   },
 
   extractSeatNumbers(seats) {
-    if (!Array.isArray(seats)) return [];
+    if (!Array.isArray(seats)) {return [];}
     return seats
       .map((s) => {
         if (typeof s === "string") {
@@ -761,7 +761,7 @@ export default {
 
   viewBooking(bookingId) {
     const booking = this.bookings.find((b) => b.id === bookingId);
-    if (!booking) return;
+    if (!booking) {return;}
 
     const performance = this.getPerformanceById(booking.performanceId);
     const performanceData = this.getPerformanceData(booking, performance);
@@ -769,7 +769,7 @@ export default {
     const seats = Array.isArray(booking.seats) ? booking.seats : [];
 
     Swal.fire({
-      title: `<i class="fas fa-ticket-alt text-indigo-600"></i> Booking Details`,
+      title: "<i class=\"fas fa-ticket-alt text-indigo-600\"></i> Booking Details",
       html: this.generateBookingDetailsHTML(
         booking,
         performanceData,
@@ -916,7 +916,7 @@ export default {
 
   async cancelBooking(bookingId) {
     const booking = this.bookings.find((b) => b.id === bookingId);
-    if (!booking) return;
+    if (!booking) {return;}
 
     const result = await Swal.fire({
       title: "Cancel Booking?",
@@ -948,7 +948,7 @@ export default {
 
   async confirmBooking(bookingId) {
     const booking = this.bookings.find((b) => b.id === bookingId);
-    if (!booking) return;
+    if (!booking) {return;}
 
     const result = await Swal.fire({
       title: "Confirm Booking?",
@@ -980,7 +980,7 @@ export default {
 
   async editBooking(bookingId) {
     const booking = this.bookings.find((b) => b.id === bookingId);
-    if (!booking) return;
+    if (!booking) {return;}
 
     const performance = this.getPerformanceById(booking.performanceId);
     const customer = this.getCustomerData(booking);
@@ -997,8 +997,8 @@ export default {
       html: this.generateEditBookingFormHTML(booking, customer.email),
       width: "700px",
       showCancelButton: true,
-      confirmButtonText: '<i class="fas fa-save mr-2"></i>Save Changes',
-      cancelButtonText: '<i class="fas fa-times mr-2"></i>Cancel',
+      confirmButtonText: "<i class=\"fas fa-save mr-2\"></i>Save Changes",
+      cancelButtonText: "<i class=\"fas fa-times mr-2\"></i>Cancel",
       confirmButtonColor: "#4f46e5",
       cancelButtonColor: "#6b7280",
       customClass: {
@@ -1106,7 +1106,7 @@ export default {
         ${this.renderEditStatusSelect(booking.status)}
         
         <!-- Hidden ticket type field -->
-        <input type="hidden" id="edit-ticket-type" value="${typeof booking.ticketType === "object" ? booking.ticketType?.name || '' : booking.ticketType || ''}" />
+        <input type="hidden" id="edit-ticket-type" value="${typeof booking.ticketType === "object" ? booking.ticketType?.name || "" : booking.ticketType || ""}" />
 
         <!-- Info Box -->
         <div class="bg-blue-50 rounded-xl p-4 border-l-4 border-blue-500">
@@ -1167,9 +1167,9 @@ export default {
 
   renderEditCustomerSelect(selectedEmail) {
     const selectedUser = this.users.find(u => u.email === selectedEmail);
-    const selectedValue = selectedUser ? `${selectedUser.name} (${selectedUser.email})` : '';
-    const selectedId = selectedUser?.id || '';
-    
+    const selectedValue = selectedUser ? `${selectedUser.name} (${selectedUser.email})` : "";
+    const selectedId = selectedUser?.id || "";
+
     const datalistOptions = this.users
       .map(u => `<option value="${u.name} (${u.email})" data-id="${u.id}"></option>`)
       .join("");
@@ -1233,7 +1233,7 @@ export default {
   renderEditTicketTypeSelect(selectedType, ticketTypes) {
     const selectedName =
       typeof selectedType === "object" ? selectedType?.name : selectedType;
-    
+
     const displayName = selectedName && selectedName !== "undefined" ? selectedName : "No ticket type";
 
     return `
@@ -1247,7 +1247,7 @@ export default {
           disabled
           class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl bg-gray-50 font-semibold text-gray-700 cursor-not-allowed"
         />
-        <input type="hidden" id="edit-ticket-type" value="${selectedName || ''}" />
+        <input type="hidden" id="edit-ticket-type" value="${selectedName || ""}" />
         <p class="text-xs text-gray-500 mt-1">
           <i class="fas fa-lock mr-1"></i>Ticket type cannot be changed
         </p>
@@ -1286,7 +1286,7 @@ export default {
     // Handle customer search input
     $("#edit-customer-search").on("input change", (e) => {
       const searchValue = $(e.target).val();
-      const matchedUser = this.users.find(u => 
+      const matchedUser = this.users.find(u =>
         `${u.name} (${u.email})` === searchValue
       );
       if (matchedUser) {
@@ -1348,10 +1348,10 @@ export default {
 
   async refundBooking(bookingId) {
     const booking = this.bookings.find((b) => b.id === bookingId);
-    if (!booking) return;
+    if (!booking) {return;}
 
     const { value: refundData } = await Swal.fire({
-      title: '<i class="fas fa-undo text-orange-600"></i> Process Refund',
+      title: "<i class=\"fas fa-undo text-orange-600\"></i> Process Refund",
       html: this.generateRefundFormHTML(booking),
       width: "600px",
       showCancelButton: true,
@@ -1484,7 +1484,7 @@ export default {
   },
 
   async showSeatSelectionModal(currentSeats = [], performance) {
-    let selectedSeats = [...currentSeats];
+    const selectedSeats = [...currentSeats];
     let detailedPerformance = performance;
     try {
       if (!detailedPerformance?.venue?.layout) {
@@ -1505,7 +1505,7 @@ export default {
         typeof s === "string"
           ? s
           : s.fullId || s.seatId || s.id || getDisplayLabel(s.seat || "");
-      if (key) seatDetails[key] = { status: "reserved" };
+      if (key) {seatDetails[key] = { status: "reserved" };}
     });
 
     const layout = detailedPerformance?.venue?.layout ||
@@ -1518,7 +1518,7 @@ export default {
     );
 
     const result = await Swal.fire({
-      title: '<i class="fas fa-chair text-indigo-600"></i> Select Seats',
+      title: "<i class=\"fas fa-chair text-indigo-600\"></i> Select Seats",
       html: `
         <div class="text-left">
           ${this.renderSeatSelectionHeader(detailedPerformance)}
@@ -1566,7 +1566,7 @@ export default {
                 const seatId = $(this).attr("data-seat-id");
                 const id = fullId || seatId;
                 const status = $(this).attr("data-status");
-                if (status === "occupied") return;
+                if (status === "occupied") {return;}
                 const idx = selectedSeats.indexOf(id);
                 const $rect = $(this).find("rect").first();
                 if (idx > -1) {
@@ -1592,7 +1592,7 @@ export default {
       willClose: () => {
         $(document).off(".adminSeatSelect");
         try {
-          if (this._pz && this._pz.dispose) this._pz.dispose();
+          if (this._pz && this._pz.dispose) {this._pz.dispose();}
         } catch (e) { }
       },
     });
@@ -1609,7 +1609,7 @@ export default {
       )
       .flatMap((b) => (Array.isArray(b.seats) ? b.seats : []));
     const toLabel = (s) => {
-      if (typeof s === "string") return getDisplayLabel(s);
+      if (typeof s === "string") {return getDisplayLabel(s);}
       return (
         s.displayLabel ||
         s.seatNumber ||
@@ -1676,7 +1676,7 @@ export default {
     const stats = this.calculateStats();
     const html = stats.map((stat) => FormComponents.statCard(stat)).join("");
     const el = document.getElementById("bookingsStats");
-    if (el) el.innerHTML = html;
+    if (el) {el.innerHTML = html;}
   },
 
   renderSelectedSeatsDisplay(selectedSeats) {
@@ -1791,7 +1791,7 @@ export default {
 
       $(".seat-btn").each(function () {
         const seatId = $(this).attr("data-seat");
-        if ($(this).prop("disabled")) return;
+        if ($(this).prop("disabled")) {return;}
 
         if (selectedSeats.includes(seatId)) {
           $(this).attr(
@@ -1820,7 +1820,7 @@ export default {
           const rowB = b.match(/[A-Z]/)[0];
           const numA = parseInt(a.match(/\d+/)[0]);
           const numB = parseInt(b.match(/\d+/)[0]);
-          if (rowA !== rowB) return rowA.localeCompare(rowB);
+          if (rowA !== rowB) {return rowA.localeCompare(rowB);}
           return numA - numB;
         });
       }
@@ -1879,7 +1879,7 @@ export default {
         const rowB = b.match(/[A-Z]/)[0];
         const numA = parseInt(a.match(/\d+/)[0]);
         const numB = parseInt(b.match(/\d+/)[0]);
-        if (rowA !== rowB) return rowA.localeCompare(rowB);
+        if (rowA !== rowB) {return rowA.localeCompare(rowB);}
         return numA - numB;
       });
 
@@ -1889,12 +1889,12 @@ export default {
 
   async emailBooking(bookingId) {
     const booking = this.bookings.find((b) => b.id === bookingId);
-    if (!booking) return;
+    if (!booking) {return;}
 
     const customer = this.getCustomerData(booking);
 
     const { value: emailData } = await Swal.fire({
-      title: '<i class="fas fa-envelope text-purple-600"></i> Send Email',
+      title: "<i class=\"fas fa-envelope text-purple-600\"></i> Send Email",
       html: this.generateEmailFormHTML(booking, customer),
       width: "600px",
       showCancelButton: true,

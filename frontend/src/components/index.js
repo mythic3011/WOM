@@ -21,6 +21,7 @@ export { createZoneEditor, showZoneEditorDialog } from "./ZoneEditor.js";
 export { createTemplateSelector, initTemplateSelector } from "./TemplateSelector.js";
 export { FormComponents } from "./FormComponents.js";
 export { Toast } from "./Toast.js";
+export { PerformanceFilter, createPerformanceFilter, DEFAULT_FILTER_PARAMS } from "./PerformanceFilter.js";
 // Layout components
 export {
     Navbar,

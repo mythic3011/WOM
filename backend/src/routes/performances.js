@@ -9,8 +9,241 @@ import {
   deletePerformanceValidator,
   listPerformancesValidator,
 } from "#middleware/validators/performanceValidators.js";
+import { uploadSingle } from "#config/multer.js";
+import { validateTimeFields, validateShowtimeFields } from "#middleware/timeValidation.js";
 
 const router = express.Router();
+
+/**
+ * @openapi
+ * /api/performances/upload-image:
+ *   post:
+ *     tags: [Performances]
+ *     summary: Upload performance image (Admin only)
+ *     description: |
+ *       Uploads an image file for a performance. Returns a public URL for the uploaded image.
+ *       
+ *       **Admin Only:**
+ *       - Requires authentication with admin role
+ *       
+ *       **File Requirements:**
+ *       - Allowed types: JPEG, PNG, WebP
+ *       - Maximum size: 5MB
+ *       - Image will be processed and optimized
+ *       
+ *       **Processing:**
+ *       - Resized to 800x600 (cover fit)
+ *       - Compressed to JPEG format
+ *       - Stored with unique filename
+ *       
+ *       **Returns:**
+ *       - Public URL for the uploaded image
+ *       - Can be used in performance creation/update
+ *     security:
+ *       - sessionAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               image:
+ *                 type: string
+ *                 format: binary
+ *                 description: Image file to upload
+ *     responses:
+ *       200:
+ *         description: Image uploaded successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     imageUrl:
+ *                       type: string
+ *                       example: /uploads/performances/abc123.jpg
+ *       400:
+ *         description: Invalid file or validation error
+ *       401:
+ *         $ref: '#/components/responses/Unauthorized'
+ *       403:
+ *         $ref: '#/components/responses/Forbidden'
+ */
+router.post(
+  "/upload-image",
+  isAuthenticated,
+  isAdmin,
+  uploadSingle,
+  performanceController.uploadPerformanceImage
+);
+
+/**
+ * @openapi
+ * /api/performances/autocomplete:
+ *   get:
+ *     tags: [Performances]
+ *     summary: Get autocomplete suggestions
+ *     description: |
+ *       Returns autocomplete suggestions for performance search. Optimized for fast response (<200ms).
+ *       
+ *       **Public Access:**
+ *       - No authentication required
+ *       - Fast response time optimized
+ *       
+ *       **Suggestion Sources:**
+ *       - Performance titles
+ *       - Composer names
+ *       - Venue names
+ *       
+ *       **Response:**
+ *       - Maximum 10 suggestions
+ *       - Ordered by relevance
+ *       - Includes context (composer, venue)
+ *       
+ *       **Use Cases:**
+ *       - Search autocomplete
+ *       - Quick performance lookup
+ *       - User input assistance
+ *     parameters:
+ *       - in: query
+ *         name: q
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Search query for autocomplete
+ *         example: Bee
+ *     responses:
+ *       200:
+ *         description: Autocomplete suggestions retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id:
+ *                         type: string
+ *                       title:
+ *                         type: string
+ *                       composer:
+ *                         type: string
+ *                       venue:
+ *                         type: object
+ *                         properties:
+ *                           name:
+ *                             type: string
+ *       400:
+ *         description: Missing or invalid query parameter
+ */
+router.get(
+  "/autocomplete",
+  optionalAuth,
+  performanceController.autocompletePerformances
+);
+
+/**
+ * @openapi
+ * /api/performances/filter:
+ *   get:
+ *     tags: [Performances]
+ *     summary: Filter performances with compound criteria
+ *     description: |
+ *       Retrieves performances filtered by multiple criteria with AND logic. All active filters are combined.
+ *       
+ *       **Public Access:**
+ *       - No authentication required
+ *       - Supports fuzzy search with PostgreSQL ILIKE
+ *       
+ *       **Filter Parameters:**
+ *       - **search**: Fuzzy text search across title, composer, conductor, orchestra
+ *       - **venue**: Filter by venue ID
+ *       - **genre**: Filter by performance genre
+ *       - **status**: Filter by ticket availability status
+ *       - **dateFrom**: Filter performances from this date
+ *       - **dateTo**: Filter performances until this date
+ *       
+ *       **Compound Logic:**
+ *       - All provided filters are combined with AND logic
+ *       - Empty/null filters are ignored
+ *       - Results match ALL active criteria
+ *       
+ *       **Use Cases:**
+ *       - Advanced performance search
+ *       - Multi-criteria filtering
+ *       - Performance discovery
+ *     parameters:
+ *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *         description: Search text for fuzzy matching
+ *         example: Beethoven
+ *       - in: query
+ *         name: venue
+ *         schema:
+ *           type: string
+ *         description: Venue ID
+ *       - in: query
+ *         name: genre
+ *         schema:
+ *           type: string
+ *         description: Performance genre
+ *         example: classical
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *           enum: [on_sale, upcoming, sold_out, early_bird, pre_order]
+ *         description: Ticket availability status
+ *       - in: query
+ *         name: dateFrom
+ *         schema:
+ *           type: string
+ *           format: date
+ *         description: Start date for date range filter
+ *       - in: query
+ *         name: dateTo
+ *         schema:
+ *           type: string
+ *           format: date
+ *         description: End date for date range filter
+ *     responses:
+ *       200:
+ *         description: Filtered performances retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/Performance'
+ */
+router.get(
+  "/filter",
+  optionalAuth,
+  listPerformancesValidator,
+  validate,
+  performanceController.filterPerformances
+);
 
 /**
  * @openapi
@@ -240,6 +473,8 @@ router.post(
   isAdmin,
   createPerformanceValidator,
   validate,
+  validateTimeFields(["date"]),
+  validateShowtimeFields(),
   performanceController.createPerformance
 );
 
@@ -319,6 +554,8 @@ router.put(
   isAdmin,
   updatePerformanceValidator,
   validate,
+  validateTimeFields(["date"]),
+  validateShowtimeFields(),
   performanceController.updatePerformance
 );
 
@@ -522,6 +759,40 @@ router.get(
   getPerformanceValidator,
   validate,
   performanceController.getPerformanceSeatMap
+);
+
+/**
+ * @openapi
+ * /api/performances/{id}/seats:
+ *   get:
+ *     tags: [Performances]
+ *     summary: Get seats with booking information
+ *     description: |
+ *       Retrieves seat details including booking information for booked seats.
+ *       Sensitive information is masked based on user permissions.
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *       - in: query
+ *         name: showtimeId
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Seat details retrieved successfully
+ *       404:
+ *         $ref: '#/components/responses/NotFound'
+ */
+router.get(
+  "/:id/seats",
+  optionalAuth,
+  getPerformanceValidator,
+  validate,
+  performanceController.getSeatsWithBookingInfo
 );
 
 /**

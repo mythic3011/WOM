@@ -1,4 +1,4 @@
-import $ from 'jquery';
+import $ from "jquery";
 
 export const Avatar = {
     render(options = {}) {
@@ -38,7 +38,7 @@ export const Avatar = {
         const uploadId = `${avatarId}-upload`;
 
         // Treat empty string as null
-        const hasValidSrc = src && src.trim() !== '';
+        const hasValidSrc = src && src.trim() !== "";
 
         return `
       <div class="avatar-container relative inline-block ${className}">
@@ -58,7 +58,7 @@ export const Avatar = {
             class="w-full h-full flex items-center justify-center font-bold text-white ${hasValidSrc ? "hidden" : ""}"
             style="display: ${hasValidSrc ? "none" : "flex"};"
           >
-            ${initials || '<i class="fas fa-user"></i>'}
+            ${initials || "<i class=\"fas fa-user\"></i>"}
           </div>
           
           ${editable || showUpload
@@ -103,7 +103,7 @@ export const Avatar = {
     },
 
     getInitials(name) {
-        if (!name) return "";
+        if (!name) {return "";}
 
         const parts = name.trim().split(/\s+/);
         if (parts.length === 1) {
@@ -127,7 +127,7 @@ export const Avatar = {
             "from-cyan-400 to-cyan-600",
         ];
 
-        if (!name) return colors[0];
+        if (!name) {return colors[0];}
 
         let hash = 0;
         for (let i = 0; i < name.length; i++) {
@@ -141,46 +141,46 @@ export const Avatar = {
         const { onUpload, onRemove, maxSize = 5 * 1024 * 1024 } = options;
 
         const $container = $(containerId);
-        if (!$container.length) return;
+        if (!$container.length) {return;}
 
-        $container.find('.avatar-upload-input').on('change', async (e) => {
+        $container.find(".avatar-upload-input").on("change", async (e) => {
             const file = e.target.files[0];
-            if (!file) return;
+            if (!file) {return;}
 
             if (file.size > maxSize) {
                 alert(`File size must be less than ${maxSize / 1024 / 1024}MB`);
-                $(e.target).val('');
+                $(e.target).val("");
                 return;
             }
 
             if (!file.type.startsWith("image/")) {
                 alert("Please select an image file");
-                $(e.target).val('');
+                $(e.target).val("");
                 return;
             }
 
             try {
                 const dataUrl = await this.readFileAsDataURL(file);
-                const avatarId = $(e.target).data('avatar-id');
+                const avatarId = $(e.target).data("avatar-id");
 
                 const $img = $(`#${avatarId}-img`);
                 const $initials = $(`#${avatarId}-initials`);
 
                 if ($img.length) {
-                    $img.attr('src', dataUrl).show();
+                    $img.attr("src", dataUrl).show();
                     $initials.hide();
                 } else {
                     const $avatarContainer = $(e.target)
-                        .closest('.avatar-container')
-                        .find('div > div')
+                        .closest(".avatar-container")
+                        .find("div > div")
                         .first();
 
                     if ($avatarContainer.length) {
-                        const $newImg = $('<img>', {
+                        const $newImg = $("<img>", {
                             id: `${avatarId}-img`,
                             src: dataUrl,
-                            alt: 'Avatar',
-                            class: 'w-full h-full object-cover'
+                            alt: "Avatar",
+                            class: "w-full h-full object-cover"
                         });
                         $avatarContainer.prepend($newImg);
                         $initials.hide();
@@ -195,18 +195,18 @@ export const Avatar = {
                 alert("Failed to upload image");
             }
 
-            $(e.target).val('');
+            $(e.target).val("");
         });
 
-        $container.find('.avatar-remove-btn').on('click', async (e) => {
+        $container.find(".avatar-remove-btn").on("click", async (e) => {
             e.stopPropagation();
-            const avatarId = $(e.currentTarget).data('avatar-id');
+            const avatarId = $(e.currentTarget).data("avatar-id");
 
             const $img = $(`#${avatarId}-img`);
             const $initials = $(`#${avatarId}-initials`);
 
             if ($img.length) {
-                $img.attr('src', '').hide();
+                $img.attr("src", "").hide();
             }
             if ($initials.length) {
                 $initials.show();
@@ -233,7 +233,7 @@ export const Avatar = {
 
         if (src) {
             if ($img.length) {
-                $img.attr('src', src).show();
+                $img.attr("src", src).show();
             }
             if ($initials.length) {
                 $initials.hide();

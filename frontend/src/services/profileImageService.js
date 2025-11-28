@@ -4,7 +4,7 @@
  * This prevents localStorage quota issues with large base64 images
  */
 
-import { authAPI } from './index.js';
+import { authAPI } from "./index.js";
 
 // In-memory cache for profile images (session-only)
 const imageCache = new Map();
@@ -38,7 +38,7 @@ export async function getProfileImage(userId, forceRefresh = false) {
 
         return null;
     } catch (error) {
-        console.error('Failed to fetch profile image:', error);
+        console.error("Failed to fetch profile image:", error);
         return null;
     }
 }

@@ -10,7 +10,7 @@ export function applyFilters(data, filters) {
   Object.keys(filters).forEach((key) => {
     const filterValue = filters[key];
 
-    if (!filterValue || filterValue === "") return;
+    if (!filterValue || filterValue === "") {return;}
 
     filtered = filtered.filter((item) => {
       const itemValue = _.get(item, key);
@@ -67,7 +67,7 @@ export function applySearchFilter(data, searchTerm, searchFields) {
 }
 
 export function applySingleFilter(data, field, value) {
-  if (!value || value === "") return data;
+  if (!value || value === "") {return data;}
 
   return data.filter((item) => {
     const itemValue = _.get(item, field);

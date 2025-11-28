@@ -15,11 +15,11 @@ const defaultOptions = {
 
 export const scrollbarUtils = {
   init(element, options = {}) {
-    if (!element) return null;
+    if (!element) {return null;}
 
     const el =
       typeof element === "string" ? document.querySelector(element) : element;
-    if (!el) return null;
+    if (!el) {return null;}
 
     const config = { ...defaultOptions, ...options };
     return OverlayScrollbars(el, config);
@@ -31,7 +31,7 @@ export const scrollbarUtils = {
 
     elements.forEach((el) => {
       const instance = this.init(el, options);
-      if (instance) instances.push(instance);
+      if (instance) {instances.push(instance);}
     });
 
     return instances;

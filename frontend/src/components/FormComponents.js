@@ -12,7 +12,7 @@ export const FormComponents = {
   }) {
     return `
       ${label
-        ? `<label for="${id}" class="block text-sm font-medium text-gray-700 mb-1">${label}${required ? '<span class="text-red-500 ml-1">*</span>' : ""
+        ? `<label for="${id}" class="block text-sm font-medium text-gray-700 mb-1">${label}${required ? "<span class=\"text-red-500 ml-1\">*</span>" : ""
         }</label>`
         : ""
       }
@@ -48,7 +48,7 @@ export const FormComponents = {
   }) {
     return `
       ${label
-        ? `<label for="${id}" class="block text-sm font-medium text-gray-700 mb-1">${label}${required ? '<span class="text-red-500 ml-1">*</span>' : ""
+        ? `<label for="${id}" class="block text-sm font-medium text-gray-700 mb-1">${label}${required ? "<span class=\"text-red-500 ml-1\">*</span>" : ""
         }</label>`
         : ""
       }
@@ -78,7 +78,7 @@ export const FormComponents = {
   }) {
     return `
       ${label
-        ? `<label for="${id}" class="block text-sm font-medium text-gray-700 mb-1">${label}${required ? '<span class="text-red-500 ml-1">*</span>' : ""
+        ? `<label for="${id}" class="block text-sm font-medium text-gray-700 mb-1">${label}${required ? "<span class=\"text-red-500 ml-1\">*</span>" : ""
         }</label>`
         : ""
       }
@@ -492,7 +492,7 @@ export const FormComponents = {
                       <div class="flex items-center gap-2">
                         <span>${col.label}</span>
                         ${col.sortable
-                ? '<i class="fas fa-sort text-gray-400"></i>'
+                ? "<i class=\"fas fa-sort text-gray-400\"></i>"
                 : ""
               }
                       </div>
@@ -561,7 +561,7 @@ export const FormComponents = {
             const prev = arr[index - 1];
             const gap =
               prev && page - prev > 1
-                ? '<span class="px-2 text-gray-400">...</span>'
+                ? "<span class=\"px-2 text-gray-400\">...</span>"
                 : "";
             return `
                     ${gap}

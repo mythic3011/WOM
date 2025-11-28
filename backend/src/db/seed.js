@@ -8,6 +8,7 @@ import { venuesData } from "./data/venues.js";
 import { getMockDataConfig } from "#config/mockDataConfig.js";
 import { generateBookings } from "./data/bookings.js";
 import { generateBrokenSeats, markSeatsAsUnavailable, updateVenueWithConditions } from "./data/venueConditions.js";
+import { validateMockData, handleEdgeCases } from "./data/mockDataValidator.js";
 import { faker } from "@faker-js/faker";
 
 const seedDatabase = async () => {
@@ -68,12 +69,33 @@ const seedDatabase = async () => {
 
     console.log("Seeding users...");
     const users = await generateUsers();
-    await User.bulkCreate(users);
-    console.log(`Created ${users.length} users`);
+
+    console.log("Validating mock data...");
+    const validationResults = validateMockData(users, performancesData);
+
+    if (validationResults.users.invalid > 0) {
+      console.warn(`Warning: ${validationResults.users.invalid} invalid user records found`);
+      validationResults.users.errors.forEach(error => {
+        console.warn(`User ${error.userId}:`, error.errors);
+      });
+    }
+
+    if (validationResults.performances.invalid > 0) {
+      console.warn(`Warning: ${validationResults.performances.invalid} invalid performance records found`);
+      validationResults.performances.errors.forEach(error => {
+        console.warn(`Performance ${error.id} (${error.title}):`, error.errors);
+      });
+    }
+
+    const sanitizedUsers = users.map(user => handleEdgeCases(user, "user"));
+    const sanitizedPerformances = performancesData.map(perf => handleEdgeCases(perf, "performance"));
+
+    await User.bulkCreate(sanitizedUsers);
+    console.log(`Created ${sanitizedUsers.length} users`);
 
     console.log("Seeding performances...");
-    await Performance.bulkCreate(performancesData);
-    console.log(`Created ${performancesData.length} performances`);
+    await Performance.bulkCreate(sanitizedPerformances);
+    console.log(`Created ${sanitizedPerformances.length} performances`);
 
     console.log("Computing seat maps for performances...");
     const performances = await Performance.findAll({

@@ -50,7 +50,7 @@ export const adminUserService = {
         const email = (row.Email || "").trim();
 
         if (!username || !password || !email) {
-          errors.push(`Missing required fields for a row`);
+          errors.push("Missing required fields for a row");
           continue;
         }
 

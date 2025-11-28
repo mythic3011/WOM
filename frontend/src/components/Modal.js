@@ -52,13 +52,13 @@ export function openModal(modalId, options = {}) {
     return;
   }
 
-  $modal.trigger('modal:beforeOpen.modal', { modalId });
+  $modal.trigger("modal:beforeOpen.modal", { modalId });
 
   $modal.removeClass("hidden").fadeIn(200, function () {
-    $(this).find('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])').first().trigger('focus');
-    $modal.trigger('modal:opened.modal', { modalId });
+    $(this).find("button, [href], input, select, textarea, [tabindex]:not([tabindex=\"-1\"])").first().trigger("focus");
+    $modal.trigger("modal:opened.modal", { modalId });
 
-    if (onOpen && typeof onOpen === 'function') {
+    if (onOpen && typeof onOpen === "function") {
       onOpen($modal);
     }
   });
@@ -73,20 +73,20 @@ export function closeModal(modalId, options = {}) {
     return;
   }
 
-  $modal.trigger('modal:beforeClose.modal', { modalId });
+  $modal.trigger("modal:beforeClose.modal", { modalId });
 
   $modal.fadeOut(200, function () {
     $(this).addClass("hidden");
-    $modal.trigger('modal:closed.modal', { modalId });
+    $modal.trigger("modal:closed.modal", { modalId });
 
-    if (onClose && typeof onClose === 'function') {
+    if (onClose && typeof onClose === "function") {
       onClose($modal);
     }
   });
 }
 
 export function initModalCloseHandlers() {
-  $(document).off('.modal');
+  $(document).off(".modal");
 
   $(document).on("click.modal", ".modal-close", function (e) {
     e.preventDefault();
@@ -121,12 +121,12 @@ export function initModalCloseHandlers() {
 }
 
 export function cleanupModalHandlers() {
-  $(document).off('.modal');
+  $(document).off(".modal");
 }
 
 export function isModalOpen(modalId) {
   const $modal = $(`#${modalId}`);
-  return $modal.length && $modal.is(':visible');
+  return $modal.length && $modal.is(":visible");
 }
 
 export function toggleModal(modalId, options = {}) {

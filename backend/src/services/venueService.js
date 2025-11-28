@@ -2,7 +2,7 @@ import { Venue, Performance } from "#models/index.js";
 import { ValidationError } from "#utils/errors.js";
 import { toNumber, toLetters } from "#utils/venueUtils.js";
 import { buildWhereClause } from "./helpers/filters.js";
-import { findEntityOrThrow, checkRelatedEntitiesCount } from "./helpers/entityHelpers.js";
+import { findEntityOrThrow } from "./helpers/entityHelpers.js";
 
 const validationCache = new Map();
 const VALIDATION_CACHE_MAX = 50;

@@ -143,6 +143,10 @@ export function setupRouter() {
     loadPage(Admin.PerformancesPage)
   );
 
+  page(ROUTES.ADMIN.PERFORMANCE_DETAILS, checkAdminAuth, (ctx) =>
+    loadPage(Admin.PerformanceDetailsPage, { id: ctx.params.id })
+  );
+
   page("/admin/venues", checkAdminAuth, () => loadPage(Admin.VenuesPage));
   page("/admin/venues/form", checkAdminAuth, () => loadPage(Admin.VenueFormPage));
 

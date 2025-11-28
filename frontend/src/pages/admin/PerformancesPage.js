@@ -1,5 +1,6 @@
 
 import dayjs from "dayjs";
+import page from "page";
 import Swal from "sweetalert2";
 
 import { SYSTEM_TICKET_TYPE_IDS } from "@/store/constants.js";
@@ -22,6 +23,7 @@ import {
 import { getTierBadge } from "@config/tierConfig.js";
 import { ResponseExtractor, ticketTypeService, templateService, venueService, performanceAPI, venueAPI, handleApiError, storage } from "@services/index.js";
 import { attachSeatTooltipListeners } from "@utils/booking/seatTooltip.js";
+import { getPerformanceImageUrl, getImageFallbackSvg } from "@utils/imageUtils.js";
 import { initializeSeatDetails } from "@utils/booking/seatUtils.js";
 import { showtimeManager } from "@utils/booking/showtimeManager.js";
 import {
@@ -242,7 +244,6 @@ export default {
       this.populateVenueFilter();
       this.displayPerformances(this.performances);
       this.setupEventListeners();
-      this.renderPerformanceModal();
     } catch (error) {
       console.error("Error loading performances:", error);
       handleApiError(error, "Failed to load performances");
@@ -253,7 +254,7 @@ export default {
     const venues = new Set();
     this.performances.forEach((p) => {
       const venue = p.venueName || p.venue;
-      if (venue) venues.add(venue);
+      if (venue) {venues.add(venue);}
     });
 
     const $venueFilter = $("#venueFilter");
@@ -331,9 +332,16 @@ export default {
   },
 
   renderPerformanceImage(perf) {
-    return perf.imageUrl
-      ? `<img src="${perf.imageUrl}" class="h-16 w-16 object-cover rounded" />`
-      : `<div class="h-16 w-16 bg-gray-200 rounded flex items-center justify-center"><i class="fas fa-image text-gray-400"></i></div>`;
+    const imageUrl = getPerformanceImageUrl(perf.image || perf.imageUrl);
+
+    return imageUrl
+      ? `<img 
+          src="${imageUrl}" 
+          class="h-16 w-16 object-cover rounded" 
+          onerror="this.onerror=null; this.src='${getImageFallbackSvg()}';"
+          alt="Performance image"
+        />`
+      : "<div class=\"h-16 w-16 bg-gray-200 rounded flex items-center justify-center\"><i class=\"fas fa-image text-gray-400\"></i></div>";
   },
 
   renderDateDisplay(perf, showtimes) {
@@ -382,7 +390,7 @@ export default {
       `;
     }
 
-    return `<div class="text-sm text-gray-500">N/A</div>`;
+    return "<div class=\"text-sm text-gray-500\">N/A</div>";
   },
 
   renderPerformanceActions(perf, showtimeCount) {
@@ -395,7 +403,7 @@ export default {
           <span>Actions</span>
           <i class="fas fa-chevron-down text-xs transition-transform group-hover:rotate-180"></i>
         </button>
-        <div class="hidden w-64 bg-white rounded-xl shadow-2xl border border-gray-200 overflow-hidden z-[9999]">
+        <div class="action-dropdown-menu hidden w-64 bg-white rounded-xl shadow-2xl border border-gray-200 overflow-hidden z-[9999]">
           <div class="py-1">
             <div class="px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide border-b border-gray-100 bg-gray-50">
               Quick Actions
@@ -428,31 +436,6 @@ export default {
             <div class="px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide border-t border-b border-gray-100 bg-gray-50 mt-1">
               More Options
             </div>
-            ${showtimeCount > 0 ? `
-            <button
-              class="action-manage-showtimes-btn w-full text-left px-4 py-2.5 text-sm hover:bg-green-50 flex items-center gap-3 transition-colors group/item"
-              data-perf-id="${perf.id}"
-            >
-              <div class="w-8 h-8 rounded-lg bg-green-100 flex items-center justify-center group-hover/item:bg-green-200 transition-colors">
-                <i class="fas fa-calendar-alt text-green-600 text-sm"></i>
-              </div>
-              <div class="flex-1">
-                <div class="font-medium text-gray-900">Manage Showtimes</div>
-                <div class="text-xs text-gray-500">${showtimeCount} showtime${showtimeCount > 1 ? 's' : ''}</div>
-              </div>
-            </button>` : ''}
-            <button
-              class="action-advanced-edit-btn w-full text-left px-4 py-2.5 text-sm hover:bg-gray-50 flex items-center gap-3 transition-colors group/item"
-              data-perf-id="${perf.id}"
-            >
-              <div class="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center group-hover/item:bg-gray-200 transition-colors">
-                <i class="fas fa-cog text-gray-600 text-sm"></i>
-              </div>
-              <div class="flex-1">
-                <div class="font-medium text-gray-900">Advanced Edit</div>
-                <div class="text-xs text-gray-500">Full form</div>
-              </div>
-            </button>
             <button
               class="action-duplicate-btn w-full text-left px-4 py-2.5 text-sm hover:bg-purple-50 flex items-center gap-3 transition-colors group/item"
               data-perf-id="${perf.id}"
@@ -486,96 +469,74 @@ export default {
   },
 
   setupEventListeners() {
-    $(document).on('click', '.action-dropdown-btn', (e) => {
+    $(document).on("click", ".action-dropdown-btn", (e) => {
       e.stopPropagation();
       const $btn = $(e.currentTarget);
       const $dropdown = $btn.next();
       const rect = $btn[0].getBoundingClientRect();
 
-      $('.action-dropdown-btn').not($btn).next().addClass('hidden');
+      $(".action-dropdown-btn").not($btn).next().addClass("hidden");
 
       $dropdown.css({
-        position: 'fixed',
-        top: (rect.bottom + 4) + 'px',
-        right: (window.innerWidth - rect.right) + 'px'
-      }).toggleClass('hidden');
+        position: "fixed",
+        top: (rect.bottom + 4) + "px",
+        right: (window.innerWidth - rect.right) + "px"
+      }).toggleClass("hidden");
 
-      if (!$dropdown.hasClass('hidden')) {
+      if (!$dropdown.hasClass("hidden")) {
         const closeDropdown = (e) => {
           const $target = $(e.target);
           // Check if clicking inside the dropdown or on an action button
-          const isInsideDropdown = $target.closest('.action-dropdown-menu').length > 0;
-          const isActionButton = $target.closest('[class*="action-"]').length > 0;
-          
+          const isInsideDropdown = $target.closest(".action-dropdown-menu").length > 0;
+          const isActionButton = $target.closest("[class*=\"action-\"]").length > 0;
+
           // Only close if clicking outside both the dropdown and action buttons
-          if (!isInsideDropdown && !isActionButton && !$target.closest('.group').length) {
-            $dropdown.addClass('hidden');
-            $(document).off('click', closeDropdown);
-            $(document).off('scroll', closeOnScroll);
+          if (!isInsideDropdown && !isActionButton && !$target.closest(".group").length) {
+            $dropdown.addClass("hidden");
+            $(document).off("click", closeDropdown);
+            $(document).off("scroll", closeOnScroll);
           }
         };
         const closeOnScroll = () => {
-          $dropdown.addClass('hidden');
-          $(document).off('click', closeDropdown);
-          $(document).off('scroll', closeOnScroll);
+          $dropdown.addClass("hidden");
+          $(document).off("click", closeDropdown);
+          $(document).off("scroll", closeOnScroll);
         };
         setTimeout(() => {
-          $(document).on('click', closeDropdown);
-          $(document).on('scroll', closeOnScroll);
+          $(document).on("click", closeDropdown);
+          $(document).on("scroll", closeOnScroll);
         }, 0);
       }
     });
 
     // Action dropdown button handlers
-    $(document).on('click', '.action-view-btn', (e) => {
+    $(document).on("click", ".action-view-btn", (e) => {
       e.stopPropagation();
-      const perfId = $(e.currentTarget).data('perf-id');
-      $('.action-dropdown-menu').addClass('hidden'); // Close dropdown
+      const perfId = $(e.currentTarget).data("perf-id");
+      $(".action-dropdown-menu").addClass("hidden"); // Close dropdown
       this.viewPerformance(perfId);
     });
 
-    $(document).on('click', '.action-edit-btn', (e) => {
+    $(document).on("click", ".action-edit-btn", (e) => {
       e.stopPropagation();
-      const perfId = $(e.currentTarget).data('perf-id');
-      $('.action-dropdown-menu').addClass('hidden'); // Close dropdown
+      const perfId = $(e.currentTarget).data("perf-id");
+      $(".action-dropdown-menu").addClass("hidden"); // Close dropdown
       this.editPerformance(perfId);
     });
 
-    $(document).on('click', '.action-manage-showtimes-btn', (e) => {
-      e.stopPropagation();
-      const perfId = $(e.currentTarget).data('perf-id');
-      $('.action-dropdown-menu').addClass('hidden'); // Close dropdown
-      this.manageShowtimes(perfId);
-    });
 
-    $(document).on('click', '.action-advanced-edit-btn', (e) => {
-      console.log("Advanced Edit button clicked!");
-      e.stopPropagation();
-      e.preventDefault();
-      const perfId = $(e.currentTarget).data('perf-id');
-      console.log("Performance ID:", perfId);
-      const performance = this.getPerformanceById(perfId);
-      console.log("Performance:", performance);
-      
-      // Close all dropdowns
-      $('.action-dropdown-menu').addClass('hidden');
-      
-      // Then open the form
-      console.log("Opening performance form...");
-      this.openPerformanceForm(performance);
-    });
 
-    $(document).on('click', '.action-duplicate-btn', (e) => {
+    $(document).on("click", ".action-duplicate-btn", (e) => {
       e.stopPropagation();
-      const perfId = $(e.currentTarget).data('perf-id');
-      $('.action-dropdown-menu').addClass('hidden'); // Close dropdown
+      const perfId = $(e.currentTarget).data("perf-id");
+      $(".action-dropdown-menu").addClass("hidden"); // Close dropdown
       this.duplicatePerformance(perfId);
     });
 
-    $(document).on('click', '.action-delete-btn', (e) => {
+    $(document).on("click", ".action-delete-btn", (e) => {
       e.stopPropagation();
-      const perfId = $(e.currentTarget).data('perf-id');
-      $('.action-dropdown-menu').addClass('hidden'); // Close dropdown
+      const perfId = $(e.currentTarget).data("perf-id");
+      $(".action-dropdown-menu").addClass("hidden"); // Close dropdown
       this.deletePerformance(perfId);
     });
 
@@ -591,7 +552,7 @@ export default {
     );
     $("#clearFilters").on("click", () => this.clearFilters());
     $("#quickCreateBtn").on("click", () => this.openQuickCreate());
-    $("#addPerformanceBtn").on("click", () => this.openPerformanceForm());
+    $("#addPerformanceBtn").on("click", () => this.openQuickCreate());
   },
 
   filterPerformances() {
@@ -601,7 +562,7 @@ export default {
     const venue = $("#venueFilter").val();
     const dateFilter = $("#dateFilter").val();
 
-    let filtered = this.performances.filter((p) => {
+    const filtered = this.performances.filter((p) => {
       const matchesSearch =
         !search ||
         (p.title && p.title.toLowerCase().includes(search)) ||
@@ -647,342 +608,31 @@ export default {
     this.displayPerformances(this.performances);
   },
 
-  renderPerformanceModal() {
-    const modalBody = this.getPerformanceFormHTML();
-    const modalFooter = `
-      <button type="button" class="px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors" onclick="closeModal('performanceModal')">
-        Cancel
-      </button>
-      <button type="submit" form="performanceForm" class="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors">
-        <i class="fas fa-save mr-2"></i>Save Performance
-      </button>
-    `;
 
-    const modal = createModal({
-      id: "performanceModal",
-      title: "Add Performance",
-      subtitle: "Create a new orchestral performance",
-      body: modalBody,
-      footer: modalFooter,
-      size: "xl",
-    });
 
-    $("#performanceModalContainer").html(modal);
-  },
 
-  getPerformanceFormHTML() {
-    return `
-      <form id="performanceForm" class="space-y-6">
-        ${PerformanceFormSections.basicInformation()}
-        ${PerformanceFormSections.performanceInformation()}
-        ${PerformanceFormSections.venueInformation(this.venues)}
-        ${PerformanceFormSections.ticketingInformation()}
 
-        ${PerformanceFormSections.showtimesSection()}
 
-        <div class="bg-gray-50 p-6 rounded-lg">
-          <h3 class="text-lg font-semibold text-gray-900 mb-4">
-            <i class="fas fa-tags text-indigo-600 mr-2"></i>Sponsors & Tags
-          </h3>
-          <div class="space-y-4">
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-2">
-                Sponsors (comma-separated)
-              </label>
-              <input type="text" id="sponsors"
-                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
-                placeholder="HSBC, Swire Group, Hong Kong Jockey Club" />
-            </div>
-          </div>
-        </div>
-      </form>
-    `;
-  },
 
-  openPerformanceForm(performance = null) {
-    this.currentPerformance = performance;
-    this.showtimes = performance?.showtimes || [];
 
-    const modalTitle = performance ? "Edit Performance" : "Add Performance";
-    const modalSubtitle = performance
-      ? `Update details for ${performance.title}`
-      : "Create a new orchestral performance";
 
-    $("#performanceModal .bg-indigo-600 h2").text(modalTitle);
-    $("#performanceModal .bg-indigo-600 p").text(modalSubtitle);
 
-    if (performance) {
-      this.populateForm(performance);
-    } else {
-      $("#performanceForm")[0].reset();
-      this.showtimes = [];
-      $("#showtimesContainer").empty();
-    }
-
-    initImageUpload("performanceImageInput", "performanceImagePreview", {
-      shape: "rounded-lg",
-      previewSize: "32",
-    });
-
-    // Listen for venue changes to auto-populate seat counts and update button state
-    $("#venueSelect").on("change", () => {
-      this.updateSeatsFromVenue();
-      this.updateAddShowtimeButtonState();
-    });
-
-    this.renderShowtimes();
-    
-    // Update button state initially
-    this.updateAddShowtimeButtonState();
-
-    // Use event delegation for Add Showtime button to ensure it works after re-renders
-    $("#performanceModal").off("click", "#addShowtimeBtn").on("click", "#addShowtimeBtn", () => this.addShowtime());
-    
-    $("#performanceForm")
-      .off("submit")
-      .on("submit", (e) => this.handleSubmit(e));
-
-    openModal("performanceModal");
-    
-    // Initialize validation after modal is opened
-    this.initializeFormValidation();
-  },
-
-  populateForm(perf) {
-    $("#title").val(perf.title || "");
-    $("#composer").val(perf.composer || "");
-    $("#conductor").val(perf.conductor || "");
-    $("#orchestra").val(perf.orchestra || "");
-    $("#description").val(perf.description || "");
-    $("#presenter").val(perf.performanceInfo?.presenter || perf.presenter || "");
-    $("#ageLimit").val(perf.performanceInfo?.ageLimit || perf.ageLimit || "");
-    $("#duration").val(perf.duration || perf.ticketingInfo?.duration || "");
-    $("#website").val(perf.performanceInfo?.website || perf.website || "");
-    $("#status").val(perf.status || perf.ticketingInfo?.status || "upcoming");
-
-    const ticketSaleStart = perf.ticketingInfo?.ticketSaleStart || perf.ticketSaleStart;
-    if (ticketSaleStart) {
-      const saleStart = dayjs(ticketSaleStart).format("YYYY-MM-DDTHH:mm");
-      $("#ticketSaleStart").val(saleStart);
-    }
-
-    const preOrderStart = perf.ticketingInfo?.preOrderStartDate || perf.preOrderStartDate;
-    if (preOrderStart) {
-      $("#preOrderStartDate").val(preOrderStart);
-    }
-
-    const earlyBirdEnd = perf.ticketingInfo?.earlyBirdEndDate || perf.earlyBirdEndDate;
-    if (earlyBirdEnd) {
-      $("#earlyBirdEndDate").val(earlyBirdEnd);
-    }
-
-    $("#additionalInfo").val(perf.additionalInfo || perf.ticketingInfo?.additionalInfo || "");
-
-    if (perf.venueId) {
-      $("#venueSelect").val(perf.venueId);
-    }
-
-    if (perf.performanceInfo?.eventCategory) {
-      perf.performanceInfo.eventCategory.forEach((cat) => {
-        $(`.event-category[value="${cat}"]`).prop("checked", true);
-      });
-    }
-
-    this.showtimes = perf.showtimes || [];
-  },
-
-  addShowtime() {
-    // Require venue selection first
-    const selectedVenueId = $('#venueSelect').val();
-    
-    if (!selectedVenueId || selectedVenueId === "Select venue...") {
-      notify.warning('Please select a venue first');
-      $('#venueSelect').focus();
-      // Highlight the venue field
-      $('#venueSelect').addClass('border-yellow-500 ring-2 ring-yellow-200');
-      setTimeout(() => {
-        $('#venueSelect').removeClass('border-yellow-500 ring-2 ring-yellow-200');
-      }, 2000);
-      return;
-    }
-
-    // Get venue capacity
-    const venue = this.venues.find(v => v.id == selectedVenueId);
-    const venueCapacity = venue?.layout?.totalCapacity || venue?.capacity || 200;
-
-    const newShowtime = showtimeManager.createEmptyShowtime(this.ticketTypes);
-    
-    // Set capacity from venue
-    newShowtime.totalSeats = venueCapacity;
-    newShowtime.availableSeats = venueCapacity;
-    
-    this.showtimes.push(newShowtime);
-    this.renderShowtimes();
-    
-    // Add animation and feedback with improved scrolling
-    setTimeout(() => {
-      const showtimeIndex = this.showtimes.length - 1;
-      const $newShowtime = $(`[data-showtime-index="${showtimeIndex}"]`);
-      
-      if ($newShowtime.length) {
-        // Fade in animation
-        $newShowtime.hide().fadeIn(400);
-        
-        // Success notification
-        notify.success(`Showtime added with ${venueCapacity} seats from ${venue?.name || 'venue'}`);
-        
-        // Scroll to the new showtime with better positioning
-        setTimeout(() => {
-          const element = $newShowtime[0];
-          if (element) {
-            // Scroll the modal content, not the whole page
-            const modalBody = element.closest('.overflow-y-auto') || element.closest('form');
-            if (modalBody) {
-              const elementTop = element.offsetTop;
-              const modalTop = modalBody.scrollTop;
-              const modalHeight = modalBody.clientHeight;
-              const elementHeight = element.clientHeight;
-              
-              // Calculate scroll position to center the element
-              const scrollTo = elementTop - (modalHeight / 2) + (elementHeight / 2);
-              
-              modalBody.scrollTo({
-                top: scrollTo,
-                behavior: 'smooth'
-              });
-            } else {
-              // Fallback to regular scroll
-              element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            }
-          }
-        }, 100);
-      }
-    }, 50);
-  },
-
-  removeShowtime(index) {
-    const showtime = this.showtimes[index];
-    const dateTimeStr = showtime.dateTime 
-      ? dayjs(showtime.dateTime).format('MMM D, YYYY h:mm A')
-      : 'Not set';
-    
-    Swal.fire({
-      title: '<i class="fas fa-exclamation-triangle text-yellow-500 mr-2"></i>Remove Showtime?',
-      html: `
-        <div class="text-left">
-          <p class="text-gray-700 mb-3">
-            Are you sure you want to remove <strong>Showtime ${index + 1}</strong>?
-          </p>
-          <div class="bg-gray-50 rounded-lg p-3 text-sm">
-            <p class="text-gray-600 mb-1"><strong>Date/Time:</strong> ${dateTimeStr}</p>
-            <p class="text-gray-600 mb-1"><strong>Seats:</strong> ${showtime.totalSeats || 0}</p>
-            <p class="text-gray-600"><strong>Price Tiers:</strong> ${showtime.pricing?.sections?.length || 0}</p>
-          </div>
-          <p class="text-red-600 text-sm mt-3">
-            <i class="fas fa-info-circle mr-1"></i>This action cannot be undone.
-          </p>
-        </div>
-      `,
-      showCancelButton: true,
-      confirmButtonText: '<i class="fas fa-trash mr-2"></i>Yes, Remove',
-      cancelButtonText: 'Cancel',
-      confirmButtonColor: SwalColors.danger,
-      cancelButtonColor: SwalColors.secondary,
-      reverseButtons: true
-    }).then((result) => {
-      if (result.isConfirmed) {
-        const $showtime = $(`[data-showtime-index="${index}"]`);
-        
-        $showtime.fadeOut(300, () => {
-          this.showtimes.splice(index, 1);
-          this.renderShowtimes();
-          notify.success("Showtime removed successfully");
-        });
-      }
-    });
-  },
-
-  updateSeatsFromVenue() {
-    const venueId = $("#venueSelect").val();
-    if (!venueId || venueId === "Select venue...") return;
-    
-    const venue = this.venues.find(v => v.id === parseInt(venueId));
-    if (!venue?.layout?.totalCapacity) return;
-    
-    const totalSeats = venue.layout.totalCapacity;
-    
-    // Update all showtimes with new venue capacity
-    let updatedCount = 0;
-    this.showtimes.forEach(showtime => {
-      if (!showtime.totalSeats || showtime.totalSeats === 200) {
-        showtime.totalSeats = totalSeats;
-        showtime.availableSeats = totalSeats;
-        updatedCount++;
-      }
-    });
-    
-    this.renderShowtimes();
-    
-    if (updatedCount > 0) {
-      notify.success(`Updated ${updatedCount} showtime${updatedCount > 1 ? 's' : ''} with ${totalSeats} seats from ${venue.name}`);
-    } else {
-      notify.info(`Venue capacity: ${totalSeats} seats`);
-    }
-  },
-
-  updateAddShowtimeButtonState() {
-    const $btn = $("#addShowtimeBtn");
-    const selectedVenueId = $('#venueSelect').val();
-    const hasVenue = selectedVenueId && selectedVenueId !== "Select venue...";
-    
-    if (hasVenue) {
-      $btn.prop('disabled', false)
-          .removeClass('opacity-50 cursor-not-allowed bg-gray-400')
-          .addClass('bg-indigo-600 hover:bg-indigo-700')
-          .attr('title', 'Add a new showtime');
-    } else {
-      $btn.prop('disabled', true)
-          .removeClass('bg-indigo-600 hover:bg-indigo-700')
-          .addClass('opacity-50 cursor-not-allowed bg-gray-400')
-          .attr('title', 'Please select a venue first');
-    }
-  },
-
-  addPricingSection(showtimeIndex) {
-    if (!this.showtimes[showtimeIndex]) return;
-
-    const existingSections =
-      this.showtimes[showtimeIndex].pricing?.sections || [];
-    const sectionNumber = existingSections.length + 1;
-
-    if (!this.showtimes[showtimeIndex].pricing) {
-      this.showtimes[showtimeIndex].pricing = { sections: [] };
-    }
-
-    const newSection = showtimeManager.createPricingSection(
-      sectionNumber,
-      this.ticketTypes
-    );
-
-    this.showtimes[showtimeIndex].pricing.sections.push(newSection);
-    this.renderShowtimes();
-  },
 
   removePricingSection(showtimeIndex, sectionIndex) {
-    if (!this.showtimes[showtimeIndex]?.pricing?.sections) return;
+    if (!this.showtimes[showtimeIndex]?.pricing?.sections) {return;}
 
     const section = this.showtimes[showtimeIndex].pricing.sections[sectionIndex];
     const sectionName = section?.section || `Section ${sectionIndex + 1}`;
-    
+
     Swal.fire({
-      title: '<i class="fas fa-exclamation-triangle text-yellow-500 mr-2"></i>Remove Price Tier?',
+      title: "<i class=\"fas fa-exclamation-triangle text-yellow-500 mr-2\"></i>Remove Price Tier?",
       html: `
         <div class="text-left">
           <p class="text-gray-700 mb-3">
             Are you sure you want to remove the price tier <strong>"${sectionName}"</strong>?
           </p>
           <div class="bg-gray-50 rounded-lg p-3 text-sm">
-            <p class="text-gray-600 mb-1"><strong>Tier:</strong> ${section?.tier || 'N/A'}</p>
+            <p class="text-gray-600 mb-1"><strong>Tier:</strong> ${section?.tier || "N/A"}</p>
             <p class="text-gray-600"><strong>Base Price:</strong> $${section?.basePrice || 0}</p>
           </div>
           <p class="text-red-600 text-sm mt-3">
@@ -991,8 +641,8 @@ export default {
         </div>
       `,
       showCancelButton: true,
-      confirmButtonText: '<i class="fas fa-trash mr-2"></i>Yes, Remove',
-      cancelButtonText: 'Cancel',
+      confirmButtonText: "<i class=\"fas fa-trash mr-2\"></i>Yes, Remove",
+      cancelButtonText: "Cancel",
       confirmButtonColor: SwalColors.danger,
       cancelButtonColor: SwalColors.secondary,
       reverseButtons: true
@@ -1008,7 +658,7 @@ export default {
   async addCustomTier(showtimeIndex, sectionIndex) {
     const { value: customTier } = await Swal.fire({
       title:
-        '<i class="fas fa-layer-group text-purple-600 mr-2"></i>Add Custom Tier',
+        "<i class=\"fas fa-layer-group text-purple-600 mr-2\"></i>Add Custom Tier",
       html: `
         <div class="text-left space-y-4">
           <div>
@@ -1059,7 +709,7 @@ export default {
   },
 
   parseRowsInput(input) {
-    if (!input || typeof input !== "string") return [];
+    if (!input || typeof input !== "string") {return [];}
 
     const rows = [];
     const parts = input.split(",").map((p) => p.trim().toUpperCase());
@@ -1087,7 +737,7 @@ export default {
   async addCustomTicketType(showtimeIndex) {
     const result = await Swal.fire({
       title:
-        '<i class="fas fa-ticket-alt text-green-600 mr-2"></i>Add Custom Ticket Type',
+        "<i class=\"fas fa-ticket-alt text-green-600 mr-2\"></i>Add Custom Ticket Type",
       html: `
         <div class="text-left space-y-4 text-gray-900">
           <div>
@@ -1148,12 +798,12 @@ export default {
         });
 
         $pricingValue.on("input", updatePreview);
-        $('input[name="pricingModifier"]').on("change", updatePreview);
+        $("input[name=\"pricingModifier\"]").on("change", updatePreview);
 
         function updatePreview() {
           const type = $pricingType.val();
           const value = parseFloat($pricingValue.val()) || 0;
-          const modifier = $('input[name="pricingModifier"]:checked').val();
+          const modifier = $("input[name=\"pricingModifier\"]:checked").val();
 
           if (type === "none" || !value) {
             $pricingPreview.addClass("hidden");
@@ -1209,7 +859,7 @@ export default {
         const pricingType = $("#pricingType").val();
         const pricingValue = parseFloat($("#pricingValue").val()) || 0;
         const pricingModifier = $(
-          'input[name="pricingModifier"]:checked'
+          "input[name=\"pricingModifier\"]:checked"
         ).val();
 
         if (pricingType !== "none" && pricingValue <= 0) {
@@ -1262,9 +912,9 @@ export default {
     container.empty();
 
     if (this.showtimes.length === 0) {
-      const selectedVenueId = $('#venueSelect').val();
+      const selectedVenueId = $("#venueSelect").val();
       const hasVenue = selectedVenueId && selectedVenueId !== "Select venue...";
-      
+
       if (!hasVenue) {
         container.html(`
           <div class="bg-gradient-to-br from-yellow-50 to-orange-50 border-2 border-dashed border-yellow-300 rounded-lg p-8 text-center">
@@ -1328,9 +978,9 @@ export default {
     this.showtimes.forEach((showtime, index) => {
       const hasPricing = showtime.pricing?.sections?.length > 0;
       const pricingCount = showtime.pricing?.sections?.length || 0;
-      
+
       const showtimeHTML = `
-        <div class="bg-white p-6 rounded-lg border-2 ${hasPricing ? 'border-indigo-200' : 'border-gray-200'} shadow-sm hover:shadow-md transition-all" data-showtime-index="${index}">
+        <div class="bg-white p-6 rounded-lg border-2 ${hasPricing ? "border-indigo-200" : "border-gray-200"} shadow-sm hover:shadow-md transition-all" data-showtime-index="${index}">
           <div class="flex justify-between items-center mb-4">
             <div class="flex items-center gap-3">
               <div class="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center">
@@ -1343,7 +993,7 @@ export default {
               ${hasPricing ? `
                 <div class="flex items-center gap-1 px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium">
                   <i class="fas fa-check-circle"></i>
-                  <span>${pricingCount} tier${pricingCount > 1 ? 's' : ''}</span>
+                  <span>${pricingCount} tier${pricingCount > 1 ? "s" : ""}</span>
                 </div>
               ` : `
                 <div class="flex items-center gap-1 px-2 py-1 bg-yellow-100 text-yellow-700 rounded-full text-xs font-medium">
@@ -1484,14 +1134,14 @@ export default {
 
     const result = await Swal.fire({
       title:
-        '<i class="fas fa-chair text-indigo-600 mr-2"></i>Customize Seat Layout',
+        "<i class=\"fas fa-chair text-indigo-600 mr-2\"></i>Customize Seat Layout",
       html: SeatLayoutCustomizer.createDialog(currentLayout),
       width: "700px",
       showCancelButton: true,
       confirmButtonColor: SwalColors.primary,
       cancelButtonColor: SwalColors.cancel,
-      confirmButtonText: '<i class="fas fa-check mr-1"></i>Apply Layout',
-      cancelButtonText: '<i class="fas fa-times mr-1"></i>Cancel',
+      confirmButtonText: "<i class=\"fas fa-check mr-1\"></i>Apply Layout",
+      cancelButtonText: "<i class=\"fas fa-times mr-1\"></i>Cancel",
       didOpen: () => {
         SeatLayoutCustomizer.setupEventHandlers();
       },
@@ -1532,7 +1182,7 @@ export default {
     let selectedSeats = [];
 
     const result = await Swal.fire({
-      title: '<i class="fas fa-chair text-green-600 mr-2"></i>Edit Seats',
+      title: "<i class=\"fas fa-chair text-green-600 mr-2\"></i>Edit Seats",
       html: `
         <div class="text-left p-4 text-gray-900">
           <div class="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
@@ -1628,8 +1278,8 @@ export default {
       showCancelButton: true,
       confirmButtonColor: SwalColors.success,
       cancelButtonColor: SwalColors.cancel,
-      confirmButtonText: '<i class="fas fa-save mr-1"></i>Save Changes',
-      cancelButtonText: '<i class="fas fa-times mr-1"></i>Cancel',
+      confirmButtonText: "<i class=\"fas fa-save mr-1\"></i>Save Changes",
+      cancelButtonText: "<i class=\"fas fa-times mr-1\"></i>Cancel",
       didOpen: () => {
         const renderInteractiveMap = () => {
           const mapHTML = this.generateInteractiveSeatMap(
@@ -1647,7 +1297,7 @@ export default {
           $(".interactive-seat").on("click", function (e) {
             e.stopPropagation();
             const $seatElement = $(e.target).closest(".interactive-seat");
-            if (!$seatElement.length) return;
+            if (!$seatElement.length) {return;}
 
             const seatId = $seatElement.data("seat-id");
             const index = selectedSeats.indexOf(seatId);
@@ -1786,7 +1436,7 @@ export default {
   renderSeatPlanSVG(showtime, showtimeIndex) {
     const layout = this.getSeatLayout(showtime);
     const sections = showtime.pricing?.sections || [];
-    let seatDetails = { ...(showtime.seatDetails || {}) };
+    const seatDetails = { ...(showtime.seatDetails || {}) };
 
     const bookings = storage.getItem("bookings", []);
     const showtimeBookings = bookings.filter(
@@ -1958,7 +1608,7 @@ export default {
               }">
                   ${type.name}
                   ${!SYSTEM_TICKET_TYPE_IDS.includes(type.id)
-                ? '<i class="fas fa-star text-yellow-500 text-[8px] ml-1" title="Custom type"></i>'
+                ? "<i class=\"fas fa-star text-yellow-500 text-[8px] ml-1\" title=\"Custom type\"></i>"
                 : ""
               }
                 </label>
@@ -1992,7 +1642,7 @@ export default {
     const touchedFields = new Set();
 
     const validateField = ($field) => {
-      const fieldId = $field.attr('id') || $field.attr('name');
+      const fieldId = $field.attr("id") || $field.attr("name");
 
       if (!touchedFields.has(fieldId)) {
         return true;
@@ -2001,15 +1651,15 @@ export default {
       const isValid = $field[0].checkValidity();
 
       if (isValid) {
-        $field.removeClass('border-red-500 ring-red-500')
-              .addClass('border-gray-300');
-        $field.next('.validation-error').remove();
+        $field.removeClass("border-red-500 ring-red-500")
+              .addClass("border-gray-300");
+        $field.next(".validation-error").remove();
       } else {
-        $field.removeClass('border-gray-300')
-              .addClass('border-red-500 ring-red-500');
+        $field.removeClass("border-gray-300")
+              .addClass("border-red-500 ring-red-500");
 
-        if (!$field.next('.validation-error').length) {
-          const errorMsg = $field[0].validationMessage || 'This field is required';
+        if (!$field.next(".validation-error").length) {
+          const errorMsg = $field[0].validationMessage || "This field is required";
           $field.after(`<p class="validation-error text-xs text-red-600 mt-1"><i class="fas fa-exclamation-circle mr-1"></i>${errorMsg}</p>`);
         }
       }
@@ -2017,8 +1667,8 @@ export default {
       return isValid;
     };
 
-    $('#performanceModal').on('blur change', 'input[required], select[required], textarea[required]', function() {
-      const fieldId = $(this).attr('id') || $(this).attr('name');
+    $("#performanceModal").on("blur change", "input[required], select[required], textarea[required]", function() {
+      const fieldId = $(this).attr("id") || $(this).attr("name");
       if (fieldId) {
         touchedFields.add(fieldId);
         validateField($(this));
@@ -2026,22 +1676,21 @@ export default {
     });
 
     // Clear validation on input
-    $('#performanceModal').on('input', 'input, select, textarea', function() {
+    $("#performanceModal").on("input", "input, select, textarea", function() {
       const $field = $(this);
-      const fieldId = $field.attr('id') || $field.attr('name');
+      const fieldId = $field.attr("id") || $field.attr("name");
 
       if (touchedFields.has(fieldId)) {
         validateField($field);
       }
     });
 
-    // Validate all fields on submit
-    $('#performanceForm').on('submit', function(e) {
+    $("#performanceForm").on("submit", function(e) {
       let isValid = true;
 
-      $(this).find('input[required], select[required], textarea[required]').each(function() {
-        const fieldId = $(this).attr('id') || $(this).attr('name');
-        touchedFields.add(fieldId); // Mark as touched
+      $(this).find("input[required], select[required], textarea[required]").each(function() {
+        const fieldId = $(this).attr("id") || $(this).attr("name");
+        touchedFields.add(fieldId);
         if (!validateField($(this))) {
           isValid = false;
         }
@@ -2050,15 +1699,15 @@ export default {
       if (!isValid) {
         e.preventDefault();
         e.stopImmediatePropagation();
-        notify.error('Please fill in all required fields correctly');
+        notify.error("Please fill in all required fields correctly");
 
         // Scroll to first error
-        const $firstError = $('.border-red-500').first();
+        const $firstError = $(".border-red-500").first();
         if ($firstError.length) {
-          $firstError[0].scrollIntoView({ behavior: 'smooth', block: 'center' });
+          $firstError[0].scrollIntoView({ behavior: "smooth", block: "center" });
           setTimeout(() => $firstError.focus(), 300);
         }
-        
+
         return false;
       }
     });
@@ -2172,16 +1821,16 @@ export default {
     try {
       // Ensure venueId is a number
       const venueId = parseInt(formData.venueId);
-      
+
       if (!venueId || isNaN(venueId)) {
         throw new Error("Valid venue selection is required");
       }
-      
+
       // Validate showtimes
       if (!formData.showtimes || formData.showtimes.length === 0) {
         throw new Error("At least one showtime is required");
       }
-      
+
       // Format showtimes with proper ISO 8601 format
       // Add .000Z to indicate UTC timezone (required by express-validator)
       const showtimes = formData.showtimes.map((st) => {
@@ -2192,11 +1841,9 @@ export default {
           availableSeats: 200,
         };
       });
-      
-      // Use the first showtime as the main performance date
-      // Add .000Z for proper ISO 8601 format with timezone
+
       const mainDate = `${formData.showtimes[0].date}T${formData.showtimes[0].time}:00.000Z`;
-      
+
       const performanceData = {
         title: formData.title,
         composer: formData.composer,
@@ -2257,7 +1904,7 @@ export default {
 
   async quickEdit(id) {
     const performance = this.getPerformanceById(id);
-    if (!performance) return;
+    if (!performance) {return;}
 
     await openQuickEdit(performance, this.venues, async (updatedData) => {
       await this.updatePerformanceFromWizard(id, updatedData);
@@ -2289,24 +1936,13 @@ export default {
 
   async viewPerformance(id) {
     const performance = this.getPerformanceById(id);
-    if (!performance) return;
+    if (!performance) {
+      notify.error("Performance not found");
+      return;
+    }
 
-    const venue = this.getVenueDisplay(performance);
-    const ticketTypes = performance.pricingSections || [];
-    const showtimes = performance.showtimes || [];
-
-    await Swal.fire({
-      title: `<i class="fas fa-music text-indigo-600 mr-2"></i>${performance.title}`,
-      html: PerformanceDetails.render(
-        performance,
-        venue,
-        showtimes,
-        ticketTypes
-      ),
-      width: "700px",
-      confirmButtonText: "Close",
-      confirmButtonColor: SwalColors.primary,
-    });
+    // Navigate to the dedicated performance details page
+    page.redirect(`/admin/performances/${id}`);
   },
 
   generatePerformanceDetailsHTML(performance, venue, showtimes, ticketTypes) {
@@ -2350,9 +1986,16 @@ export default {
   },
 
   renderPerformanceImageSection(performance) {
-    return performance.imageUrl
+    const imageUrl = getPerformanceImageUrl(performance.image || performance.imageUrl);
+
+    return imageUrl
       ? `<div class="mb-4">
-           <img src="${performance.imageUrl}" class="w-full h-48 object-cover rounded-lg" />
+           <img 
+             src="${imageUrl}" 
+             class="w-full h-48 object-cover rounded-lg" 
+             onerror="this.onerror=null; this.src='${getImageFallbackSvg()}';"
+             alt="Performance image"
+           />
          </div>`
       : "";
   },
@@ -2440,331 +2083,9 @@ export default {
     `;
   },
 
-  async manageShowtimes(id) {
-    const performance = this.getPerformanceById(id);
-    if (!performance) return;
-
-    const showtimes = performance.showtimes || [];
-    const performanceId = performance.id;
-    const bookings = [];
-
-    await Swal.fire({
-      title: `<i class="fas fa-calendar-day text-indigo-600 mr-2"></i>Manage Showtimes`,
-      html: ShowtimeManager.render(
-        performance,
-        showtimes,
-        bookings,
-        performanceId
-      ),
-      width: "900px",
-      confirmButtonText: "Close",
-      confirmButtonColor: SwalColors.primary,
-      didOpen: () => {
-        // Attach event listeners for showtime management buttons
-        
-        // Add Showtime button
-        $("#addShowtimeBtn").on("click", () => {
-          Swal.close();
-          notify.info("Add showtime functionality - opening performance editor");
-          this.editPerformance(id);
-        });
-
-        // View Showtime buttons
-        $(".view-showtime-btn").on("click", (e) => {
-          const index = $(e.currentTarget).data("index");
-          const showtime = showtimes[index];
-          this.viewShowtimeDetails(showtime, performance);
-        });
-
-        // Edit Showtime buttons
-        $(".edit-showtime-btn").on("click", (e) => {
-          const index = $(e.currentTarget).data("index");
-          Swal.close();
-          notify.info("Edit showtime - opening performance editor");
-          this.editPerformance(id);
-        });
-
-        // Delete Showtime buttons
-        $(".delete-showtime-btn").on("click", async (e) => {
-          const index = $(e.currentTarget).data("index");
-          const showtime = showtimes[index];
-          await this.deleteShowtime(performance, showtime, index);
-        });
-      },
-    });
-  },
-
-  async viewShowtimeDetails(showtime, performance) {
-    const date = dayjs(showtime.dateTime || showtime.datetime).format("MMMM D, YYYY");
-    const time = dayjs(showtime.dateTime || showtime.datetime).format("h:mm A");
-    const pricingSections = showtime.pricing?.sections || [];
-
-    const pricingHtml = pricingSections.length > 0
-      ? pricingSections.map(section => `
-          <div class="bg-gray-50 rounded-lg p-3 mb-2">
-            <div class="font-semibold text-gray-900">${section.section}</div>
-            <div class="text-sm text-gray-600">
-              Tier: ${section.tier} | Base Price: $${section.basePrice || 'N/A'}
-            </div>
-          </div>
-        `).join('')
-      : '<p class="text-gray-500 text-sm">No pricing configured</p>';
-
-    await Swal.fire({
-      title: `<i class="fas fa-calendar-check text-indigo-600 mr-2"></i>Showtime Details`,
-      html: `
-        <div class="text-left space-y-4">
-          <div class="bg-indigo-50 rounded-lg p-4">
-            <h3 class="font-bold text-lg text-indigo-900 mb-2">${performance.title}</h3>
-            <div class="text-sm text-indigo-700">
-              <div><i class="fas fa-calendar mr-2"></i>${date}</div>
-              <div><i class="fas fa-clock mr-2"></i>${time}</div>
-            </div>
-          </div>
-
-          <div>
-            <h4 class="font-semibold text-gray-900 mb-2">Capacity</h4>
-            <div class="grid grid-cols-2 gap-3">
-              <div class="bg-blue-50 rounded p-3">
-                <div class="text-xs text-blue-600">Total Seats</div>
-                <div class="text-2xl font-bold text-blue-900">${showtime.totalSeats || 0}</div>
-              </div>
-              <div class="bg-green-50 rounded p-3">
-                <div class="text-xs text-green-600">Available</div>
-                <div class="text-2xl font-bold text-green-900">${showtime.availableSeats || 0}</div>
-              </div>
-            </div>
-          </div>
-
-          <div>
-            <h4 class="font-semibold text-gray-900 mb-2">Pricing Tiers</h4>
-            ${pricingHtml}
-          </div>
-        </div>
-      `,
-      width: "600px",
-      confirmButtonText: "Close",
-      confirmButtonColor: SwalColors.primary,
-    });
-  },
-
-  async deleteShowtime(performance, showtime, index) {
-    const date = dayjs(showtime.dateTime || showtime.datetime).format("MMMM D, YYYY h:mm A");
-    
-    const result = await Swal.fire({
-      title: '<i class="fas fa-exclamation-triangle text-red-500 mr-2"></i>Delete Showtime?',
-      html: `
-        <div class="text-left">
-          <p class="text-gray-700 mb-3">
-            Are you sure you want to delete this showtime?
-          </p>
-          <div class="bg-gray-50 rounded-lg p-3 text-sm">
-            <p class="text-gray-600 mb-1"><strong>Date/Time:</strong> ${date}</p>
-            <p class="text-gray-600 mb-1"><strong>Seats:</strong> ${showtime.totalSeats || 0}</p>
-            <p class="text-gray-600"><strong>Price Tiers:</strong> ${showtime.pricing?.sections?.length || 0}</p>
-          </div>
-          <p class="text-red-600 text-sm mt-3">
-            <i class="fas fa-info-circle mr-1"></i>This action cannot be undone. Any bookings for this showtime will be affected.
-          </p>
-        </div>
-      `,
-      showCancelButton: true,
-      confirmButtonText: '<i class="fas fa-trash mr-2"></i>Yes, Delete',
-      cancelButtonText: 'Cancel',
-      confirmButtonColor: SwalColors.danger,
-      cancelButtonColor: SwalColors.secondary,
-      reverseButtons: true
-    });
-
-    if (result.isConfirmed) {
-      try {
-        // Remove showtime from performance
-        performance.showtimes.splice(index, 1);
-        
-        // Update performance
-        await performanceAPI.update(performance.id, performance);
-        
-        // Refresh performances list
-        const response = await performanceAPI.getAll();
-        this.performances = ResponseExtractor.extract(response, "performances");
-        this.displayPerformances(this.performances);
-        
-        Swal.close();
-        notify.success("Showtime deleted successfully");
-      } catch (error) {
-        console.error("Error deleting showtime:", error);
-        notify.error("Failed to delete showtime");
-      }
-    }
-  },
-
-  generateManageShowtimesHTML(performance, showtimes, bookings, performanceId) {
-    return ShowtimeManager.render(
-      performance,
-      showtimes,
-      bookings,
-      performanceId
-    );
-  },
-
-  _legacyGenerateManageShowtimesHTML(
-    performance,
-    showtimes,
-    bookings,
-    performanceId
-  ) {
-    const showtimesHtml = showtimes
-      .map((st, index) =>
-        this.renderShowtimeCard(st, index, performanceId, bookings)
-      )
-      .join("");
-
-    return `
-      <div class="text-left">
-        <div class="bg-gray-50 rounded-lg p-4 mb-4">
-          <h3 class="font-semibold text-gray-900 mb-1">${performance.title}</h3>
-          <p class="text-sm text-gray-600">${performance.composer} • ${performance.conductor
-      }</p>
-        </div>
-
-        <div class="mb-3 flex items-center justify-between">
-          <h4 class="font-semibold text-gray-700">
-            ${showtimes.length} Showtime${showtimes.length !== 1 ? "s" : ""}
-          </h4>
-          <div class="text-xs text-gray-500">
-            ${this.formatShowtimeDate(showtimes[0], "MMM YYYY")}
-            ${showtimes.length > 1
-        ? ` - ${this.formatShowtimeDate(
-          showtimes[showtimes.length - 1],
-          "MMM YYYY"
-        )}`
-        : ""
-      }
-          </div>
-        </div>
-
-        <div class="space-y-3 max-h-96 overflow-y-auto pr-2">
-          ${showtimesHtml}
-        </div>
-      </div>
-    `;
-  },
-
-  renderShowtimeCard(st, index, performanceId, bookings) {
-    const showtimeBookings = bookings.filter(
-      (b) => b.showtimeId === st.id && b.status !== "cancelled"
-    );
-    const stats = this.calculateShowtimeStats(st, showtimeBookings);
-
-    return `
-      <div class="border border-gray-200 rounded-lg p-4 hover:border-indigo-300 hover:shadow-md transition-all">
-        ${this.renderShowtimeHeader(st, stats)}
-        ${this.renderShowtimeProgress(stats)}
-        ${this.renderShowtimeActions(performanceId, index, st.id)}
-      </div>
-    `;
-  },
-
-  calculateShowtimeStats(st, showtimeBookings) {
-    const bookedSeats = showtimeBookings.reduce(
-      (sum, b) => sum + (b.seats?.length || 0),
-      0
-    );
-    const totalSeats = st.capacity || 500;
-    const availableSeats = totalSeats - bookedSeats;
-    const occupancyPercent = Math.round((bookedSeats / totalSeats) * 100);
-    const occupancyColor = this.getOccupancyColor(occupancyPercent);
-
-    return {
-      bookedSeats,
-      totalSeats,
-      availableSeats,
-      occupancyPercent,
-      occupancyColor,
-      bookingCount: showtimeBookings.length,
-    };
-  },
-
-  getOccupancyColor(occupancyPercent) {
-    if (occupancyPercent >= 90) return "bg-red-500";
-    if (occupancyPercent >= 70) return "bg-yellow-500";
-    if (occupancyPercent >= 40) return "bg-blue-500";
-    return "bg-green-500";
-  },
-
-  renderShowtimeHeader(st, stats) {
-    const cancelledBadge =
-      st.status === "cancelled"
-        ? '<span class="px-2 py-0.5 bg-red-100 text-red-700 rounded-full text-xs font-semibold">Cancelled</span>'
-        : "";
-
-    return `
-      <div class="flex items-start justify-between mb-3">
-        <div class="flex-1">
-          <div class="flex items-center gap-2 mb-1">
-            <h4 class="text-base font-semibold text-gray-900">
-              ${this.formatShowtimeDate(st, "ddd, MMM D, YYYY")}
-            </h4>
-            ${cancelledBadge}
-          </div>
-          <div class="flex items-center gap-3 text-sm text-gray-600">
-            <span class="flex items-center gap-1">
-              <i class="fas fa-clock text-indigo-600"></i>
-              ${this.formatShowtimeTime(st)}
-            </span>
-            <span class="flex items-center gap-1">
-              <i class="fas fa-users text-indigo-600"></i>
-              ${stats.bookingCount} bookings
-            </span>
-          </div>
-        </div>
-        <div class="text-right">
-          <div class="text-2xl font-bold text-indigo-600">${stats.occupancyPercent
-      }%</div>
-          <div class="text-xs text-gray-500">Occupied</div>
-        </div>
-      </div>
-    `;
-  },
-
-  renderShowtimeProgress(stats) {
-    return `
-      <div class="mb-3">
-        <div class="flex items-center justify-between text-xs text-gray-600 mb-1">
-          <span>${stats.bookedSeats} / ${stats.totalSeats} seats</span>
-          <span>${stats.availableSeats} available</span>
-        </div>
-        <div class="w-full bg-gray-200 rounded-full h-2">
-          <div class="${stats.occupancyColor} h-2 rounded-full transition-all" style="width: ${stats.occupancyPercent}%"></div>
-        </div>
-      </div>
-    `;
-  },
-
-  renderShowtimeActions(performanceId, index, showtimeId) {
-    return `
-      <div class="grid grid-cols-2 gap-2 pt-3 border-t border-gray-100">
-        <button
-          onclick="window.PerformancesPage.viewShowtimeDetails(${performanceId}, ${index})"
-          class="px-3 py-1.5 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors text-sm font-medium flex items-center justify-center gap-1"
-        >
-          <i class="fas fa-eye text-xs"></i>
-          Details
-        </button>
-        <button
-          onclick="window.PerformancesPage.viewShowtimeBookings(${performanceId}, '${showtimeId}')"
-          class="px-3 py-1.5 bg-green-50 text-green-700 rounded-lg hover:bg-green-100 transition-colors text-sm font-medium flex items-center justify-center gap-1"
-        >
-          <i class="fas fa-ticket-alt text-xs"></i>
-          Bookings
-        </button>
-      </div>
-    `;
-  },
-
   async duplicatePerformance(id) {
     const performance = this.getPerformanceById(id);
-    if (!performance) return;
+    if (!performance) {return;}
 
     const result = await Swal.fire({
       title: "Duplicate Performance",
@@ -2809,13 +2130,13 @@ export default {
 
   async viewShowtimeDetails(performanceId, showtimeIndex) {
     const performance = this.getPerformanceById(performanceId);
-    if (!performance || !performance.showtimes) return;
+    if (!performance || !performance.showtimes) {return;}
 
     const showtime = performance.showtimes[showtimeIndex];
-    if (!showtime) return;
+    if (!showtime) {return;}
 
     await Swal.fire({
-      title: `<i class="fas fa-info-circle text-blue-600 mr-2"></i>Showtime Details`,
+      title: "<i class=\"fas fa-info-circle text-blue-600 mr-2\"></i>Showtime Details",
       html: this.generateShowtimeDetailsHTML(performance, showtime),
       width: "600px",
       confirmButtonText: "Close",
@@ -2900,7 +2221,7 @@ export default {
 
   async viewShowtimeBookings(performanceId, showtimeId) {
     const performance = this.performances.find((p) => p.id === performanceId);
-    if (!performance) return;
+    if (!performance) {return;}
 
     const bookings = storage
       .getItem("bookings", [])
@@ -2964,7 +2285,7 @@ export default {
         `
           )
           .join("")
-        : '<div class="text-center py-8 text-gray-500"><i class="fas fa-inbox text-3xl mb-2"></i><p>No bookings for this showtime yet</p></div>';
+        : "<div class=\"text-center py-8 text-gray-500\"><i class=\"fas fa-inbox text-3xl mb-2\"></i><p>No bookings for this showtime yet</p></div>";
 
     const totalRevenue = bookings
       .filter((b) => b.status !== "cancelled")
@@ -2974,7 +2295,7 @@ export default {
       .reduce((sum, b) => sum + (b.seats?.length || 0), 0);
 
     await Swal.fire({
-      title: `<i class="fas fa-ticket-alt text-green-600 mr-2"></i>Showtime Bookings`,
+      title: "<i class=\"fas fa-ticket-alt text-green-600 mr-2\"></i>Showtime Bookings",
       html: `
         <div class="text-left">
           <div class="bg-gray-50 rounded-lg p-4 mb-4">
@@ -3008,7 +2329,7 @@ export default {
 
   async deletePerformance(id) {
     const performance = this.performances.find((p) => p.id === id);
-    if (!performance) return;
+    if (!performance) {return;}
 
     const result = await Swal.fire({
       title: "Delete Performance?",
@@ -3293,7 +2614,7 @@ export default {
 
     const result = await Swal.fire({
       title:
-        '<i class="fas fa-layer-group text-orange-600 mr-2"></i>Manage Pricing Zones',
+        "<i class=\"fas fa-layer-group text-orange-600 mr-2\"></i>Manage Pricing Zones",
       html: zonesHtml,
       width: "800px",
       showCancelButton: true,
@@ -3311,7 +2632,7 @@ export default {
 
               $("#zonesList").html(
                 showtime.pricingZones.length === 0
-                  ? '<p class="text-gray-500 text-sm">No zones defined. Click "Add Zone" to create your first pricing zone.</p>'
+                  ? "<p class=\"text-gray-500 text-sm\">No zones defined. Click \"Add Zone\" to create your first pricing zone.</p>"
                   : showtime.pricingZones
                     .map((zone, index) => {
                       const colorClass = zone.color.replace("#", "");

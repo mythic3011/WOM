@@ -50,7 +50,7 @@ const Venue = sequelize.define(
     tableName: "venues",
     timestamps: true,
     hooks: {
-      afterUpdate: async (venue, options) => {
+      afterUpdate: async (venue, _options) => {
         if (venue.changed('layout')) {
           const { Performance } = await import("#models/index.js");
 

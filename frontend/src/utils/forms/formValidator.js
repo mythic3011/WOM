@@ -116,10 +116,10 @@ export const formValidator = {
 
   validateDateRange(startDate, endDate) {
     const start = this.validateDate(startDate, "Start date");
-    if (!start.valid) return start;
+    if (!start.valid) {return start;}
 
     const end = this.validateDate(endDate, "End date");
-    if (!end.valid) return end;
+    if (!end.valid) {return end;}
 
     if (start.value > end.value) {
       return { valid: false, error: "Start date must be before end date" };
@@ -130,7 +130,7 @@ export const formValidator = {
 
   validateFutureDate(dateString, fieldName) {
     const result = this.validateDate(dateString, fieldName);
-    if (!result.valid) return result;
+    if (!result.valid) {return result;}
 
     if (result.value < new Date()) {
       return { valid: false, error: `${fieldName} must be in the future` };
@@ -173,7 +173,7 @@ export const formValidator = {
       return { valid: false, error: "File is required" };
     }
 
-    if (allowedTypes.length === 0) return { valid: true };
+    if (allowedTypes.length === 0) {return { valid: true };}
 
     const fileType = file.type;
     const isAllowed = allowedTypes.some((type) => {
@@ -202,7 +202,7 @@ export const formValidator = {
       "image/gif",
       "image/webp",
     ]);
-    if (!typeCheck.valid) return typeCheck;
+    if (!typeCheck.valid) {return typeCheck;}
 
     return this.validateFileSize(file, 5);
   },
@@ -256,19 +256,19 @@ export const formValidator = {
 
   validatePercentage(value, fieldName) {
     const result = this.validateNumber(value, fieldName, { min: 0, max: 100 });
-    if (!result.valid) return result;
+    if (!result.valid) {return result;}
 
     return { valid: true, value: result.value };
   },
 
   sanitizeInput(input) {
-    if (typeof input !== "string") return input;
+    if (typeof input !== "string") {return input;}
 
     return input.trim().replace(/[<>]/g, "").substring(0, 1000);
   },
 
   sanitizeHtml(html) {
-    if (typeof html !== "string") return html;
+    if (typeof html !== "string") {return html;}
 
     const $div = $("<div>").text(html);
     return $div.html();

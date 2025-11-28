@@ -16,13 +16,13 @@ export class DragDropManager {
       ...this.defaultOptions,
       ...options,
       onStart: (evt) => {
-        if (options.onDragStart) options.onDragStart(evt);
+        if (options.onDragStart) {options.onDragStart(evt);}
       },
       onMove: (evt) => {
-        if (options.onDrag) options.onDrag(evt);
+        if (options.onDrag) {options.onDrag(evt);}
       },
       onEnd: (evt) => {
-        if (options.onDragEnd) options.onDragEnd(evt);
+        if (options.onDragEnd) {options.onDragEnd(evt);}
       },
     });
 

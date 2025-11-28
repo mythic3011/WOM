@@ -37,22 +37,22 @@ export default {
 
   attachEventListeners() {
     // Calendar download buttons
-    $(document).on('click', '.add-to-calendar-btn', function (e) {
+    $(document).on("click", ".add-to-calendar-btn", function (e) {
       e.preventDefault();
       const btn = $(this);
       const bookingData = {
-        id: btn.data('booking-id'),
-        performanceTitle: btn.data('title'),
-        performanceDate: btn.data('date'),
-        venueName: btn.data('venue')
+        id: btn.data("booking-id"),
+        performanceTitle: btn.data("title"),
+        performanceDate: btn.data("date"),
+        venueName: btn.data("venue")
       };
 
       try {
         downloadBookingCalendar(bookingData);
-        notify.success('Calendar event downloaded!');
+        notify.success("Calendar event downloaded!");
       } catch (error) {
-        console.error('Error downloading calendar:', error);
-        notify.error('Failed to download calendar event');
+        console.error("Error downloading calendar:", error);
+        notify.error("Failed to download calendar event");
       }
     });
   },
@@ -294,7 +294,7 @@ export default {
       minPrice = performance.price || performance.basePrice;
     }
 
-    return minPrice ? `HKD ${minPrice.toLocaleString()}` : 'HKD 500';
+    return minPrice ? `HKD ${minPrice.toLocaleString()}` : "HKD 500";
   },
 
   renderQuickActions() {

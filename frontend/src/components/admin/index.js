@@ -8,4 +8,4 @@ export { ShowtimeAvailabilityBadge } from "./ShowtimeAvailabilityBadge.js";
 export { VenueEditForm } from "./VenueEditForm.js";
 export { SeatMapPreview } from "./SeatMapPreview.js";
 export { SeatMapPreviewHandler } from "./SeatMapPreviewHandler.js";
-export { SeatMapPreviewExample } from "./SeatMapPreviewExample.js";
+export { ImageUploader } from "./ImageUploader.js";

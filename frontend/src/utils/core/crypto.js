@@ -67,7 +67,7 @@ export function encrypt(data, customKey = null) {
 export function decrypt(encryptedData, customKey = null) {
   try {
     // Validate input
-    if (!encryptedData || (typeof encryptedData === 'string' && !encryptedData.trim())) {
+    if (!encryptedData || (typeof encryptedData === "string" && !encryptedData.trim())) {
       throw new Error("Cannot decrypt empty or invalid data");
     }
 

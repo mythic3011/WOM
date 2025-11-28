@@ -38,7 +38,7 @@ export const BookingCard = {
               <p>
                 <i class="fas fa-chair text-indigo-600 w-5"></i>
                 ${seatLabels.join(", ")}
-                ${isNewFormat ? '<span class="ml-1 text-xs text-green-600" title="Using optimized format"><i class="fas fa-check-circle"></i></span>' : ''}
+                ${isNewFormat ? "<span class=\"ml-1 text-xs text-green-600\" title=\"Using optimized format\"><i class=\"fas fa-check-circle\"></i></span>" : ""}
               </p>
             </div>
           </div>
@@ -61,7 +61,7 @@ export const BookingCard = {
             data-booking-id="${booking.id}"
             data-title="${booking.performanceTitle}"
             data-date="${booking.performanceDate}"
-            data-venue="${booking.venueName || booking.venue?.name || booking.venue || 'Venue TBA'}"
+            data-venue="${booking.venueName || booking.venue?.name || booking.venue || "Venue TBA"}"
             title="Add to Calendar">
             <i class="fas fa-calendar-plus"></i>
           </button>
@@ -181,7 +181,7 @@ export const BookingCard = {
           })
           .join("")}
                 ${seatCount > 6 ? `<span class="px-2.5 py-1 bg-gray-100 text-gray-600 border border-gray-200 rounded-lg text-xs font-semibold">+${seatCount - 6} more</span>` : ""}
-                ${isNewFormat ? '<span class="px-2.5 py-1 bg-green-50 text-green-700 border border-green-200 rounded-lg text-xs font-semibold" title="Using optimized format"><i class="fas fa-check-circle"></i> Optimized</span>' : ''}
+                ${isNewFormat ? "<span class=\"px-2.5 py-1 bg-green-50 text-green-700 border border-green-200 rounded-lg text-xs font-semibold\" title=\"Using optimized format\"><i class=\"fas fa-check-circle\"></i> Optimized</span>" : ""}
               </div>
             </div>
           `
@@ -221,9 +221,9 @@ export const BookingCard = {
             <button 
               class="add-to-calendar-btn px-3 py-2.5 bg-white border-2 border-gray-200 text-gray-700 rounded-xl hover:border-purple-300 hover:bg-purple-50 hover:text-purple-700 transition-all duration-200 text-xs font-semibold flex items-center justify-center gap-1.5" 
               data-booking-id="${booking.id}"
-              data-title="${performance?.title || 'Performance'}"
-              data-date="${performanceDate ? performanceDate.toISOString() : ''}"
-              data-venue="${performance?.venueName || performance?.location || performance?.venue || 'Venue TBA'}"
+              data-title="${performance?.title || "Performance"}"
+              data-date="${performanceDate ? performanceDate.toISOString() : ""}"
+              data-venue="${performance?.venueName || performance?.location || performance?.venue || "Venue TBA"}"
               title="Add to Calendar">
               <i class="fas fa-calendar-plus"></i>
               <span>Calendar</span>
@@ -302,7 +302,7 @@ export const BookingCard = {
   },
 
   renderSeats(seats) {
-    if (!seats) return "";
+    if (!seats) {return "";}
 
     const seatArray = Array.isArray(seats) ? seats : [seats];
     return seatArray

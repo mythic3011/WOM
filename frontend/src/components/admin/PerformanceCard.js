@@ -3,6 +3,7 @@ import dayjs from "dayjs";
 
 import { performanceUtils } from "@utils/performanceUtils.js";
 import { getStatusBadge } from "@utils/status.js";
+import { getPerformanceImageUrl } from "@utils/imageUtils.js";
 
 export const PerformanceCard = {
   render(performance, onView, onEdit, onDelete, onManageShowtimes) {
@@ -22,9 +23,9 @@ export const PerformanceCard = {
     return `
       <div class="bg-white rounded-lg shadow-md border border-gray-200 overflow-hidden hover:shadow-lg transition-shadow">
         <div class="relative h-48 bg-gradient-to-br from-indigo-500 to-purple-600 overflow-hidden">
-          ${performance.image
+          ${performance.image || performance.imageUrl
         ? `
-            <img src="${performance.image}" alt="${performance.title}" class="w-full h-full object-cover">
+            <img src="${getPerformanceImageUrl(performance.image || performance.imageUrl)}" alt="${performance.title}" class="w-full h-full object-cover">
           `
         : `
             <div class="absolute inset-0 flex items-center justify-center">

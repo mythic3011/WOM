@@ -1,20 +1,20 @@
-
 import dayjs from "dayjs";
 import Swal from "sweetalert2";
 
 import { createModal, openModal, closeModal } from "@components/Modal.js";
+import { SeatMap } from "@components/SeatMap.js";
 import { performanceService } from "@services/performanceService.js";
-import { storage } from "@services/storageService.js";
-import { seatMapGenerator } from "@utils/booking/seatMapGenerator.js";
+import { bookingService } from "@services/bookingService.js";
+import { getSeatColor, buildSeatDetails, buildSeatStatusMap } from "@utils/seatStatusCalculator.js";
+import { getSeatStatusColor, getSectionColor } from "@utils/colors.js";
 import { attachSeatTooltipListeners } from "@utils/booking/seatTooltip.js";
 import { seatUtils } from "@utils/booking/seatUtils.js";
-import { initializeSeatDetails, calculateStats } from "@utils/booking/seatUtils.js";
-import { createDebounceSearch } from "@utils/data/filters.js";
+import { initializeSeatDetails } from "@utils/booking/seatUtils.js";
 import { initSeatMapPanzoom } from "@utils/panzoomSeatMap.js";
-import { performanceOptimizer } from "@utils/performance.js";
 import { reportingUtils } from "@utils/reports/reporting.js";
-import { keyboard, registerGlobalShortcuts } from "@utils/ui/keyboard.js";
+import { keyboard } from "@utils/ui/keyboard.js";
 import { notify } from "@utils/ui/notification.js";
+import { URLQueryManager } from "@utils/core/URLQueryManager.js";
 
 export default {
   title: "Seat Management | Admin",
@@ -23,6 +23,12 @@ export default {
   selectedShowtime: null,
   selectedSeats: [],
   panzoomInstance: null,
+  urlQueryManager: null,
+  unsubscribeURLChanges: null,
+  bookingsData: null,
+  seatStatusMap: null,
+  bookingsLoading: false,
+  bookingsLoaded: false,
 
   async render() {
     return `
@@ -75,9 +81,6 @@ export default {
                 </div>
 
                 <div id="actionsContainer" class="hidden space-y-2">
-                  <button id="editLayoutBtn" class="w-full px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors">
-                    <i class="fas fa-cog mr-2"></i>Edit Layout
-                  </button>
                   <button id="editSeatsBtn" class="w-full px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">
                     <i class="fas fa-edit mr-2"></i>Edit Individual Seats
                   </button>
@@ -125,9 +128,149 @@ export default {
   },
 
   async afterRender() {
+    this.initURLQueryManager();
     await this.loadPerformances();
     this.setupEventListeners();
     this.setupKeyboardShortcuts();
+    await this.handleURLParameters();
+  },
+
+  initURLQueryManager() {
+    this.urlQueryManager = new URLQueryManager({
+      performanceId: null,
+      showtimeId: null,
+    });
+
+    this.unsubscribeURLChanges = this.urlQueryManager.subscribe(
+      async (params) => {
+        await this.handleURLParamsChange(params);
+      }
+    );
+  },
+
+  async handleURLParamsChange(params) {
+    const { performanceId, showtimeId } = params;
+    const $performanceSelect = $("#performanceSelect");
+    const currentPerformanceId = $performanceSelect.val();
+
+    if (performanceId && String(performanceId) !== String(currentPerformanceId)) {
+      $performanceSelect.val(performanceId);
+      await this.fetchDataWithLoading(
+        () => this.handlePerformanceChange(
+          { target: { value: performanceId } },
+          { skipURLUpdate: true }
+        ),
+        "Loading performance..."
+      );
+    }
+
+    if (showtimeId && this.selectedPerformance) {
+      const showtimeIndex = this.selectedPerformance.showtimes?.findIndex(
+        (st) => String(st.id || st.showtimeId) === String(showtimeId)
+      );
+
+      if (showtimeIndex !== -1) {
+        const $showtimeSelect = $("#showtimeSelect");
+        const currentShowtimeIndex = $showtimeSelect.val();
+
+        if (String(showtimeIndex) !== String(currentShowtimeIndex)) {
+          $showtimeSelect.val(showtimeIndex);
+          await this.handleShowtimeChange(
+            { target: { value: showtimeIndex } },
+            { skipURLUpdate: true }
+          );
+        }
+      }
+    }
+  },
+
+  async fetchDataWithLoading(fetchFn, loadingMessage = "Loading...") {
+    const $container = $("#seatMapContainer");
+    const originalContent = $container.html();
+
+    $container.html(`
+      <div class="flex flex-col items-center justify-center min-h-[400px]">
+        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mb-4"></div>
+        <p class="text-gray-600">${loadingMessage}</p>
+      </div>
+    `);
+
+    try {
+      await fetchFn();
+    } catch (error) {
+      console.error("Error fetching data:", error);
+      $container.html(`
+        <div class="flex flex-col items-center justify-center min-h-[400px]">
+          <i class="fas fa-exclamation-triangle text-red-500 text-4xl mb-4"></i>
+          <p class="text-red-600 mb-4">Failed to load data</p>
+          <button id="retryFetchBtn" class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors">
+            <i class="fas fa-redo mr-2"></i>Retry
+          </button>
+        </div>
+      `);
+
+      $("#retryFetchBtn").on("click", () => {
+        this.fetchDataWithLoading(fetchFn, loadingMessage);
+      });
+    }
+  },
+
+  async handleURLParameters() {
+    const params = this.urlQueryManager.getParams();
+    const { performanceId, showtimeId } = params;
+
+    if (performanceId) {
+      const $performanceSelect = $("#performanceSelect");
+      const optionExists = $performanceSelect.find(`option[value="${performanceId}"]`).length > 0;
+
+      if (optionExists) {
+        $performanceSelect.val(performanceId);
+        await this.handlePerformanceChange(
+          { target: { value: performanceId } },
+          { skipURLUpdate: true }
+        );
+
+        if (showtimeId && this.selectedPerformance) {
+          const showtimeIndex = this.selectedPerformance.showtimes?.findIndex(
+            (st) => String(st.id || st.showtimeId) === String(showtimeId)
+          );
+
+          if (showtimeIndex !== -1) {
+            const $showtimeSelect = $("#showtimeSelect");
+            $showtimeSelect.val(showtimeIndex);
+            await this.handleShowtimeChange(
+              { target: { value: showtimeIndex } },
+              { skipURLUpdate: true }
+            );
+          } else {
+            notify.warning("Invalid showtime ID in URL, using default");
+            this.urlQueryManager.removeParam("showtimeId", { silent: true, replaceState: true });
+          }
+        }
+      } else {
+        notify.warning("Invalid performance ID in URL, using default");
+        this.urlQueryManager.clearAll({ silent: true, replaceState: true });
+      }
+    }
+  },
+
+  updateURLParams(performanceId, showtimeId) {
+    if (!this.urlQueryManager) {return;}
+
+    const params = {};
+    if (performanceId) {
+      params.performanceId = performanceId;
+    }
+    if (showtimeId) {
+      params.showtimeId = showtimeId;
+    }
+
+    this.urlQueryManager.setParams(params, { silent: true });
+  },
+
+  clearURLParams() {
+    if (!this.urlQueryManager) {return;}
+    this.urlQueryManager.clearAll({ silent: true });
   },
 
   setupKeyboardShortcuts() {
@@ -193,8 +336,7 @@ export default {
     $("#performanceSelect").on("change", (e) =>
       this.handlePerformanceChange(e)
     );
-    $("#showtimeSelect").on("change", (e) => this.handleShowtimeChange(e));
-    $("#editLayoutBtn").on("click", () => this.editLayout());
+    $("#showtimeSelect").on("change", async (e) => await this.handleShowtimeChange(e));
     $("#editSeatsBtn").on("click", () => this.editSeats());
     $("#advancedSelectionBtn").on("click", () => this.advancedSelection());
     $("#batchOperationsBtn").on("click", () => this.batchOperations());
@@ -202,7 +344,8 @@ export default {
     $("#exportSeatsBtn").on("click", () => this.exportSeatMap());
   },
 
-  async handlePerformanceChange(e) {
+  async handlePerformanceChange(e, options = {}) {
+    const { skipURLUpdate = false } = options;
     const performanceId = parseInt(e.target.value);
 
     if (!performanceId) {
@@ -215,6 +358,11 @@ export default {
           <p class="text-lg">Select a performance and showtime to view the seat map</p>
         </div>
       `);
+      this.selectedPerformance = null;
+      this.selectedShowtime = null;
+      if (!skipURLUpdate) {
+        this.clearURLParams();
+      }
       return;
     }
 
@@ -225,7 +373,7 @@ export default {
       const $showtimeSelect = $("#showtimeSelect");
       $showtimeSelect
         .empty()
-        .append('<option value="">Select a showtime...</option>');
+        .append("<option value=\"\">Select a showtime...</option>");
 
       if (performance.showtimes && performance.showtimes.length > 0) {
         performance.showtimes.forEach((showtime, index) => {
@@ -241,33 +389,95 @@ export default {
       } else {
         notify.warning("This performance has no showtimes configured");
       }
+
+      if (!skipURLUpdate) {
+        this.updateURLParams(performanceId, null);
+      }
     } catch (error) {
       console.error("Error loading performance:", error);
       notify.error("Failed to load performance details");
     }
   },
 
-  handleShowtimeChange(e) {
+  async handleShowtimeChange(e, options = {}) {
+    const { skipURLUpdate = false } = options;
     const showtimeIndex = parseInt(e.target.value);
 
     if (isNaN(showtimeIndex)) {
       $("#statsContainer").addClass("hidden");
       $("#actionsContainer").addClass("hidden");
       $("#legendContainer").addClass("hidden");
+      this.selectedShowtime = null;
+      this.seatStatusMap = null;
+      this.bookingsData = null;
+      this.bookingsLoaded = false;
+      if (!skipURLUpdate && this.selectedPerformance) {
+        this.updateURLParams(this.selectedPerformance.id, null);
+      }
       return;
     }
 
     this.selectedShowtime = this.selectedPerformance.showtimes[showtimeIndex];
+
+    await this.loadBookingDataForShowtime();
+
     this.renderSeatMap();
     this.updateStats();
     $("#statsContainer").removeClass("hidden");
     $("#actionsContainer").removeClass("hidden");
     $("#legendContainer").removeClass("hidden");
+
+    if (!skipURLUpdate) {
+      const showtimeId = this.selectedShowtime.id || this.selectedShowtime.showtimeId;
+      this.updateURLParams(this.selectedPerformance.id, showtimeId);
+    }
+  },
+
+  async loadBookingDataForShowtime() {
+    if (!this.selectedPerformance || !this.selectedShowtime) {
+      this.seatStatusMap = new Map();
+      this.bookingsData = [];
+      this.bookingsLoaded = true;
+      return;
+    }
+
+    const performanceId = this.selectedPerformance.id;
+    const showtimeId = this.selectedShowtime.id || this.selectedShowtime.showtimeId;
+
+    this.bookingsLoading = true;
+
+    $("#seatMapContainer").html(`
+      <div class="flex flex-col items-center justify-center min-h-[400px]">
+        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mb-4"></div>
+        <p class="text-gray-600">Loading booking data...</p>
+      </div>
+    `);
+
+    try {
+      const bookings = await bookingService.getBookingsByShowtime(
+        performanceId,
+        showtimeId
+      );
+
+      this.bookingsData = bookings;
+      const seatMap = this.selectedPerformance.seatMap;
+      this.seatStatusMap = buildSeatStatusMap(bookings, seatMap);
+      this.bookingsLoaded = true;
+      this.bookingsLoading = false;
+    } catch (error) {
+      console.error("Error loading booking data:", error);
+      this.bookingsData = [];
+      this.seatStatusMap = new Map();
+      this.bookingsLoaded = true;
+      this.bookingsLoading = false;
+      notify.warning("Failed to load booking data. Showing all seats as available.");
+    }
   },
 
   getSeatTypes() {
-    const showtime = this.selectedShowtime;
-    const pricingSections = showtime?.pricing?.sections || [];
+    const performance = this.selectedPerformance;
+    const venue = performance?.venue;
+    const venueLayout = venue?.layout;
 
     const systemTypes = [
       { value: "available", label: "Available", color: "#10b981" },
@@ -275,12 +485,27 @@ export default {
       { value: "reserved", label: "Reserved", color: "#f59e0b" },
     ];
 
-    const sectionTypes = pricingSections.map((section, index) => ({
-      value: `section-${index}`,
-      label: section.section || `Section ${index + 1}`,
-      color: this.getSectionColor(index),
-      sectionIndex: index,
-    }));
+    let sectionTypes = [];
+
+    if (venueLayout?.sections && venueLayout.sections.length > 0) {
+      sectionTypes = venueLayout.sections.map((section, index) => ({
+        value: `section-${index}`,
+        label: section.name || `Section ${index + 1}`,
+        color: this.getSectionColor(index),
+        sectionIndex: index,
+        sectionName: section.name,
+      }));
+    } else {
+      const pricingSections = performance?.pricingSections || [];
+      sectionTypes = pricingSections
+        .filter(section => section && (section.sectionName || section.section))
+        .map((section, index) => ({
+          value: `section-${index}`,
+          label: section.sectionName || section.section || `Section ${index + 1}`,
+          color: this.getSectionColor(index),
+          sectionIndex: index,
+        }));
+    }
 
     return [...systemTypes, ...sectionTypes];
   },
@@ -301,6 +526,66 @@ export default {
 
   renderSeatMap() {
     const showtime = this.selectedShowtime;
+    const performance = this.selectedPerformance;
+    const venue = performance?.venue;
+    const venueLayout = venue?.layout;
+
+    if (venueLayout?.sections && venueLayout.sections.length > 0) {
+      this.renderSectionedSeatMap(showtime, performance, venueLayout);
+    } else {
+      this.renderSimpleSeatMap(showtime, performance);
+    }
+
+    this.updateLegend();
+
+    setTimeout(() => {
+      if (this.panzoomInstance) {
+        this.panzoomInstance.dispose();
+      }
+      this.panzoomInstance = initSeatMapPanzoom("#seatMapContainer");
+    }, 100);
+  },
+
+  renderSectionedSeatMap(showtime, performance, venueLayout) {
+    const seatMap = performance?.seatMap;
+    const pricingSections = performance?.pricingSections || [];
+    const statusMap = this.seatStatusMap || new Map();
+
+    const seatDetails = buildSeatDetails(seatMap, statusMap, pricingSections);
+
+    if (showtime.seatDetails) {
+      Object.entries(showtime.seatDetails).forEach(([seatId, detail]) => {
+        if (seatDetails[seatId]) {
+          seatDetails[seatId].status = detail.status || seatDetails[seatId].status;
+          if (detail.sectionIndex !== undefined) {
+            seatDetails[seatId].sectionIndex = detail.sectionIndex;
+          }
+        }
+      });
+    }
+
+    let seatMapHTML = "";
+    try {
+      seatMapHTML = SeatMap.generateFromLayout(
+        venueLayout,
+        seatDetails,
+        [],
+        false
+      );
+    } catch (error) {
+      console.error("Error generating sectioned seat map:", error);
+      seatMapHTML = `
+        <div class="text-center py-12">
+          <i class="fas fa-exclamation-triangle text-red-500 text-4xl mb-4"></i>
+          <p class="text-red-600">Error generating seat map: ${error.message}</p>
+        </div>
+      `;
+    }
+
+    $("#seatMapContainer").html(seatMapHTML);
+  },
+
+  renderSimpleSeatMap(showtime, _performance) {
     const layout = showtime.seatLayout || { rows: 5, seatsPerRow: 8 };
 
     if (!showtime.seatDetails) {
@@ -316,104 +601,79 @@ export default {
       showtime.seatDetails
     );
     $("#seatMapContainer").html(seatMapHTML);
-    this.updateLegend();
-
-    setTimeout(() => {
-      if (this.panzoomInstance) {
-        this.panzoomInstance.dispose();
-      }
-      this.panzoomInstance = initSeatMapPanzoom();
-    }, 100);
   },
 
-  getSeatColor(seatDetail) {
-    const seatTypes = this.getSeatTypes();
-    const seatType = seatTypes.find(
-      (type) =>
-        seatDetail.status === type.value ||
-        (seatDetail.sectionIndex !== undefined &&
-          type.sectionIndex === seatDetail.sectionIndex)
-    );
-    return seatType?.color || "#10b981";
+  getSeatColorForDetail(seatDetail) {
+    // Use the existing color utility functions for consistency
+    if (!seatDetail) {
+      return getSeatStatusColor("available");
+    }
+
+    // If seat has a section assignment, use section color
+    if (seatDetail.sectionIndex !== undefined) {
+      return getSectionColor(seatDetail.sectionIndex);
+    }
+
+    // Otherwise use status color
+    return getSeatColor(seatDetail.status || "available");
   },
 
   updateLegend() {
-    const seatTypes = this.getSeatTypes();
-    const usedTypes = new Set();
+    const performance = this.selectedPerformance;
+    const venue = performance?.venue;
+    const venueLayout = venue?.layout;
 
-    Object.values(this.selectedShowtime.seatDetails || {}).forEach((seat) => {
-      if (seat.status) usedTypes.add(seat.status);
-      if (seat.sectionIndex !== undefined)
-        usedTypes.add(`section-${seat.sectionIndex}`);
-    });
+    let sections = [];
+    if (venueLayout?.sections && venueLayout.sections.length > 0) {
+      sections = venueLayout.sections.map((section, index) => ({
+        sectionName: section.name || `Section ${index + 1}`,
+        sectionCode: section.tier || "",
+      }));
+    } else {
+      sections = performance?.pricingSections || [];
+    }
 
-    const legendHTML = seatTypes
-      .filter(
-        (type) =>
-          usedTypes.has(type.value) ||
-          ["available", "blocked", "reserved"].includes(type.value)
-      )
-      .map(
-        (type) => `
-        <div class="flex items-center gap-2">
-          <div class="w-4 h-4 rounded" style="background-color: ${type.color}"></div>
-          <span class="text-black">${type.label}</span>
-        </div>
-      `
-      )
-      .join("");
+    const legendHTML = SeatMap.createLegend(sections, true);
 
     $("#legendContainer").html(legendHTML);
   },
 
   generateSeatMapSVG(rows, seats, seatDetails) {
-    const seatSize = 32;
-    const seatGap = 8;
-    const stageWidth = seats * (seatSize + seatGap) + seatGap;
-    const stageHeight = 35;
-    const stagePadding = 25;
-    const svgWidth = stageWidth + stagePadding * 2;
-    const svgHeight =
-      rows * (seatSize + seatGap) + stageHeight + stagePadding * 3;
+    const getSeatColorFn = (seatDetail) => this.getSeatColorForDetail(seatDetail);
 
-    let seatsHTML = "";
-    for (let row = 0; row < rows; row++) {
-      const rowY =
-        stagePadding + stageHeight + stagePadding + row * (seatSize + seatGap);
-      const rowLetter = String.fromCharCode(65 + row);
+    return SeatMap.generateStatic(rows, seats, seatDetails, getSeatColorFn);
+  },
 
-      for (let seat = 0; seat < seats; seat++) {
-        const seatX = stagePadding + seat * (seatSize + seatGap);
-        const seatNumber = seat + 1;
-        const seatId = `${rowLetter}${seatNumber}`;
-        const seatDetail = seatDetails[seatId] || { status: "available" };
+  generateInteractiveSeatMap(rows, seats, seatDetails, selectedSeats) {
+    const performance = this.selectedPerformance;
+    const venue = performance?.venue;
+    const venueLayout = venue?.layout;
 
-        const fillColor = this.getSeatColor(seatDetail);
-
-        seatsHTML += `
-          <g class="seat-item" data-seat-id="${seatId}">
-            <rect x="${seatX}" y="${rowY}" width="${seatSize}" height="${seatSize}"
-              fill="${fillColor}" rx="4" stroke="#ffffff" stroke-width="2" />
-            <text x="${seatX + seatSize / 2}" y="${rowY + seatSize / 2 + 4
-          }" fill="white"
-              text-anchor="middle" font-size="11" font-weight="bold">${seatId}</text>
-          </g>
-        `;
-      }
+    if (venueLayout?.sections && venueLayout.sections.length > 0) {
+      return this.generateInteractiveSectionedSeatMap(seatDetails, selectedSeats, venueLayout);
     }
 
-    return `
-      <svg id="seatMap" width="${svgWidth}" height="${svgHeight}" class="bg-white rounded shadow-lg" viewBox="0 0 ${svgWidth} ${svgHeight}">
-        <g id="content-layer">
-          <rect x="${stagePadding}" y="${stagePadding}" width="${stageWidth}" height="${stageHeight}"
-            fill="#374151" rx="5" class="stage" />
-          <text x="${svgWidth / 2}" y="${stagePadding + stageHeight / 2 + 6
-      }" fill="white"
-            text-anchor="middle" font-size="16" font-weight="bold">STAGE</text>
-          ${seatsHTML}
-        </g>
-      </svg>
-    `;
+    const getSeatColorFn = (seatDetail) => this.getSeatColorForDetail(seatDetail);
+    return SeatMap.generateInteractive(rows, seats, seatDetails, selectedSeats, getSeatColorFn);
+  },
+
+  generateInteractiveSectionedSeatMap(seatDetails, selectedSeats, venueLayout) {
+    try {
+      return SeatMap.generateFromLayout(
+        venueLayout,
+        seatDetails,
+        selectedSeats,
+        true
+      );
+    } catch (error) {
+      console.error("Error generating interactive sectioned seat map:", error);
+      return `
+        <div class="text-center py-12">
+          <i class="fas fa-exclamation-triangle text-red-500 text-4xl mb-4"></i>
+          <p class="text-red-600">Error generating seat map: ${error.message}</p>
+        </div>
+      `;
+    }
   },
 
   initializeSeatDetails(rows, seatsPerRow) {
@@ -421,99 +681,115 @@ export default {
   },
 
   updateStats() {
-    const seatDetails = this.selectedShowtime.seatDetails || {};
-    const layout = this.selectedShowtime.seatLayout || {
-      rows: 5,
-      seatsPerRow: 8,
-    };
+    const performance = this.selectedPerformance;
+    const venue = performance?.venue;
+    const venueLayout = venue?.layout;
+    const seatMap = performance?.seatMap;
+    const statusMap = this.seatStatusMap || new Map();
 
-    const stats = calculateStats(seatDetails);
-    stats.total = layout.rows * layout.seatsPerRow;
+    let totalSeats = 0;
+    const sectionStats = {};
 
-    const seatTypes = this.getSeatTypes();
-    seatTypes.forEach((type) => {
-      if (type.value !== "available" && type.value !== "blocked") {
-        const key = `section-${type.sectionIndex}`;
-        stats[key] = 0;
+    if (venueLayout?.sections && venueLayout.sections.length > 0) {
+      venueLayout.sections.forEach((section, index) => {
+        const skipIndices = section.seatNumbering?.skipSeatIndices || [];
+        const seatsPerRow = section.seatsPerRow - skipIndices.length;
+        const sectionSeats = section.rows * seatsPerRow;
+        totalSeats += sectionSeats;
+
+        const sectionName = section.name || `Section ${index + 1}`;
+        sectionStats[sectionName.toLowerCase()] = {
+          name: sectionName,
+          total: sectionSeats,
+          count: sectionSeats,
+          index: index,
+        };
+      });
+    } else {
+      const layout = this.selectedShowtime.seatLayout || { rows: 5, seatsPerRow: 8 };
+      totalSeats = layout.rows * layout.seatsPerRow;
+    }
+
+    let availableCount = totalSeats;
+    let blockedCount = 0;
+    let bookedCount = 0;
+    let reservedCount = 0;
+
+    if (seatMap?.indexMap) {
+      Object.values(seatMap.indexMap).forEach((seatData) => {
+        const sectionName = (seatData.sectionName || seatData.section || "").toLowerCase();
+        if (sectionStats[sectionName]) {
+          sectionStats[sectionName].count = sectionStats[sectionName].total;
+        }
+      });
+    }
+
+    statusMap.forEach((seatStatus) => {
+      if (seatStatus.status === "booked") {
+        bookedCount++;
+        availableCount--;
+      } else if (seatStatus.status === "reserved") {
+        reservedCount++;
+        availableCount--;
       }
     });
 
-    Object.values(seatDetails).forEach((detail) => {
-      if (detail.sectionIndex !== undefined) {
-        const key = `section-${detail.sectionIndex}`;
-        if (stats[key] !== undefined) stats[key]++;
+    const showtimeSeatDetails = this.selectedShowtime?.seatDetails || {};
+    Object.values(showtimeSeatDetails).forEach((detail) => {
+      if (detail.status === "blocked") {
+        blockedCount++;
+        if (!statusMap.has(detail.seatId)) {
+          availableCount--;
+        }
       }
     });
 
-    $("#totalSeats").text(stats.total);
-    $("#availableSeats").text(stats.available);
-    $("#blockedSeats").text(stats.blocked);
+    $("#totalSeats").text(totalSeats);
+    $("#availableSeats").text(availableCount);
+    $("#blockedSeats").text(blockedCount);
 
-    const pricingSections = this.selectedShowtime?.pricing?.sections || [];
-    const otherStatsHTML = pricingSections
-      .map((section, index) => {
-        const count = stats[`section-${index}`] || 0;
+    let dynamicStatsHTML = "";
+
+    if (bookedCount > 0 || reservedCount > 0) {
+      dynamicStatsHTML += `
+        <div class="flex justify-between text-sm">
+          <span class="text-gray-600">Booked:</span>
+          <span class="font-bold text-blue-600">${bookedCount}</span>
+        </div>
+      `;
+      if (reservedCount > 0) {
+        dynamicStatsHTML += `
+          <div class="flex justify-between text-sm">
+            <span class="text-gray-600">Reserved:</span>
+            <span class="font-bold text-amber-600">${reservedCount}</span>
+          </div>
+        `;
+      }
+
+      const occupancyPercentage = totalSeats > 0
+        ? Math.round(((bookedCount + reservedCount) / totalSeats) * 100)
+        : 0;
+      dynamicStatsHTML += `
+        <div class="flex justify-between text-sm border-t border-gray-200 pt-2 mt-2">
+          <span class="text-gray-600">Occupancy:</span>
+          <span class="font-bold ${occupancyPercentage > 80 ? "text-red-600" : occupancyPercentage > 50 ? "text-amber-600" : "text-green-600"}">${occupancyPercentage}%</span>
+        </div>
+      `;
+    }
+
+    dynamicStatsHTML += Object.values(sectionStats)
+      .sort((a, b) => a.index - b.index)
+      .map((stat) => {
         return `
         <div class="flex justify-between text-sm">
-          <span class="text-gray-600">${section.section}:</span>
-          <span class="font-bold" style="color: ${this.getSectionColor(
-          index
-        )}">${count}</span>
+          <span class="text-gray-600">${stat.name}:</span>
+          <span class="font-bold" style="color: ${this.getSectionColor(stat.index)}">${stat.count}</span>
         </div>
       `;
       })
       .join("");
 
-    $("#dynamicStats").html(otherStatsHTML);
-  },
-
-  async editLayout() {
-    const showtime = this.selectedShowtime;
-    const currentLayout = showtime.seatLayout || { rows: 5, seatsPerRow: 8 };
-
-    const result = await Swal.fire({
-      title: '<i class="fas fa-cog text-indigo-600 mr-2"></i>Edit Seat Layout',
-      html: `
-        <div class="text-left p-4">
-          <div class="grid grid-cols-2 gap-4 mb-4">
-            <div>
-              <label class="block text-sm font-medium mb-2">Number of Rows</label>
-              <input type="number" id="rows" class="swal2-input" value="${currentLayout.rows}" min="1" max="20">
-            </div>
-            <div>
-              <label class="block text-sm font-medium mb-2">Seats Per Row</label>
-              <input type="number" id="seatsPerRow" class="swal2-input" value="${currentLayout.seatsPerRow}" min="1" max="30">
-            </div>
-          </div>
-          <p class="text-xs text-red-600">Warning: Changing layout will reset all seat configurations!</p>
-        </div>
-      `,
-      showCancelButton: true,
-      confirmButtonText: "Apply",
-      preConfirm: () => {
-        const rows = parseInt(document.getElementById("rows").value);
-        const seatsPerRow = parseInt(
-          document.getElementById("seatsPerRow").value
-        );
-        if (!rows || !seatsPerRow) {
-          Swal.showValidationMessage("Please enter valid numbers");
-          return false;
-        }
-        return { rows, seatsPerRow };
-      },
-    });
-
-    if (result.isConfirmed) {
-      showtime.seatLayout = result.value;
-      showtime.seatDetails = this.initializeSeatDetails(
-        result.value.rows,
-        result.value.seatsPerRow
-      );
-      await this.saveChanges();
-      this.renderSeatMap();
-      this.updateStats();
-      notify.success("Seat layout updated successfully!");
-    }
+    $("#dynamicStats").html(dynamicStatsHTML);
   },
 
   async editSeats() {
@@ -529,79 +805,102 @@ export default {
 
     let selectedSeats = [];
     const seatTypes = this.getSeatTypes();
+    let modalPanzoomInstance = null;
 
-    const result = await Swal.fire({
-      title: '<i class="fas fa-edit text-green-600 mr-2"></i>Edit Seats',
-      html: `
-        <div class="text-left p-4">
-          <div class="bg-blue-50 p-3 rounded mb-4">
-            <p class="text-sm">Click seats to select. Selected: <span id="modal-selected-count" class="font-bold">0</span></p>
+    const modalId = "editSeatsModal";
+    const existingModal = document.getElementById(modalId);
+    if (existingModal) {
+      existingModal.remove();
+    }
+
+    const modalHTML = createModal({
+      id: modalId,
+      title: "Edit Seats",
+      subtitle: "Click seats to select and apply changes",
+      size: "xl",
+      body: `
+        <div class="space-y-4">
+          <div class="bg-blue-50 p-3 rounded-lg">
+            <p class="text-sm text-blue-800">Click seats to select. Selected: <span id="modal-selected-count" class="font-bold">0</span></p>
             <div class="flex gap-2 mt-2">
-              <button type="button" id="select-all" class="px-3 py-1 bg-blue-500 text-white rounded text-xs">Select All</button>
-              <button type="button" id="clear-all" class="px-3 py-1 bg-gray-400 text-white rounded text-xs">Clear</button>
+              <button type="button" id="select-all" class="px-3 py-1 bg-blue-500 text-white rounded text-xs hover:bg-blue-600">Select All</button>
+              <button type="button" id="clear-all" class="px-3 py-1 bg-gray-400 text-white rounded text-xs hover:bg-gray-500">Clear</button>
             </div>
           </div>
 
-          <div id="interactive-map" class="mb-4 overflow-auto" style="max-height: 400px;"></div>
+          <div id="interactive-map" class="overflow-auto bg-gray-50 rounded-lg p-4" style="max-height: 500px; min-height: 300px;"></div>
 
-          <div class="grid grid-cols-2 gap-4">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label class="block text-sm font-medium mb-1">Seat Type</label>
-              <select id="status-select" class="swal2-input w-full">
+              <label class="block text-sm font-medium text-gray-700 mb-1">Seat Type</label>
+              <select id="status-select" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
                 <option value="">- No Change -</option>
-                ${seatTypes
-          .map(
-            (type) => `
-                  <option value="${type.value}" data-section-index="${type.sectionIndex || ""
-              }">${type.label}</option>
-                `
-          )
-          .join("")}
+                ${seatTypes.map((type) => `
+                  <option value="${type.value}" data-section-index="${type.sectionIndex || ""}">${type.label}</option>
+                `).join("")}
               </select>
             </div>
-            <div>
-              <button type="button" id="apply-btn" class="w-full px-4 py-2 bg-indigo-600 text-white rounded mt-6">Apply to Selected</button>
+            <div class="flex items-end">
+              <button type="button" id="apply-btn" class="w-full px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors">
+                <i class="fas fa-check mr-2"></i>Apply to Selected
+              </button>
             </div>
           </div>
         </div>
       `,
-      width: "800px",
-      showCancelButton: true,
-      confirmButtonText: "Save Changes",
-      didOpen: () => {
-        const renderMap = () => {
-          const mapHTML = this.generateInteractiveSeatMap(
-            layout.rows,
-            layout.seatsPerRow,
-            showtime.seatDetails,
-            selectedSeats
-          );
-          document.getElementById("interactive-map").innerHTML = mapHTML;
-          document.getElementById("modal-selected-count").textContent =
-            selectedSeats.length;
+      footer: `
+        <button type="button" class="modal-close px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors" data-modal="${modalId}">
+          Cancel
+        </button>
+        <button type="button" id="save-seats-btn" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">
+          <i class="fas fa-save mr-2"></i>Save Changes
+        </button>
+      `,
+    });
 
-          setTimeout(() => {
-            attachSeatTooltipListeners("#interactive-map svg");
-          }, 100);
+    $("body").append(modalHTML);
 
-          document.querySelectorAll(".interactive-seat").forEach((seat) => {
-            seat.addEventListener("click", function (e) {
-              e.stopPropagation();
-              const seatElement = e.target.closest(".interactive-seat");
-              if (!seatElement) return;
+    const renderMap = () => {
+      const mapHTML = this.generateInteractiveSeatMap(
+        layout.rows,
+        layout.seatsPerRow,
+        showtime.seatDetails,
+        selectedSeats
+      );
+      document.getElementById("interactive-map").innerHTML = mapHTML;
+      document.getElementById("modal-selected-count").textContent = selectedSeats.length;
 
-              const seatId = seatElement.dataset.seatId;
-              const index = selectedSeats.indexOf(seatId);
-              if (index > -1) {
-                selectedSeats.splice(index, 1);
-              } else {
-                selectedSeats.push(seatId);
-              }
-              renderMap();
-            });
-          });
-        };
+      setTimeout(() => {
+        attachSeatTooltipListeners("#interactive-map svg");
 
+        if (modalPanzoomInstance) {
+          modalPanzoomInstance.dispose();
+        }
+        modalPanzoomInstance = initSeatMapPanzoom("#interactive-map");
+      }, 100);
+
+      document.querySelectorAll("#interactive-map .interactive-seat").forEach((seat) => {
+        seat.addEventListener("click", function (e) {
+          e.stopPropagation();
+          const seatElement = e.target.closest(".interactive-seat");
+          if (!seatElement) {return;}
+
+          const seatId = seatElement.dataset.seatId || seatElement.dataset.fullId;
+          if (!seatId) {return;}
+
+          const index = selectedSeats.indexOf(seatId);
+          if (index > -1) {
+            selectedSeats.splice(index, 1);
+          } else {
+            selectedSeats.push(seatId);
+          }
+          renderMap();
+        });
+      });
+    };
+
+    openModal(modalId, {
+      onOpen: () => {
         renderMap();
 
         document.getElementById("select-all").addEventListener("click", () => {
@@ -633,8 +932,7 @@ export default {
             if (showtime.seatDetails[seatId]) {
               if (sectionIndex !== "") {
                 showtime.seatDetails[seatId].status = "assigned";
-                showtime.seatDetails[seatId].sectionIndex =
-                  parseInt(sectionIndex);
+                showtime.seatDetails[seatId].sectionIndex = parseInt(sectionIndex);
               } else {
                 showtime.seatDetails[seatId].status = value;
                 delete showtime.seatDetails[seatId].sectionIndex;
@@ -647,75 +945,33 @@ export default {
           selectEl.value = "";
           renderMap();
         });
-      },
-      preConfirm: () => {
-        return { seatDetails: showtime.seatDetails };
+
+        document.getElementById("save-seats-btn").addEventListener("click", async () => {
+          if (modalPanzoomInstance) {
+            modalPanzoomInstance.dispose();
+          }
+          closeModal(modalId);
+          await this.saveChanges();
+          this.renderSeatMap();
+          this.updateStats();
+          notify.success("Seat changes saved successfully!");
+          $(`#${modalId}`).remove();
+        });
       },
     });
 
-    if (result.isConfirmed) {
-      await this.saveChanges();
-      this.renderSeatMap();
-      this.updateStats();
-      notify.success("Seat changes saved successfully!");
-    }
-  },
-
-  generateInteractiveSeatMap(rows, seats, seatDetails, selectedSeats) {
-    const seatSize = 32;
-    const seatGap = 8;
-    const stageWidth = seats * (seatSize + seatGap) + seatGap;
-    const stageHeight = 30;
-    const stagePadding = 20;
-    const svgWidth = stageWidth + stagePadding * 2;
-    const svgHeight =
-      rows * (seatSize + seatGap) + stageHeight + stagePadding * 3;
-
-    let seatsHTML = "";
-    for (let row = 0; row < rows; row++) {
-      const rowY =
-        stagePadding + stageHeight + stagePadding + row * (seatSize + seatGap);
-      const rowLetter = String.fromCharCode(65 + row);
-
-      for (let seat = 0; seat < seats; seat++) {
-        const seatX = stagePadding + seat * (seatSize + seatGap);
-        const seatNumber = seat + 1;
-        const seatId = `${rowLetter}${seatNumber}`;
-        const seatDetail = seatDetails[seatId] || { status: "available" };
-        const isSelected = selectedSeats.includes(seatId);
-
-        const fillColor = isSelected
-          ? "#eab308"
-          : this.getSeatColor(seatDetail);
-
-        seatsHTML += `
-          <g class="interactive-seat cursor-pointer" data-seat-id="${seatId}">
-            <rect x="${seatX}" y="${rowY}" width="${seatSize}" height="${seatSize}"
-              fill="${fillColor}" rx="4" stroke="${isSelected ? "#ca8a04" : "#ffffff"
-          }" stroke-width="${isSelected ? "3" : "1"}" />
-            <text x="${seatX + seatSize / 2}" y="${rowY + seatSize / 2 + 4
-          }" fill="white"
-              text-anchor="middle" font-size="11" font-weight="bold">${seatId}</text>
-          </g>
-        `;
+    $(`#${modalId}`).on("modal:closed.modal", () => {
+      if (modalPanzoomInstance) {
+        modalPanzoomInstance.dispose();
       }
-    }
-
-    return `
-      <svg width="${svgWidth}" height="${svgHeight}" class="bg-white rounded shadow-sm mx-auto">
-        <rect x="${stagePadding}" y="${stagePadding}" width="${stageWidth}" height="${stageHeight}" fill="#374151" rx="4" />
-        <text x="${svgWidth / 2}" y="${stagePadding + stageHeight / 2 + 5
-      }" fill="white"
-          text-anchor="middle" font-size="14" font-weight="bold">STAGE</text>
-        ${seatsHTML}
-      </svg>
-    `;
+      $(`#${modalId}`).remove();
+    });
   },
 
   async batchOperations() {
     const result = await Swal.fire({
       title:
-        '<i class="fas fa-layer-group text-purple-600 mr-2"></i>Batch Operations',
+        "<i class=\"fas fa-layer-group text-purple-600 mr-2\"></i>Batch Operations",
       html: `
         <div class="text-left p-4 space-y-4">
           <button type="button" id="block-all" class="w-full px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600">
@@ -886,7 +1142,7 @@ export default {
 
     const result = await Swal.fire({
       title:
-        '<i class="fas fa-mouse-pointer text-blue-600 mr-2"></i>Advanced Selection Tools',
+        "<i class=\"fas fa-mouse-pointer text-blue-600 mr-2\"></i>Advanced Selection Tools",
       html: `
         <div class="text-left space-y-4">
           <div class="bg-blue-50 border border-blue-200 rounded-lg p-3">
@@ -1078,7 +1334,7 @@ export default {
 
     const result = await Swal.fire({
       title:
-        '<i class="fas fa-chart-bar text-teal-600 mr-2"></i>Seat Utilization & Revenue Report',
+        "<i class=\"fas fa-chart-bar text-teal-600 mr-2\"></i>Seat Utilization & Revenue Report",
       html: `
         <div class="text-left space-y-4">
           ${htmlReport}
@@ -1146,5 +1402,29 @@ export default {
         });
       },
     });
+  },
+
+  cleanup() {
+    if (this.unsubscribeURLChanges) {
+      this.unsubscribeURLChanges();
+      this.unsubscribeURLChanges = null;
+    }
+
+    if (this.urlQueryManager) {
+      this.urlQueryManager.destroy();
+      this.urlQueryManager = null;
+    }
+
+    if (this.panzoomInstance) {
+      this.panzoomInstance.dispose();
+      this.panzoomInstance = null;
+    }
+
+    this.bookingsData = null;
+    this.seatStatusMap = null;
+    this.bookingsLoading = false;
+    this.bookingsLoaded = false;
+
+    keyboard.unbindAll();
   },
 };

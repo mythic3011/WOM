@@ -99,7 +99,7 @@ export const SeatLayoutEditor = {
       sections: JSON.parse(JSON.stringify(initialLayout.sections || [])),
     };
     if (!state.sections.length)
-      state.sections = [
+      {state.sections = [
         {
           name: "Section A",
           rows: 5,
@@ -107,7 +107,7 @@ export const SeatLayoutEditor = {
           tier: "standard",
           startRow: "A",
         },
-      ];
+      ];}
 
     const renderAll = () => {
       $(container).html(this.render({ sections: state.sections }));

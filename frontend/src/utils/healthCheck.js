@@ -97,7 +97,7 @@ export const healthCheck = {
     }
 
     console.log(
-      `%cHealth Monitoring Started`,
+      "%cHealth Monitoring Started",
       "color: #3b82f6; font-weight: bold; font-size: 14px;"
     );
     console.log(`Checking every ${interval / 1000} seconds`);

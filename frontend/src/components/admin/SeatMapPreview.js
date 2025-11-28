@@ -1,6 +1,6 @@
 /**
  * SeatMapPreview Component
- * 
+ *
  * Real-time visual preview of venue seat layout with:
  * - SVG-based rendering for scalability
  * - Color coding by pricing tier
@@ -33,10 +33,10 @@ export const SeatMapPreview = {
 
     // Tier colors
     TIER_COLORS: {
-        vip: '#9333ea',      // Purple
-        premium: '#3b82f6',  // Blue
-        standard: '#10b981', // Green
-        economy: '#f59e0b',  // Amber
+        vip: "#9333ea", // Purple
+        premium: "#3b82f6", // Blue
+        standard: "#10b981", // Green
+        economy: "#f59e0b", // Amber
     },
 
     /**
@@ -76,7 +76,7 @@ export const SeatMapPreview = {
               Seat Map Preview
             </h3>
             <p class="text-sm text-gray-600 mt-1">
-              ${sections} section${sections !== 1 ? 's' : ''} • ${totalSeats} total seats
+              ${sections} section${sections !== 1 ? "s" : ""} • ${totalSeats} total seats
             </p>
           </div>
           <button
@@ -223,7 +223,7 @@ export const SeatMapPreview = {
             return this.renderEmptyState();
         }
 
-        let svg = '';
+        let svg = "";
         let currentY = 50;
 
         this.seatMap.sections.forEach((section, sectionIndex) => {
@@ -317,7 +317,7 @@ export const SeatMapPreview = {
      * @returns {string}
      */
     renderSeat(x, y, width, height, seat, color, isSelected, isHovered) {
-        const strokeColor = isSelected ? '#1f2937' : (isHovered ? '#4b5563' : '#e5e7eb');
+        const strokeColor = isSelected ? "#1f2937" : (isHovered ? "#4b5563" : "#e5e7eb");
         const strokeWidth = isSelected ? 3 : (isHovered ? 2 : 1);
         const opacity = isSelected ? 1 : (isHovered ? 0.9 : 0.8);
 
@@ -368,10 +368,10 @@ export const SeatMapPreview = {
      */
     renderLegend() {
         const tiers = [
-            { key: 'vip', label: 'VIP' },
-            { key: 'premium', label: 'Premium' },
-            { key: 'standard', label: 'Standard' },
-            { key: 'economy', label: 'Economy' }
+            { key: "vip", label: "VIP" },
+            { key: "premium", label: "Premium" },
+            { key: "standard", label: "Standard" },
+            { key: "economy", label: "Economy" }
         ];
 
         return `
@@ -386,7 +386,7 @@ export const SeatMapPreview = {
               ></div>
               <span class="text-sm text-gray-700">${tier.label}</span>
             </div>
-          `).join('')}
+          `).join("")}
         </div>
       </div>
     `;
@@ -441,7 +441,7 @@ export const SeatMapPreview = {
 
             sections.push({
                 name: section.name,
-                tier: section.tier || 'standard',
+                tier: section.tier || "standard",
                 rows
             });
         });
@@ -456,7 +456,7 @@ export const SeatMapPreview = {
      * @returns {string}
      */
     computeRowLabel(section, rowIndex) {
-        const startRow = section.startRow || 'A';
+        const startRow = section.startRow || "A";
         const charCode = startRow.charCodeAt(0) + rowIndex;
         return String.fromCharCode(charCode);
     },
@@ -472,10 +472,10 @@ export const SeatMapPreview = {
     generateRowSeats(section, sectionIndex, rowIndex, rowLabel) {
         const seats = [];
         const numbering = section.seatNumbering || {
-            globalDirection: 'ltr',
+            globalDirection: "ltr",
             startNumber: 1,
-            prefix: '',
-            suffix: '',
+            prefix: "",
+            suffix: "",
             skipNumbers: []
         };
 
@@ -484,7 +484,7 @@ export const SeatMapPreview = {
         const config = rowConfig || numbering;
 
         // Parse pattern if available
-        const pattern = rowConfig?.pattern || '';
+        const pattern = rowConfig?.pattern || "";
         const seatsPerRow = section.seatsPerRow || 20;
 
         if (pattern) {
@@ -528,13 +528,13 @@ export const SeatMapPreview = {
         for (let i = 0; i < pattern.length; i++) {
             const char = pattern[i].toUpperCase();
 
-            if (char === 'S') {
+            if (char === "S") {
                 // Skip numbers in skip list
                 while (skipNumbers.has(seatNumber)) {
                     seatNumber++;
                 }
 
-                const displayLabel = `${config.prefix || ''}${seatNumber}${config.suffix || ''}`;
+                const displayLabel = `${config.prefix || ""}${seatNumber}${config.suffix || ""}`;
                 const fullId = `${sectionSlug}-${rowLabel.toLowerCase()}${seatNumber}`;
 
                 seats.push({
@@ -543,17 +543,17 @@ export const SeatMapPreview = {
                     sectionName: section.name,
                     rowLabel,
                     seatNumber,
-                    tier: section.tier || 'standard',
+                    tier: section.tier || "standard",
                     seatIndex,
                     width: 1.0 // Default width, can be overridden by seat shapes
                 });
 
                 seatNumber++;
                 seatIndex++;
-            } else if (char === 'H') {
+            } else if (char === "H") {
                 // Gap - skip this position
                 continue;
-            } else if (char === 'E') {
+            } else if (char === "E") {
                 // Empty - skip this position
                 continue;
             }
@@ -584,7 +584,7 @@ export const SeatMapPreview = {
                 seatNumber++;
             }
 
-            const displayLabel = `${config.prefix || ''}${seatNumber}${config.suffix || ''}`;
+            const displayLabel = `${config.prefix || ""}${seatNumber}${config.suffix || ""}`;
             const fullId = `${sectionSlug}-${rowLabel.toLowerCase()}${seatNumber}`;
 
             seats.push({
@@ -593,7 +593,7 @@ export const SeatMapPreview = {
                 sectionName: section.name,
                 rowLabel,
                 seatNumber,
-                tier: section.tier || 'standard',
+                tier: section.tier || "standard",
                 seatIndex: i,
                 width: 1.0
             });
@@ -612,8 +612,8 @@ export const SeatMapPreview = {
     slugify(str) {
         return str
             .toLowerCase()
-            .replace(/[^a-z0-9]+/g, '-')
-            .replace(/^-+|-+$/g, '');
+            .replace(/[^a-z0-9]+/g, "-")
+            .replace(/^-+|-+$/g, "");
     },
 
     /**
@@ -656,12 +656,12 @@ export const SeatMapPreview = {
      * Update SVG transform
      */
     updateTransform() {
-        const canvas = document.getElementById('seat-map-canvas');
+        const canvas = document.getElementById("seat-map-canvas");
         if (canvas) {
             canvas.style.transform = `translate(${this.offsetX}px, ${this.offsetY}px) scale(${this.scale})`;
         }
 
-        const zoomLevel = document.getElementById('preview-zoom-level');
+        const zoomLevel = document.getElementById("preview-zoom-level");
         if (zoomLevel) {
             zoomLevel.textContent = `${Math.round(this.scale * 100)}%`;
         }
@@ -697,11 +697,11 @@ export const SeatMapPreview = {
      * @param {Object} seat - Seat object
      */
     showSeatDetails(seat) {
-        const panel = document.getElementById('seat-details-panel');
-        const content = document.getElementById('seat-details-content');
+        const panel = document.getElementById("seat-details-panel");
+        const content = document.getElementById("seat-details-content");
 
         if (panel && content) {
-            panel.style.display = 'block';
+            panel.style.display = "block";
             content.innerHTML = `
         <div class="space-y-2">
           <div class="flex justify-between">
@@ -733,9 +733,9 @@ export const SeatMapPreview = {
      * Hide seat details
      */
     hideSeatDetails() {
-        const panel = document.getElementById('seat-details-panel');
+        const panel = document.getElementById("seat-details-panel");
         if (panel) {
-            panel.style.display = 'none';
+            panel.style.display = "none";
         }
         this.hoveredSeat = null;
     }

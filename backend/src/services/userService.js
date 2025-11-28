@@ -107,3 +107,32 @@ export const getUserBookings = async (userId) => {
 
   return user.bookings;
 };
+
+/**
+ * Uploads a profile image file
+ * @param {Object} file - Multer file object
+ * @returns {Promise<string>} Public URL for the uploaded image
+ */
+export const uploadProfileImage = async (file) => {
+  const { validateImage, processProfileImage, saveImage } = await import("#utils/imageProcessor.js");
+  const path = await import("path");
+  const { fileURLToPath } = await import("url");
+  const { dirname } = path;
+
+  // Validate the image file
+  validateImage(file);
+
+  // Process the image (resize and optimize)
+  const processedBuffer = await processProfileImage(file.buffer);
+
+  // Determine upload directory
+  const __filename = fileURLToPath(import.meta.url);
+  const __dirname = dirname(__filename);
+  const uploadDir = path.join(__dirname, "../../public/uploads/profiles");
+
+  // Save the processed image
+  const { filename } = await saveImage(processedBuffer, uploadDir);
+
+  // Return the public URL
+  return `/uploads/profiles/${filename}`;
+};

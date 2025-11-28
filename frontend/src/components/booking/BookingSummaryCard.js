@@ -47,7 +47,7 @@ export const BookingSummaryCard = {
                         <span class="font-mono font-medium text-indigo-700">${displayLabel}</span>
                         ${ticket
                 ? `<span class="text-gray-900">$${ticket.price}</span>`
-                : `<span class="text-gray-400 text-xs">No ticket</span>`
+                : "<span class=\"text-gray-400 text-xs\">No ticket</span>"
               }
                       </div>
                     `;
@@ -56,7 +56,7 @@ export const BookingSummaryCard = {
               </div>
               <p class="text-xs text-gray-500 mt-2">${selectedSeats.length} seat${selectedSeats.length > 1 ? "s" : ""}</p>
             `
-        : `<p class="text-sm text-gray-400 italic">No seats selected</p>`
+        : "<p class=\"text-sm text-gray-400 italic\">No seats selected</p>"
       }
           </div>
 

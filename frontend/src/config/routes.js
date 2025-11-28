@@ -29,6 +29,7 @@ export const ROUTES = {
   ADMIN: {
     DASHBOARD: "/admin/dashboard",
     PERFORMANCES: "/admin/performances",
+    PERFORMANCE_DETAILS: "/admin/performances/:id",
     VENUES: "/admin/venues",
     BOOKINGS: "/admin/bookings",
     USERS: "/admin/users",
@@ -171,6 +172,20 @@ export const ROUTE_METADATA = {
     ],
   },
 
+  [ROUTES.ADMIN.PERFORMANCE_DETAILS]: {
+    title: "Performance Details | Admin",
+    icon: "fa-music",
+    label: "Performance Details",
+    requiresAuth: true,
+    roles: ["admin"],
+    breadcrumb: [
+      { label: "Admin Dashboard", path: ROUTES.ADMIN.DASHBOARD },
+      { label: "Performances", path: ROUTES.ADMIN.PERFORMANCES },
+      { label: "Details", path: null },
+    ],
+    hideInNav: true,
+  },
+
   [ROUTES.ADMIN.USERS]: {
     title: "User Management | Admin",
     icon: "fa-users",
@@ -271,7 +286,7 @@ export function getRouteMetadata(path) {
   for (const [route, metadata] of Object.entries(ROUTE_METADATA)) {
     const routeSegments = route.split("/").filter(Boolean);
 
-    if (pathSegments.length !== routeSegments.length) continue;
+    if (pathSegments.length !== routeSegments.length) {continue;}
 
     const isMatch = routeSegments.every((segment, index) => {
       return segment.startsWith(":") || segment === pathSegments[index];
@@ -289,8 +304,8 @@ export function getNavigationByRole(role) {
   const routes = [];
 
   Object.entries(ROUTE_METADATA).forEach(([path, metadata]) => {
-    if (metadata.hideInNav) return;
-    if (!metadata.roles.includes(role)) return;
+    if (metadata.hideInNav) {return;}
+    if (!metadata.roles.includes(role)) {return;}
 
     routes.push({
       path,
@@ -305,7 +320,7 @@ export function getNavigationByRole(role) {
 
 export function canAccessRoute(path, userRole) {
   const metadata = getRouteMetadata(path);
-  if (!metadata) return true;
+  if (!metadata) {return true;}
 
   if (!userRole) {
     return metadata.roles.includes("guest");

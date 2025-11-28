@@ -425,7 +425,7 @@ export const TicketGenerator = {
                 {
                   stack: [
                     {
-                      text: `VERIFICATION CODE`,
+                      text: "VERIFICATION CODE",
                       style: "verificationHeader",
                       alignment: "center",
                       margin: [0, 0, 0, 6],

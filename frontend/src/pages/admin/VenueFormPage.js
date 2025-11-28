@@ -364,7 +364,7 @@ export default {
           </h3>
           <div id="customFacilitiesContainer" class="space-y-2">
             ${customHtml ||
-      '<p class="text-gray-500 text-sm italic">No custom facilities added</p>'
+      "<p class=\"text-gray-500 text-sm italic\">No custom facilities added</p>"
       }
           </div>
         </div>
@@ -478,8 +478,8 @@ export default {
   calculateCapacity() {
     let totalCapacity = 0;
     $(".section-item").each(function () {
-      const rows = parseInt($(this).find('[data-field="rows"]').val()) || 0;
-      const seatsPerRow = parseInt($(this).find('[data-field="seatsPerRow"]').val()) || 0;
+      const rows = parseInt($(this).find("[data-field=\"rows\"]").val()) || 0;
+      const seatsPerRow = parseInt($(this).find("[data-field=\"seatsPerRow\"]").val()) || 0;
       totalCapacity += rows * seatsPerRow;
     });
     $("#venueCapacity").val(totalCapacity);
@@ -500,7 +500,7 @@ export default {
       this.calculateCapacity();
     });
 
-    $(document).on("input change", '[data-field="rows"], [data-field="seatsPerRow"]', () => {
+    $(document).on("input change", "[data-field=\"rows\"], [data-field=\"seatsPerRow\"]", () => {
       this.calculateCapacity();
     });
   },
@@ -541,10 +541,10 @@ export default {
   },
 
   removeCustomFacility(index) {
-    $(`.custom-facility-item`).eq(index).remove();
+    $(".custom-facility-item").eq(index).remove();
     const $container = $("#customFacilitiesContainer");
     if ($container.find(".custom-facility-item").length === 0) {
-      $container.html('<p class="text-gray-500 text-sm italic">No custom facilities added</p>');
+      $container.html("<p class=\"text-gray-500 text-sm italic\">No custom facilities added</p>");
     }
   },
 
@@ -638,7 +638,7 @@ export default {
   },
 
   removeSection(index) {
-    $(`.section-item`).eq(index).remove();
+    $(".section-item").eq(index).remove();
   },
 
   async handleSubmit(e) {
@@ -650,7 +650,7 @@ export default {
 
     $submitBtn.prop("disabled", true);
     $submitBtn.addClass("opacity-75 cursor-wait");
-    $submitText.html('<i class="fas fa-spinner fa-spin mr-2"></i>Saving...');
+    $submitText.html("<i class=\"fas fa-spinner fa-spin mr-2\"></i>Saving...");
 
     const facilities = [];
 
@@ -661,7 +661,7 @@ export default {
 
     $(".custom-facility-item input").each(function () {
       const value = $(this).val().trim();
-      if (value) facilities.push(value);
+      if (value) {facilities.push(value);}
     });
 
     const sections = [];
@@ -677,7 +677,7 @@ export default {
           }
           section[field] = value;
         });
-      if (section.name) sections.push(section);
+      if (section.name) {sections.push(section);}
     });
 
     const capacity = this.calculateCapacity();

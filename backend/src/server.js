@@ -2,6 +2,30 @@ import env from "./config/env.js";
 import app from "./app.js";
 import sequelize, { testConnection, syncDatabase } from "./config/database.js";
 import { autoSetupDatabase } from "./db/autoSetup.js";
+import EnvironmentValidator from "./config/EnvironmentValidator.js";
+
+const validator = new EnvironmentValidator();
+const validationResult = validator.validate();
+
+if (!validationResult.valid) {
+  console.error("\n❌ Environment validation failed:\n");
+  validationResult.errors.forEach((error) => {
+    console.error(`  - ${error}`);
+  });
+  console.error("\nPlease check your .env file and ensure all required variables are set.");
+  console.error("See backend/ENV_SETUP.md for configuration guide.\n");
+  process.exit(1);
+}
+
+if (validationResult.warnings.length > 0) {
+  console.warn("\n⚠️  Environment warnings:\n");
+  validationResult.warnings.forEach((warning) => {
+    console.warn(`  - ${warning}`);
+  });
+  console.warn("");
+}
+
+console.log("✓ Environment validation passed");
 
 const PORT = env.PORT || 3000;
 const NODE_ENV = env.NODE_ENV || "development";

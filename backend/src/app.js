@@ -7,6 +7,11 @@ import helmet from "helmet";
 import morgan from "morgan";
 import compression from "compression";
 import { apiReference } from "@scalar/express-api-reference";
+import path from "path";
+import { fileURLToPath } from "url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 import "./config/env.js";
 import { corsConfig } from "./config/cors.js";
@@ -28,6 +33,7 @@ import ticketTypeRoutes from "./routes/ticketTypes.js";
 import statsRoutes from "./routes/stats.js";
 import constantsRoutes from "./routes/constants.js";
 import devToolsRoutes from "./routes/devTools.js";
+import imageRoutes from "./routes/images.js";
 
 const app = express();
 
@@ -82,6 +88,9 @@ app.use(cookieParser());
 
 app.use(session(sessionConfig));
 
+app.use("/uploads", express.static(path.join(__dirname, "../public/uploads")));
+app.use("/assets", express.static(path.join(__dirname, "../public/assets")));
+
 app.get("/", (req, res) => {
   res.json({
     success: true,
@@ -97,6 +106,7 @@ app.get("/", (req, res) => {
       ticketTypes: "/api/ticket-types",
       stats: "/api/stats",
       constants: "/api/constants",
+      image: "/api/image",
     },
   });
 });
@@ -161,6 +171,7 @@ app.use("/api/venues", venueRoutes);
 app.use("/api/ticket-types", ticketTypeRoutes);
 app.use("/api/stats", statsRoutes);
 app.use("/api/constants", constantsRoutes);
+app.use("/api/image", imageRoutes);
 
 if (process.env.NODE_ENV === "development") {
   app.use("/api/dev-tools", devToolsRoutes);

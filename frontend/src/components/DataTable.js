@@ -46,7 +46,7 @@ export class DataTable {
 
   enhanceColumns() {
     this.options.columns = this.options.columns.map((col) => {
-      if (col.render) return col;
+      if (col.render) {return col;}
 
       switch (col.type) {
         case "avatar":
@@ -61,7 +61,7 @@ export class DataTable {
         case "date":
           col.render = (row) => {
             const value = TableSortUtil.getNestedValue(row, col.key);
-            if (!value) return "-";
+            if (!value) {return "-";}
             return dayjs(value).format(col.format || "MMM D, YYYY");
           };
           break;
@@ -69,7 +69,7 @@ export class DataTable {
         case "currency":
           col.render = (row) => {
             const value = TableSortUtil.getNestedValue(row, col.key);
-            if (value === null || value === undefined) return "-";
+            if (value === null || value === undefined) {return "-";}
             const prefix = col.prefix || "HKD";
             return `${prefix} ${parseFloat(value).toLocaleString()}`;
           };
@@ -78,7 +78,7 @@ export class DataTable {
         case "badge":
           col.render = (row) => {
             const value = TableSortUtil.getNestedValue(row, col.key);
-            if (!value) return "-";
+            if (!value) {return "-";}
             const colors = col.badgeColors || {};
             const color = colors[value] || "gray";
             return `
@@ -107,8 +107,8 @@ export class DataTable {
           col.render = (row) => {
             const value = TableSortUtil.getNestedValue(row, col.key);
             return value
-              ? '<i class="fas fa-check text-green-600"></i>'
-              : '<i class="fas fa-times text-red-600"></i>';
+              ? "<i class=\"fas fa-check text-green-600\"></i>"
+              : "<i class=\"fas fa-times text-red-600\"></i>";
           };
           break;
 
@@ -137,7 +137,7 @@ export class DataTable {
         case "image":
           col.render = (row) => {
             const value = TableSortUtil.getNestedValue(row, col.key);
-            if (!value) return "-";
+            if (!value) {return "-";}
             return `<img src="${value}" alt="" class="h-10 w-10 rounded object-cover" />`;
           };
           break;
@@ -145,7 +145,7 @@ export class DataTable {
         case "actions":
           col.sortable = false;
           col.render = (row) => {
-            if (!col.actions) return "";
+            if (!col.actions) {return "";}
             const buttons = col.actions(row).map((action) => {
               const color = action.color || "indigo";
               return `
@@ -188,7 +188,7 @@ export class DataTable {
   }
 
   applySorting(column, direction) {
-    if (!column) return;
+    if (!column) {return;}
 
     this.state.currentSort = { column, direction };
     this.state.filteredData = TableSortUtil.sortData(
@@ -223,7 +223,7 @@ export class DataTable {
   applyFilter(searchTerm) {
     this.state.searchTerm = searchTerm;
 
-    let baseData = this.applyColumnFilters();
+    const baseData = this.applyColumnFilters();
 
     if (!searchTerm || searchTerm.trim() === "") {
       this.state.filteredData = baseData;
@@ -306,7 +306,7 @@ export class DataTable {
             <div class="flex-1 grid grid-cols-1 md:grid-cols-${this.options.columnFilters.length} gap-4">
               ${filters}
             </div>
-          ` : '<div class="flex-1"></div>'}
+          ` : "<div class=\"flex-1\"></div>"}
           
           <div class="flex items-center gap-2">
             ${hasFilters ? `
@@ -317,7 +317,7 @@ export class DataTable {
                 <i class="fas fa-times-circle mr-1"></i>
                 Clear
               </button>
-            ` : ''}
+            ` : ""}
             
             ${hasColumns ? `
               <div class="relative">
@@ -348,7 +348,7 @@ export class DataTable {
                   `).join("")}
                 </div>
               </div>
-            ` : ''}
+            ` : ""}
           </div>
         </div>
       </div>

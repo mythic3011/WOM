@@ -22,6 +22,51 @@ export const getAllPerformances = async (req, res, next) => {
   }
 };
 
+export const filterPerformances = async (req, res, next) => {
+  try {
+    const filters = {
+      status: req.query.status,
+      venueId: req.query.venue,
+      genre: req.query.genre,
+      search: req.query.search,
+      dateFrom: req.query.dateFrom,
+      dateTo: req.query.dateTo,
+    };
+
+    const performances = await performanceService.filterPerformances(filters);
+
+    res.json({
+      success: true,
+      data: performances,
+      count: performances.length,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const autocompletePerformances = async (req, res, next) => {
+  try {
+    const query = req.query.q;
+
+    if (!query || query.trim() === "") {
+      return res.status(400).json({
+        success: false,
+        message: "Query parameter 'q' is required",
+      });
+    }
+
+    const suggestions = await performanceService.autocompletePerformances(query);
+
+    res.json({
+      success: true,
+      data: suggestions,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const getPerformanceById = async (req, res, next) => {
   try {
     const performance = await performanceService.getPerformanceById(req.params.id);
@@ -158,6 +203,33 @@ export const getPerformanceSeatMap = async (req, res, next) => {
   }
 };
 
+export const getSeatsWithBookingInfo = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { showtimeId } = req.query;
+    const userRole = req.user?.role || "user";
+
+    const seatDetails = await performanceService.getSeatsWithBookingInfo(
+      id,
+      showtimeId,
+      userRole
+    );
+
+    res.json({
+      success: true,
+      data: seatDetails,
+    });
+  } catch (error) {
+    if (error.message === "Performance not found") {
+      return res.status(404).json({
+        success: false,
+        message: error.message,
+      });
+    }
+    next(error);
+  }
+};
+
 export const rebuildPerformanceSeatMap = async (req, res, next) => {
   try {
     const result = await performanceService.rebuildSeatMap(req.params.id);
@@ -170,6 +242,33 @@ export const rebuildPerformanceSeatMap = async (req, res, next) => {
   } catch (error) {
     if (error.message === "Performance not found") {
       return res.status(404).json({
+        success: false,
+        message: error.message,
+      });
+    }
+    next(error);
+  }
+};
+
+export const uploadPerformanceImage = async (req, res, next) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        message: "No image file provided",
+      });
+    }
+
+    const imageUrl = await performanceService.uploadPerformanceImage(req.file);
+
+    res.json({
+      success: true,
+      message: "Image uploaded successfully",
+      data: { imageUrl },
+    });
+  } catch (error) {
+    if (error.message.includes("Invalid file type") || error.message.includes("File size")) {
+      return res.status(400).json({
         success: false,
         message: error.message,
       });

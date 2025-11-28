@@ -424,15 +424,15 @@ export default {
 
   async updateProfileImage(imageData) {
     const user = getCurrentUser();
-    if (!user) return;
+    if (!user) {return;}
 
     await userAPI.update(user.id, {
       profileImage: imageData,
     });
 
     // Clear profile image cache and refresh navbar
-    const { clearProfileImageCache } = await import('@services/profileImageService.js');
-    const { refreshNavbar } = await import('@components/layout/Navbar.js');
+    const { clearProfileImageCache } = await import("@services/profileImageService.js");
+    const { refreshNavbar } = await import("@components/layout/Navbar.js");
 
     clearProfileImageCache(user.id);
     await refreshNavbar();

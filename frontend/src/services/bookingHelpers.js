@@ -43,7 +43,7 @@ export const bookingHelpers = {
   },
 
   getSeatPrice(seat, pricing) {
-    if (!pricing) return 0;
+    if (!pricing) {return 0;}
 
     const tierPricing = {
       VIP: pricing.vipPrice || pricing.basePrice * 1.5,
@@ -57,7 +57,7 @@ export const bookingHelpers = {
   },
 
   canCancelBooking(booking, currentDate = new Date()) {
-    if (!booking) return false;
+    if (!booking) {return false;}
 
     if (booking.status === "cancelled" || booking.status === "completed") {
       return false;
@@ -125,7 +125,7 @@ export const bookingHelpers = {
   },
 
   filterBookings(bookings, filters) {
-    if (!bookings) return [];
+    if (!bookings) {return [];}
 
     let filtered = [...bookings];
 
@@ -167,7 +167,7 @@ export const bookingHelpers = {
   },
 
   sortBookings(bookings, sortBy = "date-desc") {
-    if (!bookings) return [];
+    if (!bookings) {return [];}
 
     const sorted = [...bookings];
 
@@ -198,7 +198,7 @@ export const bookingHelpers = {
   },
 
   groupByStatus(bookings) {
-    if (!bookings) return {};
+    if (!bookings) {return {};}
 
     return bookings.reduce((groups, booking) => {
       const status = booking.status || "unknown";
@@ -211,7 +211,7 @@ export const bookingHelpers = {
   },
 
   groupByDate(bookings) {
-    if (!bookings) return {};
+    if (!bookings) {return {};}
 
     return bookings.reduce((groups, booking) => {
       const date = dayjs(booking.performanceDate).format("YYYY-MM-DD");

@@ -2,7 +2,7 @@ import dayjs from "dayjs";
 
 export const performanceHelpers = {
   filterPerformances(performances, filters) {
-    if (!performances) return [];
+    if (!performances) {return [];}
 
     let filtered = [...performances];
 
@@ -50,7 +50,7 @@ export const performanceHelpers = {
   },
 
   sortPerformances(performances, sortBy = "date-asc") {
-    if (!performances) return [];
+    if (!performances) {return [];}
 
     const sorted = [...performances];
 
@@ -87,7 +87,7 @@ export const performanceHelpers = {
   },
 
   categorizeByDate(performances) {
-    if (!performances) return { upcoming: [], past: [], today: [] };
+    if (!performances) {return { upcoming: [], past: [], today: [] };}
 
     const now = dayjs();
     const today = now.startOf("day");
@@ -128,9 +128,9 @@ export const performanceHelpers = {
     const percentage = total > 0 ? (sold / total) * 100 : 0;
 
     let status = "available";
-    if (percentage >= 100) status = "sold_out";
-    else if (percentage >= 90) status = "almost_full";
-    else if (percentage >= 70) status = "filling_fast";
+    if (percentage >= 100) {status = "sold_out";}
+    else if (percentage >= 90) {status = "almost_full";}
+    else if (percentage >= 70) {status = "filling_fast";}
 
     return {
       total,
@@ -198,7 +198,7 @@ export const performanceHelpers = {
   },
 
   searchPerformances(performances, query) {
-    if (!query || !performances) return performances;
+    if (!query || !performances) {return performances;}
 
     const searchTerm = query.toLowerCase().trim();
 
@@ -213,7 +213,7 @@ export const performanceHelpers = {
   },
 
   getRecommendations(performances, userHistory = []) {
-    if (!performances || performances.length === 0) return [];
+    if (!performances || performances.length === 0) {return [];}
 
     const userGenres = new Set(userHistory.map((p) => p.genre).filter(Boolean));
     const userComposers = new Set(
@@ -223,14 +223,14 @@ export const performanceHelpers = {
     const scored = performances.map((performance) => {
       let score = 0;
 
-      if (userGenres.has(performance.genre)) score += 3;
-      if (userComposers.has(performance.composer)) score += 2;
+      if (userGenres.has(performance.genre)) {score += 3;}
+      if (userComposers.has(performance.composer)) {score += 2;}
 
       const availability = this.calculateAvailability(performance);
-      if (availability.status === "filling_fast") score += 1;
+      if (availability.status === "filling_fast") {score += 1;}
 
       const daysUntil = dayjs(performance.date).diff(dayjs(), "day");
-      if (daysUntil >= 7 && daysUntil <= 30) score += 1;
+      if (daysUntil >= 7 && daysUntil <= 30) {score += 1;}
 
       return { ...performance, recommendationScore: score };
     });
@@ -241,7 +241,7 @@ export const performanceHelpers = {
   },
 
   groupByGenre(performances) {
-    if (!performances) return {};
+    if (!performances) {return {};}
 
     return performances.reduce((groups, performance) => {
       const genre = performance.genre || "Other";
@@ -254,7 +254,7 @@ export const performanceHelpers = {
   },
 
   groupByVenue(performances) {
-    if (!performances) return {};
+    if (!performances) {return {};}
 
     return performances.reduce((groups, performance) => {
       const venueName = performance.venue?.name || "Unknown";
@@ -267,14 +267,14 @@ export const performanceHelpers = {
   },
 
   calculateSeatAvailability(totalSeats, availableSeats) {
-    if (!totalSeats || totalSeats <= 0) return 0;
+    if (!totalSeats || totalSeats <= 0) {return 0;}
     return (availableSeats / totalSeats) * 100;
   },
 
   getAvailabilityCategory(availabilityPercent) {
-    if (availabilityPercent === 0) return "sold_out";
-    if (availabilityPercent > 0 && availabilityPercent < 10) return "low";
-    if (availabilityPercent >= 10 && availabilityPercent <= 50) return "medium";
+    if (availabilityPercent === 0) {return "sold_out";}
+    if (availabilityPercent > 0 && availabilityPercent < 10) {return "low";}
+    if (availabilityPercent >= 10 && availabilityPercent <= 50) {return "medium";}
     return "high";
   },
 
@@ -313,7 +313,7 @@ export const performanceHelpers = {
   },
 
   formatPerformanceDate(dateTime) {
-    if (!dateTime) return "Date TBA";
+    if (!dateTime) {return "Date TBA";}
     const date = new Date(dateTime);
     return date.toLocaleDateString("en-US", {
       weekday: "short",
@@ -324,7 +324,7 @@ export const performanceHelpers = {
   },
 
   formatPerformanceTime(dateTime) {
-    if (!dateTime) return "";
+    if (!dateTime) {return "";}
     const date = new Date(dateTime);
     return date.toLocaleTimeString("en-US", {
       hour: "2-digit",
@@ -334,7 +334,7 @@ export const performanceHelpers = {
 
   getPriceRange(performance) {
     const showtimes = performance.showtimes || [];
-    if (showtimes.length === 0) return { min: 0, max: 0 };
+    if (showtimes.length === 0) {return { min: 0, max: 0 };}
 
     let min = Infinity;
     let max = -Infinity;
@@ -342,19 +342,19 @@ export const performanceHelpers = {
     showtimes.forEach((showtime) => {
       const sections = showtime.pricing?.sections || [];
       sections.forEach((section) => {
-        if (section.price < min) min = section.price;
-        if (section.price > max) max = section.price;
+        if (section.price < min) {min = section.price;}
+        if (section.price > max) {max = section.price;}
       });
     });
 
-    if (min === Infinity) return { min: 0, max: 0 };
+    if (min === Infinity) {return { min: 0, max: 0 };}
     return { min, max };
   },
 
   formatPriceRange(performance) {
     const { min, max } = this.getPriceRange(performance);
-    if (min === 0 && max === 0) return "Price TBA";
-    if (min === max) return `HKD ${min}`;
+    if (min === 0 && max === 0) {return "Price TBA";}
+    if (min === max) {return `HKD ${min}`;}
     return `HKD ${min} - ${max}`;
   },
 };

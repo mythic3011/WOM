@@ -308,7 +308,7 @@ export const VenueEditForm = {
           
           <div class="aisles-container space-y-2" data-section-index="${index}">
             ${horizontalAisles.length === 0
-                ? `<p class="text-xs text-gray-500 italic">No horizontal aisles configured</p>`
+                ? "<p class=\"text-xs text-gray-500 italic\">No horizontal aisles configured</p>"
                 : horizontalAisles.map((aisle, aisleIndex) => this.renderAisleRow(aisle, index, aisleIndex)).join("")
             }
           </div>
@@ -646,7 +646,7 @@ export const VenueEditForm = {
                   >
                     ${label}
                     ${hasOverride
-                            ? '<i class="fas fa-cog text-indigo-600 float-right"></i>'
+                            ? "<i class=\"fas fa-cog text-indigo-600 float-right\"></i>"
                             : ""
                         }
                   </button>
@@ -829,7 +829,7 @@ export const VenueEditForm = {
           </div>
           <div class="seat-shapes-container space-y-2" data-section-index="${sectionIndex}" data-row-label="${rowLabel}">
             ${(config.seatShapes || []).length === 0
-                ? `<p class="text-xs text-gray-500 italic">No custom seat shapes configured</p>`
+                ? "<p class=\"text-xs text-gray-500 italic\">No custom seat shapes configured</p>"
                 : (config.seatShapes || []).map((shape, shapeIndex) => this.renderSeatShapeRow(shape, sectionIndex, rowLabel, shapeIndex)).join("")
             }
           </div>

@@ -1,6 +1,6 @@
 export const phoneUtils = {
   formatHKPhone(phone) {
-    if (!phone) return "";
+    if (!phone) {return "";}
 
     const cleaned = phone.replace(/\D/g, "");
 
@@ -12,12 +12,12 @@ export const phoneUtils = {
   },
 
   cleanPhone(phone) {
-    if (!phone) return "";
+    if (!phone) {return "";}
     return phone.replace(/\D/g, "");
   },
 
   validateHKPhone(phone) {
-    if (!phone) return false;
+    if (!phone) {return false;}
     const cleaned = this.cleanPhone(phone);
     return /^[2-9][0-9]{7}$/.test(cleaned);
   },

@@ -75,7 +75,7 @@ export const parseValidationErrors = (error) => {
 
 export const displayValidationErrors = (errors, formId) => {
   const form = document.getElementById(formId);
-  if (!form) return;
+  if (!form) {return;}
 
   Object.keys(errors).forEach((field) => {
     const input = form.querySelector(`[name="${field}"]`);
@@ -97,7 +97,7 @@ export const displayValidationErrors = (errors, formId) => {
 
 export const clearValidationErrors = (formId) => {
   const form = document.getElementById(formId);
-  if (!form) return;
+  if (!form) {return;}
 
   form.querySelectorAll(".text-red-600").forEach((el) => el.remove());
   form.querySelectorAll(".border-red-500").forEach((el) => {
@@ -326,7 +326,7 @@ export const cacheApiResponse = (key, data, ttl = 300000) => {
 
 export const getCachedResponse = (key) => {
   const cached = sessionStorage.getItem(`api_cache_${key}`);
-  if (!cached) return null;
+  if (!cached) {return null;}
 
   try {
     const item = JSON.parse(cached);

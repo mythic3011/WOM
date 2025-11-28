@@ -62,6 +62,27 @@ so we need to add the class manually
   .badge-info {
     @apply badge bg-blue-100 text-blue-800;
   }
+
+  .performance-tab {
+    @apply border-gray-300 text-gray-500 hover:text-gray-700 hover:border-gray-400 transition-colors cursor-pointer;
+  }
+
+  .performance-tab.active {
+    @apply border-indigo-600 text-indigo-600;
+  }
+
+  .tab-panel {
+    @apply outline-none;
+  }
+
+  .tab-panel.active {
+    @apply block;
+  }
+}
+
+/* Tab panel visibility - outside @layer to avoid circular dependency */
+.tab-panel.hidden {
+  display: none;
 }
 
 svg g.interactive-seat {
@@ -75,6 +96,57 @@ svg g.interactive-seat rect {
 
 svg g.interactive-seat text {
   pointer-events: none;
+}
+
+/* Seat tooltip styles */
+.seat-tooltip {
+  position: fixed;
+  display: none;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 12px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  z-index: 10000;
+  pointer-events: none;
+  max-width: 250px;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+}
+
+.seat-tooltip .booking-tooltip {
+  color: #374151;
+}
+
+.seat-tooltip .booking-tooltip .font-semibold {
+  font-weight: 600;
+  margin-bottom: 0.25rem;
+  color: #111827;
+}
+
+.seat-tooltip .booking-tooltip .text-gray-500 {
+  color: #6b7280;
+  font-weight: 500;
+}
+
+/* Ensure seat labels are visible on booked seats */
+svg g.seat text.seat-number,
+svg g.interactive-seat text.seat-number {
+  fill: white;
+  font-weight: bold;
+  pointer-events: none;
+  user-select: none;
+}
+
+/* Hover effect for booked seats with tooltips */
+svg g.seat[data-status="occupied"]:hover rect,
+svg g.seat[data-status="booked"]:hover rect,
+svg g.seat[data-status="reserved"]:hover rect,
+svg g.interactive-seat[data-status="occupied"]:hover rect,
+svg g.interactive-seat[data-status="booked"]:hover rect,
+svg g.interactive-seat[data-status="reserved"]:hover rect {
+  opacity: 0.8;
+  stroke-width: 2;
 }
 
 .os-theme-indigo>.os-scrollbar>.os-scrollbar-track>.os-scrollbar-handle {

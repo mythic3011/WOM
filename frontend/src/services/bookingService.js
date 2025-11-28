@@ -26,7 +26,7 @@ export const bookingService = {
   },
 
   filterUserBookings(bookings, userId) {
-    if (!userId || !Array.isArray(bookings)) return [];
+    if (!userId || !Array.isArray(bookings)) {return [];}
 
     return bookings.filter((b) => {
       return (
@@ -72,7 +72,7 @@ export const bookingService = {
   },
 
   calculateAverageSpent(bookings) {
-    if (!bookings.length) return 0;
+    if (!bookings.length) {return 0;}
     return this.calculateTotalSpent(bookings) / bookings.length;
   },
 
@@ -94,7 +94,7 @@ export const bookingService = {
   },
 
   filterByStatus(bookings, status) {
-    if (!status || status === "all") return bookings;
+    if (!status || status === "all") {return bookings;}
 
     const statusMap = {
       confirmed: this.getConfirmedBookings,
@@ -107,7 +107,7 @@ export const bookingService = {
   },
 
   searchBookings(bookings, searchTerm) {
-    if (!searchTerm || !searchTerm.trim()) return bookings;
+    if (!searchTerm || !searchTerm.trim()) {return bookings;}
 
     const term = searchTerm.toLowerCase().trim();
 
@@ -232,5 +232,100 @@ export const bookingService = {
     });
 
     return Object.values(revenueMap);
+  },
+
+  /**
+   * Fetch bookings for a specific performance with retry logic
+   * @param {number} performanceId - Performance ID
+   * @param {Object} options - Options for retry behavior
+   * @param {number} options.maxRetries - Maximum number of retry attempts (default: 3)
+   * @param {number} options.retryDelay - Delay between retries in ms (default: 1000)
+   * @returns {Promise<Array>} Array of bookings with seatTickets
+   */
+  async getBookingsByPerformance(performanceId, options = {}) {
+    const { maxRetries = 3, retryDelay = 1000 } = options;
+    let lastError = null;
+
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
+      try {
+        const response = await bookingAPI.getAll({
+          performanceId,
+        });
+        const allBookings = ResponseExtractor.extract(response, "bookings");
+        return allBookings.filter(b => b.status === "confirmed" || b.status === "pending");
+      } catch (error) {
+        lastError = error;
+        console.warn(
+          `Attempt ${attempt + 1}/${maxRetries} failed for getBookingsByPerformance:`,
+          error.message
+        );
+
+        if (error.status && error.status >= 400 && error.status < 500) {
+          break;
+        }
+
+        if (attempt < maxRetries - 1) {
+          await new Promise((resolve) =>
+            setTimeout(resolve, retryDelay * Math.pow(2, attempt))
+          );
+        }
+      }
+    }
+
+    handleApiError(
+      lastError,
+      `Failed to fetch bookings for performance ${performanceId}`
+    );
+    return [];
+  },
+
+  /**
+   * Fetch bookings for a specific showtime with retry logic
+   * @param {number} performanceId - Performance ID
+   * @param {string} showtimeId - Showtime ID
+   * @param {Object} options - Options for retry behavior
+   * @param {number} options.maxRetries - Maximum number of retry attempts (default: 3)
+   * @param {number} options.retryDelay - Delay between retries in ms (default: 1000)
+   * @returns {Promise<Array>} Array of bookings for the showtime
+   */
+  async getBookingsByShowtime(performanceId, showtimeId, options = {}) {
+    const { maxRetries = 3, retryDelay = 1000 } = options;
+    let lastError = null;
+
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
+      try {
+        const response = await bookingAPI.getAll({
+          performanceId,
+          showtimeId,
+          status: "confirmed,pending",
+        });
+        return ResponseExtractor.extract(response, "bookings");
+      } catch (error) {
+        lastError = error;
+        console.warn(
+          `Attempt ${attempt + 1}/${maxRetries} failed for getBookingsByShowtime:`,
+          error.message
+        );
+
+        // Don't retry on client errors (4xx), only on network/server errors
+        if (error.status && error.status >= 400 && error.status < 500) {
+          break;
+        }
+
+        // Wait before retrying (exponential backoff)
+        if (attempt < maxRetries - 1) {
+          await new Promise((resolve) =>
+            setTimeout(resolve, retryDelay * Math.pow(2, attempt))
+          );
+        }
+      }
+    }
+
+    // All retries failed
+    handleApiError(
+      lastError,
+      `Failed to fetch bookings for showtime ${showtimeId}`
+    );
+    return [];
   },
 };

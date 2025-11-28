@@ -113,7 +113,7 @@ function renderHeaderStats(stats) {
     </div>
   `
     )
-    .join('<div class="h-8 w-px bg-gray-300"></div>');
+    .join("<div class=\"h-8 w-px bg-gray-300\"></div>");
 }
 
 function renderSearchBar(tableId) {
@@ -184,13 +184,13 @@ function renderTableContent({
             }"
               data-column="${col.key}"
               ${
-                col.sortable !== false && sortable ? `data-sortable="true"` : ""
+                col.sortable !== false && sortable ? "data-sortable=\"true\"" : ""
               }>
               <div class="flex items-center gap-2">
                 <span>${col.label}</span>
                 ${
                   col.sortable !== false && sortable
-                    ? '<i class="fas fa-sort text-gray-400 text-xs"></i>'
+                    ? "<i class=\"fas fa-sort text-gray-400 text-xs\"></i>"
                     : ""
                 }
               </div>
@@ -208,7 +208,7 @@ function renderTableContent({
             onRowClick ? "cursor-pointer" : ""
           }"
             data-row-index="${index}"
-            ${onRowClick ? 'data-clickable="true"' : ""}>
+            ${onRowClick ? "data-clickable=\"true\"" : ""}>
             ${
               selectable
                 ? `
@@ -289,7 +289,7 @@ function renderPagination(pagination) {
   const pages = [];
   const maxVisible = 5;
   let startPage = Math.max(1, currentPage - Math.floor(maxVisible / 2));
-  let endPage = Math.min(totalPages, startPage + maxVisible - 1);
+  const endPage = Math.min(totalPages, startPage + maxVisible - 1);
 
   if (endPage - startPage < maxVisible - 1) {
     startPage = Math.max(1, endPage - maxVisible + 1);
@@ -326,7 +326,7 @@ function renderPagination(pagination) {
             <button class="pagination-btn px-3 py-2 text-sm font-medium rounded-lg border text-gray-700 bg-white border-gray-300 hover:bg-gray-50" data-page="1">
               1
             </button>
-            ${startPage > 2 ? '<span class="text-gray-500">...</span>' : ""}
+            ${startPage > 2 ? "<span class=\"text-gray-500\">...</span>" : ""}
           `
               : ""
           }
@@ -353,7 +353,7 @@ function renderPagination(pagination) {
               ? `
             ${
               endPage < totalPages - 1
-                ? '<span class="text-gray-500">...</span>'
+                ? "<span class=\"text-gray-500\">...</span>"
                 : ""
             }
             <button class="pagination-btn px-3 py-2 text-sm font-medium rounded-lg border text-gray-700 bg-white border-gray-300 hover:bg-gray-50" data-page="${totalPages}">
@@ -516,7 +516,7 @@ export function createSimpleTable({
               ? data
                   .map(
                     (row, index) => `
-              <tr ${hover ? 'class="hover:bg-gray-50"' : ""}>
+              <tr ${hover ? "class=\"hover:bg-gray-50\"" : ""}>
                 ${columns
                   .map(
                     (col) => `

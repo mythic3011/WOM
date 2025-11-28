@@ -14,7 +14,7 @@ export async function checkSession() {
       return success ? currentUser : null;
     }
   } catch (error) {
-    console.error('Session check error:', error);
+    console.error("Session check error:", error);
     currentUser = null;
     storage.removeUser();
   }
@@ -40,28 +40,24 @@ export function getCurrentUser() {
  * Removes empty strings and invalid values
  */
 function sanitizeUserData(user) {
-  if (!user || typeof user !== 'object') {
+  if (!user || typeof user !== "object") {
     return null;
   }
 
   const sanitized = { ...user };
 
-  // Remove or fix problematic fields
   Object.keys(sanitized).forEach(key => {
     const value = sanitized[key];
 
-    // Remove empty strings
-    if (typeof value === 'string' && !value.trim()) {
+    if (typeof value === "string" && !value.trim()) {
       delete sanitized[key];
     }
 
-    // Handle null/undefined
     if (value === null || value === undefined) {
       delete sanitized[key];
     }
 
-    // Handle nested objects (like profile)
-    if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+    if (typeof value === "object" && value !== null && !Array.isArray(value)) {
       const nestedSanitized = sanitizeUserData(value);
       if (nestedSanitized && Object.keys(nestedSanitized).length > 0) {
         sanitized[key] = nestedSanitized;
@@ -71,9 +67,8 @@ function sanitizeUserData(user) {
     }
   });
 
-  // Ensure required fields exist
   if (!sanitized.id) {
-    console.error('User data missing required id field');
+    console.error("User data missing required id field");
     return null;
   }
 
@@ -84,7 +79,7 @@ export function setUser(user) {
   const sanitized = sanitizeUserData(user);
 
   if (!sanitized) {
-    console.error('Failed to sanitize user data:', user);
+    console.error("Failed to sanitize user data:", user);
     return false;
   }
 
@@ -117,11 +112,30 @@ export async function login(email, password) {
 
 export async function logout() {
   try {
+    // Preserve remember me data before clearing
+    const REMEMBER_KEY = "wom_remembered_user";
+    const rememberedUser = localStorage.getItem(REMEMBER_KEY);
+
     await authAPI.logout();
+
+    // Clear user data
+    clearUser();
+
+    // Restore remember me data if it existed
+    if (rememberedUser) {
+      localStorage.setItem(REMEMBER_KEY, rememberedUser);
+    }
+
+    window.location.href = ROUTES.AUTH.LOGIN;
   } catch (error) {
     console.error("Logout error:", error);
-  } finally {
+    // Still clear user data even if logout API fails
+    const REMEMBER_KEY = "wom_remembered_user";
+    const rememberedUser = localStorage.getItem(REMEMBER_KEY);
     clearUser();
+    if (rememberedUser) {
+      localStorage.setItem(REMEMBER_KEY, rememberedUser);
+    }
     window.location.href = ROUTES.AUTH.LOGIN;
   }
 }
@@ -157,7 +171,7 @@ export async function requireAuth(redirectUrl = null) {
 }
 
 export async function requireAdmin() {
-  if (!(await requireAuth())) return false;
+  if (!(await requireAuth())) {return false;}
 
   if (!isAdmin()) {
     window.location.href = ROUTES.USER.DASHBOARD;
@@ -167,7 +181,7 @@ export async function requireAdmin() {
 }
 
 export async function requireUser() {
-  if (!(await requireAuth())) return false;
+  if (!(await requireAuth())) {return false;}
 
   if (!isUser()) {
     window.location.href = ROUTES.ADMIN.DASHBOARD;

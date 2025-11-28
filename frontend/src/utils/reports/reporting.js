@@ -16,8 +16,8 @@ export const reportingUtils = {
     };
 
     Object.values(seatDetails).forEach((seat) => {
-      if (seat.status) stats[seat.status]++;
-      if (seat.category === "wheelchair") stats.wheelchair++;
+      if (seat.status) {stats[seat.status]++;}
+      if (seat.category === "wheelchair") {stats.wheelchair++;}
     });
 
     const utilizationPercentage = (

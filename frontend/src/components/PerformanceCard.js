@@ -3,6 +3,7 @@ import dayjs from "dayjs";
 
 import { performanceUtils } from "@utils/performanceUtils.js";
 import { getStatusBadge } from "@utils/status.js";
+import { getPerformanceImageUrl, getImageFallbackSvg } from "@utils/imageUtils.js";
 
 export const PerformanceCard = {
   /**
@@ -138,10 +139,10 @@ export const PerformanceCard = {
       }">
         <div class="relative overflow-hidden bg-gray-100">
           <img
-            src="${performance.imageUrl || "/img/default-performance.jpg"}"
+            src="${getPerformanceImageUrl(performance.imageUrl || performance.image)}"
             alt="${performance.title}"
             class="w-full h-48 object-cover group-hover:scale-110 transition-transform duration-500"
-            onerror="this.onerror=null; this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 400 300%22%3E%3Crect fill=%22%23f3f4f6%22 width=%22400%22 height=%22300%22/%3E%3Ctext fill=%22%239ca3af%22 font-family=%22Arial, sans-serif%22 font-size=%2220%22 text-anchor=%22middle%22 x=%22200%22 y=%22140%22%3E%3Ctspan x=%22200%22 dy=%220%22%3E%F0%9F%8E%BC%3C/tspan%3E%3Ctspan x=%22200%22 dy=%2230%22%3EPerformance Image%3C/tspan%3E%3C/text%3E%3C/svg%3E';"
+            onerror="this.onerror=null; this.src='${getImageFallbackSvg()}';"
           />
           <div class="absolute top-3 right-3">
             ${statusBadge || ""}
@@ -248,10 +249,10 @@ export const PerformanceCard = {
         <div class="flex flex-col md:flex-row">
           <div class="md:w-64 flex-shrink-0 relative overflow-hidden bg-gray-100">
             <img
-              src="${performance.imageUrl || "/img/default-performance.jpg"}"
+              src="${getPerformanceImageUrl(performance.imageUrl || performance.image)}"
               alt="${performance.title}"
               class="w-full h-48 md:h-full object-cover group-hover:scale-110 transition-transform duration-500"
-              onerror="this.onerror=null; this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 400 300%22%3E%3Crect fill=%22%23f3f4f6%22 width=%22400%22 height=%22300%22/%3E%3Ctext fill=%22%239ca3af%22 font-family=%22Arial, sans-serif%22 font-size=%2220%22 text-anchor=%22middle%22 x=%22200%22 y=%22140%22%3E%3Ctspan x=%22200%22 dy=%220%22%3E%F0%9F%8E%BC%3C/tspan%3E%3Ctspan x=%22200%22 dy=%2230%22%3EPerformance Image%3C/tspan%3E%3C/text%3E%3C/svg%3E';"
+              onerror="this.onerror=null; this.src='${getImageFallbackSvg()}';"
             />
             <div class="absolute top-3 left-3">
               ${statusBadge || ""}

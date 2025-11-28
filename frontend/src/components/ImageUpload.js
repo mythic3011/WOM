@@ -26,7 +26,7 @@ export function createImageUpload({
   return `
     <div class="image-upload-container">
       <label class="block text-sm font-medium text-gray-700 mb-2">
-        ${label}${required ? ' <span class="text-red-500">*</span>' : ""}
+        ${label}${required ? " <span class=\"text-red-500\">*</span>" : ""}
       </label>
       <div class="flex items-center space-x-4">
         ${preview
@@ -80,7 +80,7 @@ export function initImageUpload(inputId, previewId, options = {}) {
 
   $(`#${inputId}`).on("change", async function (e) {
     const file = e.target.files[0];
-    if (!file) return;
+    if (!file) {return;}
 
     // Validate using centralized fileHandler
     if (!fileHandler.validateFile(file, { maxSize, allowedTypes })) {
@@ -151,7 +151,7 @@ export function getImageFile(inputId) {
  */
 export async function getImageDataURL(inputId) {
   const file = getImageFile(inputId);
-  if (!file) return null;
+  if (!file) {return null;}
 
   try {
     return await fileHandler.readAsDataURL(file);

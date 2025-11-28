@@ -135,13 +135,27 @@ export default {
   },
 
   async afterRender() {
-    // Preload background image for better LCP
-    const preloadLink = document.createElement('link');
-    preloadLink.rel = 'preload';
-    preloadLink.as = 'image';
-    preloadLink.href = '/img/loginBg2.jpg';
-    preloadLink.fetchPriority = 'high';
-    if (!document.querySelector('link[href="/img/loginBg2.jpg"]')) {
+    const { getCurrentUser } = await import("@utils/core/auth.js");
+    const currentUser = getCurrentUser();
+
+    if (currentUser) {
+      const { ROUTES } = await import("@config/routes.js");
+      const { navigate } = await import("@utils/core/navigation.js");
+
+      if (currentUser.role === "admin") {
+        navigate(ROUTES.ADMIN.DASHBOARD);
+      } else {
+        navigate(ROUTES.USER.DASHBOARD);
+      }
+      return;
+    }
+
+    const preloadLink = document.createElement("link");
+    preloadLink.rel = "preload";
+    preloadLink.as = "image";
+    preloadLink.href = "/img/loginBg2.jpg";
+    preloadLink.fetchPriority = "high";
+    if (!document.querySelector("link[href=\"/img/loginBg2.jpg\"]")) {
       document.head.appendChild(preloadLink);
     }
 
@@ -182,7 +196,6 @@ export default {
 
     $alert.removeClass("hidden").hide().slideDown(300);
 
-    // Show toast notification
     Toast[type](message, title);
   },
 
@@ -226,7 +239,6 @@ export default {
     `);
 
     try {
-      // Hide any previous alerts
       this.hideAlert();
 
       if (remember) {
@@ -251,10 +263,10 @@ export default {
           navigate(ROUTES.USER.DASHBOARD);
         }
       }, 500);
+
     } catch (error) {
       $btn.prop("disabled", false).html(originalHTML);
 
-      // Determine error message
       let errorTitle = "Login Failed";
       let errorMessage = "Please check your credentials and try again.";
 

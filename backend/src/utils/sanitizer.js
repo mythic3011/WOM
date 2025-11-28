@@ -41,10 +41,18 @@ export const sanitizeObject = (obj) => {
     });
   }
 
+  // Fields that should not be HTML-encoded (URLs, paths, etc.)
+  const skipSanitizeFields = ['image', 'imageUrl', 'profileImage', 'avatar', 'url', 'link', 'href'];
+
   const sanitized = {};
   for (const [key, value] of Object.entries(obj)) {
     if (typeof value === "string") {
-      sanitized[key] = sanitizeString(value);
+      // Skip sanitization for URL/path fields
+      if (skipSanitizeFields.includes(key)) {
+        sanitized[key] = value;
+      } else {
+        sanitized[key] = sanitizeString(value);
+      }
     } else if (typeof value === "object" && value !== null) {
       sanitized[key] = sanitizeObject(value);
     } else {

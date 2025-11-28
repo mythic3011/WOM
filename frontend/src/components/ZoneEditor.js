@@ -13,7 +13,7 @@ export function createZoneEditor(zones = [], pricingSections = []) {
       <div id="zonesList" class="space-y-3">
         ${
           zones.length === 0
-            ? '<p class="text-gray-500 text-sm">No zones defined. Click "Add Zone" to create your first pricing zone.</p>'
+            ? "<p class=\"text-gray-500 text-sm\">No zones defined. Click \"Add Zone\" to create your first pricing zone.</p>"
             : zones
                 .map(
                   (zone, index) => `

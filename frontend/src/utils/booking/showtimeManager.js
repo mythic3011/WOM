@@ -42,7 +42,7 @@ export const showtimeManager = {
   },
 
   updateSectionPrice(showtime, showtimeIndex, sectionIndex, ticketType, price) {
-    if (!showtime?.pricing?.sections?.[sectionIndex]) return showtime;
+    if (!showtime?.pricing?.sections?.[sectionIndex]) {return showtime;}
 
     showtime.pricing.sections[sectionIndex].prices[ticketType] = price;
     return showtime;
@@ -80,7 +80,7 @@ export const showtimeManager = {
   },
 
   calculatePriceFromBase(basePrice, pricingRule) {
-    if (!pricingRule) return "";
+    if (!pricingRule) {return "";}
 
     let result = basePrice;
 
@@ -139,7 +139,7 @@ export const showtimeManager = {
   },
 
   calculateShowtimeRevenue(showtime) {
-    if (!showtime.seatDetails) return 0;
+    if (!showtime.seatDetails) {return 0;}
 
     let totalRevenue = 0;
     const sections = showtime.pricing?.sections || [];
@@ -166,10 +166,10 @@ export const showtimeManager = {
   },
 
   getShowtimeUtilization(showtime) {
-    if (!showtime.seatDetails) return 0;
+    if (!showtime.seatDetails) {return 0;}
 
     const totalSeats = this.calculateShowtimeCapacity(showtime);
-    if (totalSeats === 0) return 0;
+    if (totalSeats === 0) {return 0;}
 
     const reservedSeats = Object.values(showtime.seatDetails).filter(
       (s) => s.status === "reserved"
@@ -187,7 +187,7 @@ export const showtimeManager = {
   },
 
   filterShowtimesByVenue(showtimes, venueId) {
-    if (!venueId) return showtimes;
+    if (!venueId) {return showtimes;}
     return showtimes.filter((s) => s.venueId === venueId);
   },
 
@@ -197,8 +197,8 @@ export const showtimeManager = {
       const start = startDate ? new Date(startDate) : null;
       const end = endDate ? new Date(endDate) : null;
 
-      if (start && date < start) return false;
-      if (end && date > end) return false;
+      if (start && date < start) {return false;}
+      if (end && date > end) {return false;}
       return true;
     });
   },

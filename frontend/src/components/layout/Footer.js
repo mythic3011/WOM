@@ -154,8 +154,8 @@ export const Footer = {
         </div>
       `,
             showCancelButton: true,
-            confirmButtonText: '<i class="fas fa-sign-out-alt mr-2"></i>Yes, Logout',
-            cancelButtonText: '<i class="fas fa-times mr-2"></i>Cancel',
+            confirmButtonText: "<i class=\"fas fa-sign-out-alt mr-2\"></i>Yes, Logout",
+            cancelButtonText: "<i class=\"fas fa-times mr-2\"></i>Cancel",
             confirmButtonColor: SwalColors.danger,
             cancelButtonColor: SwalColors.secondary,
             reverseButtons: true,
@@ -170,7 +170,7 @@ export const Footer = {
         if (result.isConfirmed) {
             await Swal.fire({
                 title: "Logging Out...",
-                html: '<div class="text-center"><i class="fas fa-spinner fa-spin text-4xl text-indigo-600"></i><p class="mt-4 text-gray-600">Please wait</p></div>',
+                html: "<div class=\"text-center\"><i class=\"fas fa-spinner fa-spin text-4xl text-indigo-600\"></i><p class=\"mt-4 text-gray-600\">Please wait</p></div>",
                 showConfirmButton: false,
                 allowOutsideClick: false,
                 timer: 800,

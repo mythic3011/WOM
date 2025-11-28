@@ -17,6 +17,7 @@
   "scripts": {
     "start": "node src/server.js",
     "dev": "nodemon src/server.js",
+    "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js",
     "lint": "eslint src/**/*.js",
     "lint:fix": "eslint src/**/*.js --fix",
     "format": "prettier --write \"src/**/*.js\"",
@@ -29,7 +30,13 @@
     "db:seed:undo:all": "sequelize-cli db:seed:undo:all",
     "db:setup": "npm run db:migrate && npm run db:seed:all",
     "db:reset": "npm run db:migrate:undo:all && npm run db:migrate && npm run db:seed:all",
-    "db:fresh": "node src/db/seed.js"
+    "db:fresh": "node src/db/seed.js",
+    "db:cli": "node src/db/cli.js",
+    "db:clean": "node src/db/cli.js clean",
+    "db:init": "node src/db/cli.js init",
+    "db:seed-only": "node src/db/cli.js seed",
+    "db:setup-full": "node src/db/cli.js setup",
+    "db:reset-full": "node src/db/cli.js reset"
   },
   "keywords": [
     "orchestral",

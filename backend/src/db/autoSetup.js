@@ -1,5 +1,6 @@
 import config from "#config/environment.js";
 import logger from "#config/logger.js";
+import sequelize from "#config/database.js";
 import { User, Performance, Venue, TicketType, Booking } from "#models/index.js";
 import { buildSeatMapFromVenueLayout, countSeats } from "#utils/seatMapBuilder.js";
 import { generateUsers } from "./data/users.js";
@@ -26,6 +27,31 @@ const isDatabaseEmpty = async () => {
   }
 };
 
+export const syncDatabaseSchema = async () => {
+  try {
+    logger.info("Synchronizing database schema...");
+    
+    await sequelize.sync({ alter: false });
+    
+    logger.info("Database schema synchronized successfully");
+    return true;
+  } catch (error) {
+    logger.error("Error synchronizing database schema:", error);
+    
+    if (error.name === "SequelizeConnectionError") {
+      logger.error("Suggested fix: Check database connection settings in .env file");
+      logger.error("  - Verify DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD");
+    } else if (error.name === "SequelizeDatabaseError") {
+      logger.error("Suggested fix: Database error occurred");
+      logger.error("  - Check if database exists and user has proper permissions");
+    } else {
+      logger.error("Suggested fix: Review error details above and check database configuration");
+    }
+    
+    throw error;
+  }
+};
+
 const logProgress = (message, data = {}) => {
   if (config.autoSetup.logging === "verbose") {
     logger.info(message, data);
@@ -42,35 +68,45 @@ const measureTime = async (label, fn) => {
   return result;
 };
 
-export const autoSetupDatabase = async () => {
+export const seedMockData = async (options = {}) => {
+  const { force = false } = options;
   const startTime = Date.now();
 
   try {
-    if (!config.autoSetup.enabled) {
-      logger.info("Auto-setup disabled, skipping...");
-      return false;
+    if (!force) {
+      logProgress("Checking database status...");
+      const isEmpty = await isDatabaseEmpty();
+
+      if (!isEmpty) {
+        logger.info("Database already populated, skipping seeding");
+        return false;
+      }
     }
 
-    logProgress("Checking database status...");
-    const isEmpty = await isDatabaseEmpty();
-
-    if (!isEmpty) {
-      logger.info("Database already populated, skipping auto-setup");
-      return false;
-    }
-
-    logger.info(`Starting auto-setup (strategy: ${config.autoSetup.strategy})...`);
+    logger.info("Starting mock data seeding...");
 
     logProgress("Seeding ticket types...");
     await measureTime("Ticket types", async () => {
-      await TicketType.bulkCreate(ticketTypesData);
-      logProgress(`Created ${ticketTypesData.length} ticket types`);
+      try {
+        await TicketType.bulkCreate(ticketTypesData);
+        logger.info(`Created ${ticketTypesData.length} ticket types`);
+      } catch (error) {
+        logger.error("Failed to seed ticket types:", error);
+        logger.error("Suggested fix: Check ticketTypesData structure in data/ticketTypes.js");
+        throw error;
+      }
     });
 
     logProgress("Seeding venues...");
     await measureTime("Venues", async () => {
-      await Venue.bulkCreate(venuesData);
-      logProgress(`Created ${venuesData.length} venues`);
+      try {
+        await Venue.bulkCreate(venuesData);
+        logger.info(`Created ${venuesData.length} venues`);
+      } catch (error) {
+        logger.error("Failed to seed venues:", error);
+        logger.error("Suggested fix: Check venuesData structure in data/venues.js");
+        throw error;
+      }
     });
 
     // Get mock data configuration
@@ -81,49 +117,67 @@ export const autoSetupDatabase = async () => {
     logProgress("Generating venue conditions...");
     const venueConditionsMap = new Map();
     await measureTime("Venue conditions", async () => {
-      // Initialize faker with seed for deterministic generation
-      faker.seed(mockConfig.seed);
+      try {
+        faker.seed(mockConfig.seed);
 
-      const venues = await Venue.findAll();
-      let totalBrokenSeats = 0;
-      let venuesWithBrokenSeats = 0;
+        const venues = await Venue.findAll();
+        let totalBrokenSeats = 0;
+        let venuesWithBrokenSeats = 0;
 
-      for (const venue of venues) {
-        const brokenSeats = generateBrokenSeats(venue, {
-          probability: mockConfig.venueConditions.brokenSeatProbability,
-          maxBrokenSeats: mockConfig.venueConditions.maxBrokenSeatsPerVenue,
-        });
+        for (const venue of venues) {
+          const brokenSeats = generateBrokenSeats(venue, {
+            probability: mockConfig.venueConditions.brokenSeatProbability,
+            maxBrokenSeats: mockConfig.venueConditions.maxBrokenSeatsPerVenue,
+          });
 
-        if (brokenSeats.length > 0) {
-          venuesWithBrokenSeats++;
-          totalBrokenSeats += brokenSeats.length;
+          if (brokenSeats.length > 0) {
+            venuesWithBrokenSeats++;
+            totalBrokenSeats += brokenSeats.length;
 
-          // Store broken seats for later use
-          venueConditionsMap.set(venue.id, brokenSeats);
+            venueConditionsMap.set(venue.id, brokenSeats);
 
-          // Update venue with conditions metadata
-          const updatedLayout = updateVenueWithConditions(venue, brokenSeats);
-          await venue.update({ layout: updatedLayout });
+            const updatedLayout = updateVenueWithConditions(venue, brokenSeats);
+            await venue.update({ layout: updatedLayout });
 
-          logProgress(`Venue ${venue.id} (${venue.name}): ${brokenSeats.length} broken seats`);
+            logProgress(`Venue ${venue.id} (${venue.name}): ${brokenSeats.length} broken seats`);
+          }
         }
-      }
 
-      logProgress(`Generated venue conditions: ${venuesWithBrokenSeats} venues with ${totalBrokenSeats} total broken seats`);
+        logger.info(`Generated venue conditions: ${venuesWithBrokenSeats} venues with ${totalBrokenSeats} total broken seats`);
+      } catch (error) {
+        logger.error("Failed to generate venue conditions:", error);
+        logger.error("Suggested fix: Check venue layout structure and broken seat generation logic");
+        throw error;
+      }
     });
 
     logProgress("Seeding users...");
     const users = await measureTime("Users", async () => {
-      const generatedUsers = await generateUsers();
-      await User.bulkCreate(generatedUsers);
-      logProgress(`Created ${generatedUsers.length} users`);
-      return generatedUsers;
+      try {
+        const generatedUsers = await generateUsers();
+        await User.bulkCreate(generatedUsers);
+        logger.info(`Created ${generatedUsers.length} users`);
+        return generatedUsers;
+      } catch (error) {
+        logger.error("Failed to seed users:", error);
+        logger.error("Suggested fix: Check generateUsers function in data/users.js");
+        logger.error("  - Verify password hashing is working correctly");
+        throw error;
+      }
     });
 
     logProgress("Seeding performances...");
     await measureTime("Performances", async () => {
-      await Performance.bulkCreate(performancesData);
-      logProgress(`Created ${performancesData.length} performances`);
+      try {
+        await Performance.bulkCreate(performancesData);
+        logger.info(`Created ${performancesData.length} performances`);
+      } catch (error) {
+        logger.error("Failed to seed performances:", error);
+        logger.error("Suggested fix: Check performancesData structure in data/performances.js");
+        logger.error("  - Verify all required fields are present");
+        logger.error("  - Check that venueId references exist");
+        throw error;
+      }
     });
 
     logProgress("Computing seat maps for performances...");
@@ -290,8 +344,8 @@ export const autoSetupDatabase = async () => {
 
     const totalDuration = Date.now() - startTime;
 
-    logger.info("Database auto-setup completed successfully");
-    logger.info("\nSetup Summary:");
+    logger.info("Mock data seeding completed successfully");
+    logger.info("\nSeeding Summary:");
     logger.info(`- Environment: ${config.env}`);
     logger.info(`- Mock Data Mode: ${mockConfig.mode}`);
     logger.info(`- Total Time: ${totalDuration}ms`);
@@ -301,7 +355,6 @@ export const autoSetupDatabase = async () => {
     logger.info(`- Ticket Types: ${ticketTypesData.length}`);
     logger.info(`- Bookings: ${bookings.length}`);
 
-    // Add venue conditions summary
     const totalBrokenSeats = Array.from(venueConditionsMap.values()).reduce(
       (sum, seats) => sum + seats.length,
       0
@@ -317,10 +370,45 @@ export const autoSetupDatabase = async () => {
       logger.info("User: user@example.com / userpass");
     }
 
-    return true;
+    return {
+      success: true,
+      counts: {
+        users: users.length,
+        venues: venuesData.length,
+        performances: performancesData.length,
+        ticketTypes: ticketTypesData.length,
+        bookings: bookings.length,
+        brokenSeats: totalBrokenSeats,
+      },
+      duration: totalDuration,
+    };
+  } catch (error) {
+    logger.error("Error in mock data seeding:", error);
+    throw error;
+  }
+};
+
+export const autoSetupDatabase = async () => {
+  try {
+    if (!config.autoSetup.enabled) {
+      logger.info("Auto-setup disabled, skipping...");
+      return false;
+    }
+
+    logger.info(`Starting auto-setup (strategy: ${config.autoSetup.strategy})...`);
+
+    await syncDatabaseSchema();
+    
+    const result = await seedMockData();
+    
+    if (result && result.success) {
+      logger.info("Database auto-setup completed successfully");
+      return true;
+    }
+    
+    return false;
   } catch (error) {
     logger.error("Error in auto-setup:", error);
-    logger.error("Rolling back changes...");
     throw error;
   }
 };

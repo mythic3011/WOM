@@ -1,7 +1,7 @@
 export const TableFilterUtil = {
   filterData(data, searchTerm, columns) {
-    if (!data || !Array.isArray(data)) return data;
-    if (!searchTerm || searchTerm.trim() === "") return data;
+    if (!data || !Array.isArray(data)) {return data;}
+    if (!searchTerm || searchTerm.trim() === "") {return data;}
 
     const term = searchTerm.toLowerCase().trim();
 
@@ -15,8 +15,8 @@ export const TableFilterUtil = {
   },
 
   filterByColumn(data, columnKey, filterValue, filterType = "exact") {
-    if (!data || !Array.isArray(data)) return data;
-    if (!filterValue) return data;
+    if (!data || !Array.isArray(data)) {return data;}
+    if (!filterValue) {return data;}
 
     return data.filter((row) => {
       const value = this.getNestedValue(row, columnKey);
@@ -41,8 +41,8 @@ export const TableFilterUtil = {
   },
 
   filterByMultiple(data, filters) {
-    if (!data || !Array.isArray(data)) return data;
-    if (!filters || Object.keys(filters).length === 0) return data;
+    if (!data || !Array.isArray(data)) {return data;}
+    if (!filters || Object.keys(filters).length === 0) {return data;}
 
     return data.filter((row) => {
       return Object.entries(filters).every(([columnKey, filter]) => {
@@ -66,18 +66,18 @@ export const TableFilterUtil = {
   },
 
   getNestedValue(obj, path) {
-    if (!path) return obj;
+    if (!path) {return obj;}
     const keys = path.split(".");
     let value = obj;
     for (const key of keys) {
       value = value?.[key];
-      if (value === undefined) return null;
+      if (value === undefined) {return null;}
     }
     return value;
   },
 
   getSearchableValue(value, type) {
-    if (value === null || value === undefined) return "";
+    if (value === null || value === undefined) {return "";}
 
     switch (type) {
       case "date":

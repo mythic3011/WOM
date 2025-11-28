@@ -278,7 +278,7 @@ export const VenueLayoutEditor = {
             }" data-row-label="${label}">
                     ${label}
                     ${hasOverride
-              ? '<i class="fas fa-cog text-indigo-600 float-right"></i>'
+              ? "<i class=\"fas fa-cog text-indigo-600 float-right\"></i>"
               : ""
             }
                   </button>
@@ -485,7 +485,7 @@ export const VenueLayoutEditor = {
 
       if (isSkipped) {
         preview.push(
-          `<span class="px-2 py-1 bg-gray-200 text-gray-500 text-xs rounded line-through">SKIP</span>`
+          "<span class=\"px-2 py-1 bg-gray-200 text-gray-500 text-xs rounded line-through\">SKIP</span>"
         );
       } else if (isSkippedNumber) {
         preview.push(
