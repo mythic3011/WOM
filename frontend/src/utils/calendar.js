@@ -41,7 +41,7 @@ function foldLine(line) {
 }
 
 /**
- * Generate iCalendar file content with enhanced formatting
+ * Generate iCalendar file content
  * @param {Object} event - Event details
  * @returns {string} iCalendar format string
  */
@@ -155,7 +155,7 @@ export function downloadICalendar(event, filename = "event.ics") {
 }
 
 /**
- * Generate iCalendar for a booking with enhanced details
+ * Generate iCalendar for a booking with detailed information
  * @param {Object} booking - Booking object
  * @returns {string} iCalendar content
  */

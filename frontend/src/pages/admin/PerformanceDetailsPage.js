@@ -8,6 +8,7 @@ import { performanceAPI } from "@services/index.js";
 import { ROUTES } from "@config/routes.js";
 import { getPerformanceImageUrl, getImageFallbackSvg } from "@utils/imageUtils.js";
 import { initSeatMapPanzoom } from "@utils/panzoomSeatMap.js";
+import { SeatMapTooltip } from "@utils/ui/seatMapTooltip.js";
 
 const PerformanceDetailsPage = {
   title: "Performance Details | Admin",
@@ -27,7 +28,16 @@ const PerformanceDetailsPage = {
   _cacheTTL: 30000,
   _hoverDebounceTimer: null,
   _hoverDebounceDelay: 100,
+  _seatMapTooltip: null,
   _panzoomInstance: null,
+  _editMode: true,
+  _selectedSeats: [],
+  _contextMenu: null,
+  _pollingInterval: null,
+  _keyboardHandler: null,
+  _undoStack: [],
+  _redoStack: [],
+  _seatFilter: null,
 
   async render(params) {
     const { id } = params;
@@ -122,9 +132,11 @@ const PerformanceDetailsPage = {
     return `
       ${this.renderSkipLinks()}
       ${this.renderPageHeader()}
+      ${this.renderEditModeToolbar()}
+      ${this.renderSelectionToolbar()}
       
       <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8">
-        <div class="space-y-6 lg:space-y-8 max-w-7xl mx-auto">
+        <div id="main-content" class="space-y-6 lg:space-y-8 max-w-7xl mx-auto ${this._selectedShowtimeId ? 'lg:pr-80' : ''}">
           ${this.renderPerformanceInfo(performance, venue)}
           ${this.renderShowtimesList()}
           ${this.renderSeatMapViewer()}
@@ -133,6 +145,178 @@ const PerformanceDetailsPage = {
       
       <!-- Screen reader announcements -->
       <div id="sr-announcements" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></div>
+    `;
+  },
+
+  renderEditModeToolbar() {
+    const visibilityClass = this._selectedShowtimeId ? 'lg:block' : 'lg:hidden';
+    
+    return `
+      <div id="edit-mode-toolbar" class="hidden ${visibilityClass} fixed top-20 right-6 z-50 bg-white rounded-xl shadow-xl border border-gray-200 p-4 space-y-3 w-72 transition-all">
+        <div class="flex items-center gap-2 pb-3 border-b border-gray-200">
+          <div class="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+          <span class="text-sm font-semibold text-gray-900">Seat Management</span>
+        </div>
+
+        <div class="space-y-2">
+          <button
+            id="select-all-seats"
+            class="w-full px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded text-sm font-medium transition-colors flex items-center gap-2"
+          >
+            <i class="fas fa-check-double"></i>
+            <span>Select All Available</span>
+          </button>
+
+          <button
+            id="select-all-blocked"
+            class="w-full px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded text-sm font-medium transition-colors flex items-center gap-2"
+          >
+            <i class="fas fa-ban text-red-500"></i>
+            <span>Select All Blocked</span>
+          </button>
+
+          <button
+            id="clear-selection"
+            class="w-full px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded text-sm font-medium transition-colors flex items-center gap-2"
+          >
+            <i class="fas fa-times-circle"></i>
+            <span>Clear Selection</span>
+          </button>
+
+          <div class="relative">
+            <button
+              id="batch-operations-btn"
+              class="w-full px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded text-sm font-medium transition-colors flex items-center justify-between"
+            >
+              <span class="flex items-center gap-2">
+                <i class="fas fa-layer-group"></i>
+                <span>Batch Operations</span>
+              </span>
+              <i class="fas fa-chevron-down text-xs"></i>
+            </button>
+            <div id="batch-operations-menu" class="hidden absolute top-full left-0 right-0 mt-1 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-10">
+              <button class="batch-op-item w-full px-3 py-2 text-left text-sm hover:bg-gray-50 transition-colors" data-action="block-row">
+                <i class="fas fa-minus-circle text-red-500 mr-2"></i>
+                Block Row
+              </button>
+              <button class="batch-op-item w-full px-3 py-2 text-left text-sm hover:bg-gray-50 transition-colors" data-action="block-section">
+                <i class="fas fa-ban text-red-500 mr-2"></i>
+                Block Section
+              </button>
+              <button class="batch-op-item w-full px-3 py-2 text-left text-sm hover:bg-gray-50 transition-colors" data-action="select-by-status">
+                <i class="fas fa-filter text-blue-500 mr-2"></i>
+                Select by Status
+              </button>
+            </div>
+          </div>
+
+          <div class="relative">
+            <button
+              id="filter-seats-btn"
+              class="w-full px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded text-sm font-medium transition-colors flex items-center justify-between"
+            >
+              <span class="flex items-center gap-2">
+                <i class="fas fa-filter"></i>
+                <span>Filter View</span>
+              </span>
+              <i class="fas fa-chevron-down text-xs"></i>
+            </button>
+            <div id="filter-seats-menu" class="hidden absolute top-full left-0 right-0 mt-1 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-10">
+              <button class="filter-item w-full px-3 py-2 text-left text-sm hover:bg-gray-50 transition-colors" data-filter="available">
+                <i class="fas fa-check-circle text-green-500 mr-2"></i>
+                Show Only Available
+              </button>
+              <button class="filter-item w-full px-3 py-2 text-left text-sm hover:bg-gray-50 transition-colors" data-filter="blocked">
+                <i class="fas fa-ban text-red-500 mr-2"></i>
+                Show Only Blocked
+              </button>
+              <button class="filter-item w-full px-3 py-2 text-left text-sm hover:bg-gray-50 transition-colors" data-filter="booked">
+                <i class="fas fa-ticket-alt text-gray-600 mr-2"></i>
+                Show Only Booked
+              </button>
+              <div class="border-t border-gray-200 my-1"></div>
+              <button class="filter-item w-full px-3 py-2 text-left text-sm hover:bg-gray-50 transition-colors" data-filter="clear">
+                <i class="fas fa-times-circle text-gray-500 mr-2"></i>
+                Clear Filters
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="pt-3 border-t border-gray-200 space-y-2">
+          <div class="text-xs text-gray-500 space-y-1">
+            <div><kbd class="px-1.5 py-0.5 bg-gray-100 rounded text-xs">Esc</kbd> Clear Selection</div>
+            <div><kbd class="px-1.5 py-0.5 bg-gray-100 rounded text-xs">${this.getModifierKeyLabel()}+A</kbd> Select All</div>
+            <div><kbd class="px-1.5 py-0.5 bg-gray-100 rounded text-xs">B</kbd> Block Selected</div>
+            <div><kbd class="px-1.5 py-0.5 bg-gray-100 rounded text-xs">U</kbd> Unblock Selected</div>
+            <div><kbd class="px-1.5 py-0.5 bg-gray-100 rounded text-xs">${this.getModifierKeyLabel()}+Z</kbd> Undo</div>
+            <div><kbd class="px-1.5 py-0.5 bg-gray-100 rounded text-xs">${this.getModifierKeyLabel()}+Shift+Z</kbd> Redo</div>
+          </div>
+        </div>
+      </div>
+    `;
+  },
+
+  renderSelectionToolbar() {
+    const selectedCount = this._selectedSeats.length;
+
+    if (selectedCount === 0) {
+      return "";
+    }
+
+    return `
+      <div id="selection-toolbar" class="fixed bottom-6 left-1/2 transform -translate-x-1/2 bg-white rounded-lg shadow-2xl border border-gray-200 px-6 py-4 flex items-center gap-6 z-50 animate-slide-up">
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center">
+            <span class="text-sm font-bold text-indigo-600">${selectedCount}</span>
+          </div>
+          <span class="text-sm font-medium text-gray-700">${selectedCount === 1 ? "seat" : "seats"} selected</span>
+        </div>
+
+        <div class="h-6 w-px bg-gray-300"></div>
+
+        <div class="flex gap-2">
+          <button
+            id="toolbar-block-btn"
+            data-action="block"
+            class="px-4 py-2 bg-red-500 text-white rounded-lg text-sm font-medium hover:bg-red-600 transition-colors flex items-center gap-2 shadow-sm"
+          >
+            <i class="fas fa-ban"></i>
+            <span>Block</span>
+          </button>
+          <button
+            id="toolbar-unblock-btn"
+            data-action="unblock"
+            class="px-4 py-2 bg-green-500 text-white rounded-lg text-sm font-medium hover:bg-green-600 transition-colors flex items-center gap-2 shadow-sm"
+          >
+            <i class="fas fa-check-circle"></i>
+            <span>Make Available</span>
+          </button>
+          <button
+            id="toolbar-clear-btn"
+            data-action="clear"
+            class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-300 transition-colors flex items-center gap-2"
+          >
+            <i class="fas fa-times"></i>
+            <span>Clear</span>
+          </button>
+        </div>
+      </div>
+      <style>
+        @keyframes slide-up {
+          from {
+            transform: translate(-50%, 20px);
+            opacity: 0;
+          }
+          to {
+            transform: translate(-50%, 0);
+            opacity: 1;
+          }
+        }
+        .animate-slide-up {
+          animation: slide-up 0.3s ease-out;
+        }
+      </style>
     `;
   },
 
@@ -184,6 +368,44 @@ const PerformanceDetailsPage = {
           white-space: nowrap;
           border-width: 0;
         }
+        .seat.selected rect,
+        .interactive-seat.selected rect {
+          stroke: #eab308;
+          stroke-width: 3;
+          filter: drop-shadow(0 0 4px rgba(234, 179, 8, 0.5));
+        }
+        .seat.selectable:hover rect,
+        .interactive-seat.selectable:hover rect {
+          filter: brightness(1.1);
+          cursor: pointer;
+        }
+        .seat.non-selectable:hover,
+        .interactive-seat.non-selectable:hover {
+          cursor: not-allowed;
+        }
+        @keyframes pulse {
+          0%, 100% {
+            opacity: 0.6;
+          }
+          50% {
+            opacity: 1;
+          }
+        }
+        .seat-updating {
+          animation: pulse 1s ease-in-out infinite;
+        }
+        .seat-updated {
+          animation: flash-success 1s ease-in-out;
+        }
+        @keyframes flash-success {
+          0%, 100% {
+            opacity: 1;
+          }
+          50% {
+            opacity: 0.6;
+            filter: brightness(1.3);
+          }
+        }
       </style>
     `;
   },
@@ -201,17 +423,6 @@ const PerformanceDetailsPage = {
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
           </svg>
         </button>
-        
-        <button
-          id="manage-seats-btn"
-          class="flex items-center justify-center w-12 h-12 bg-indigo-600 text-white hover:bg-indigo-700 rounded-full shadow-lg hover:shadow-xl transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
-          aria-label="Manage seats for this performance"
-          title="Manage Seats"
-        >
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
-          </svg>
-        </button>
       </div>
       
       <div class="lg:hidden bg-white border-b border-gray-200 shadow-sm sticky top-0 z-50">
@@ -226,17 +437,6 @@ const PerformanceDetailsPage = {
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
               </svg>
               <span class="text-sm font-medium">Back</span>
-            </button>
-            
-            <button
-              id="manage-seats-btn-mobile"
-              class="inline-flex items-center gap-2 px-3 py-1.5 bg-indigo-600 text-white text-sm font-semibold rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition-colors duration-150"
-              aria-label="Manage seats for this performance"
-            >
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
-              </svg>
-              <span>Manage</span>
             </button>
           </div>
         </div>
@@ -267,112 +467,110 @@ const PerformanceDetailsPage = {
     const imageUrl = getPerformanceImageUrl(performance.image || performance.imageUrl);
 
     return `
-      <section id="performance-info" class="bg-white rounded-xl shadow-md border border-gray-100 overflow-hidden hover:shadow-lg transition-shadow duration-200" aria-labelledby="performance-info-heading">
-        ${imageUrl ? `
-          <div class="relative h-64 lg:h-80 overflow-hidden bg-gradient-to-br from-indigo-900 to-purple-900">
-            <img 
-              src="${imageUrl}" 
-              alt="${this.formatValue(performance.title, "Performance")}" 
-              class="w-full h-full object-cover opacity-90"
-              onerror="this.onerror=null; this.src='${getImageFallbackSvg()}';"
-              onerror="this.onerror=null; this.src='/img/default-performance.jpg';"
-            />
-            <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent"></div>
-          </div>
-        ` : ""}
-        
-        <div class="p-6 lg:p-8">
-          <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6 pb-4 border-b border-gray-200">
-            <div class="flex-1">
-              <h1 class="text-2xl lg:text-3xl font-bold text-gray-900 mb-1">${this.formatValue(performance.title, "Performance Details")}</h1>
-              <p class="text-base text-gray-600">
-                <i class="fas fa-user-music text-indigo-600 mr-1"></i>
-                ${this.formatValue(performance.composer, "Unknown Composer")}
-              </p>
-            </div>
-            <div class="flex items-center gap-2">
-              <button
-                id="edit-performance-btn"
-                class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors text-sm font-medium shadow-sm hover:shadow flex items-center gap-2"
-                aria-label="Edit performance"
-              >
-                <i class="fas fa-edit"></i>
-                <span class="hidden sm:inline">Edit</span>
-              </button>
+      <section id="performance-info" class="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow" aria-labelledby="performance-info-heading">
+        <div class="grid grid-cols-1 lg:grid-cols-5 gap-0">
+          <div class="lg:col-span-2 relative h-80 lg:h-auto min-h-[500px] bg-gradient-to-br from-gray-900 to-gray-800">
+            ${imageUrl ? `
+              <img 
+                src="${imageUrl}" 
+                alt="${this.formatValue(performance.title, "Performance")}" 
+                class="w-full h-full object-cover opacity-95"
+                onerror="this.onerror=null; this.src='${getImageFallbackSvg()}';"
+              />
+              <div class="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent"></div>
+            ` : `
+              <div class="w-full h-full flex items-center justify-center">
+                <i class="fas fa-music text-7xl text-gray-700"></i>
+              </div>
+            `}
+            <div class="absolute top-6 right-6 flex gap-3">
               <button
                 id="delete-performance-btn"
-                class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm font-medium shadow-sm hover:shadow flex items-center gap-2"
+                class="p-3.5 bg-red-500/95 backdrop-blur-sm text-white rounded-xl hover:bg-red-600 hover:scale-105 transition-all shadow-lg hover:shadow-xl"
                 aria-label="Delete performance"
               >
-                <i class="fas fa-trash"></i>
-                <span class="hidden sm:inline">Delete</span>
+                <i class="fas fa-trash text-lg"></i>
               </button>
             </div>
           </div>
-          
-          <div class="space-y-6 lg:space-y-8">
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <div class="space-y-4">
-                <h3 class="text-sm font-bold text-gray-800 flex items-center gap-2 uppercase tracking-wide">
-                  <i class="fas fa-music text-blue-600"></i>
-                  <span>Basic Information</span>
-                </h3>
-                <div class="space-y-3">
-                  <div class="flex items-start gap-3 p-4 bg-gradient-to-br from-purple-50 to-pink-50 rounded-lg border border-purple-100">
-                    <div class="flex-shrink-0 w-10 h-10 rounded-lg bg-purple-100 flex items-center justify-center">
-                      <i class="fas fa-wand-magic-sparkles text-purple-600"></i>
-                    </div>
-                    <div class="flex-1 min-w-0">
-                      <div class="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1">Conductor</div>
-                      <div class="text-base font-bold text-gray-900 truncate">${this.formatValue(performance.conductor)}</div>
-                    </div>
+
+          <div class="lg:col-span-3 p-8 lg:p-10">
+            <div class="mb-8">
+              <h1 class="text-4xl font-bold text-gray-900 mb-3 leading-tight">${this.formatValue(performance.title, "Performance Details")}</h1>
+              <div class="flex items-center gap-2 text-lg text-gray-600">
+                <i class="fas fa-user-music text-indigo-600"></i>
+                <span class="font-medium">${this.formatValue(performance.composer, "Unknown Composer")}</span>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
+              <div class="group bg-gradient-to-br from-indigo-50 to-indigo-100/50 rounded-xl p-5 border border-indigo-200 hover:shadow-md transition-all">
+                <div class="flex items-start gap-4">
+                  <div class="w-12 h-12 bg-indigo-500 rounded-xl flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform">
+                    <i class="fas fa-wand-magic-sparkles text-white text-lg"></i>
                   </div>
-                  
-                  <div class="grid grid-cols-2 gap-3">
-                    <div class="flex items-start gap-2 p-3 bg-gradient-to-br from-green-50 to-emerald-50 rounded-lg border border-green-100">
-                      <div class="flex-shrink-0 w-8 h-8 rounded-lg bg-green-100 flex items-center justify-center">
-                        <i class="fas fa-guitar text-green-600 text-sm"></i>
-                      </div>
-                      <div class="flex-1 min-w-0">
-                        <div class="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-0.5">Genre</div>
-                        <div class="text-sm font-bold text-gray-900 truncate">${this.formatValue(performance.genre)}</div>
-                      </div>
-                    </div>
-                    
-                    <div class="flex items-start gap-2 p-3 bg-gradient-to-br from-amber-50 to-orange-50 rounded-lg border border-amber-100">
-                      <div class="flex-shrink-0 w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center">
-                        <i class="fas fa-clock text-amber-600 text-sm"></i>
-                      </div>
-                      <div class="flex-1 min-w-0">
-                        <div class="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-0.5">Duration</div>
-                        <div class="text-sm font-bold text-gray-900">${this.formatValue(performance.duration)} ${performance.duration ? "min" : ""}</div>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div class="flex items-start gap-3 p-4 bg-gradient-to-br from-rose-50 to-red-50 rounded-lg border border-rose-100">
-                    <div class="flex-shrink-0 w-10 h-10 rounded-lg bg-rose-100 flex items-center justify-center">
-                      <i class="fas fa-map-marker-alt text-rose-600"></i>
-                    </div>
-                    <div class="flex-1 min-w-0">
-                      <div class="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1">Venue</div>
-                      <div class="text-base font-bold text-gray-900">${this.formatValue(venue?.name || venue)}</div>
-                      ${venue?.address ? `<div class="text-xs text-gray-600 mt-1">${venue.address}</div>` : ""}
-                      ${venue?.capacity ? `<div class="text-xs text-gray-500 mt-1"><i class="fas fa-chair mr-1"></i>Capacity: ${venue.capacity} seats</div>` : ""}
-                    </div>
+                  <div class="flex-1 min-w-0">
+                    <div class="text-xs text-indigo-700 font-semibold uppercase tracking-wider mb-1">Conductor</div>
+                    <div class="text-base font-bold text-gray-900">${this.formatValue(performance.conductor)}</div>
                   </div>
                 </div>
               </div>
 
-              <div class="space-y-4">
-                <h3 class="text-sm font-bold text-gray-800 flex items-center gap-2 uppercase tracking-wide">
-                  <i class="fas fa-align-left text-purple-600"></i>
-                  <span>Description</span>
-                </h3>
-                <div class="bg-gradient-to-br from-purple-50 to-indigo-50 rounded-lg p-5 text-sm border border-purple-100 min-h-[300px] lg:min-h-[400px]">
-                  <p class="text-gray-800 leading-relaxed whitespace-pre-wrap">
+              <div class="group bg-gradient-to-br from-green-50 to-green-100/50 rounded-xl p-5 border border-green-200 hover:shadow-md transition-all">
+                <div class="flex items-start gap-4">
+                  <div class="w-12 h-12 bg-green-500 rounded-xl flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform">
+                    <i class="fas fa-guitar text-white text-lg"></i>
+                  </div>
+                  <div class="flex-1 min-w-0">
+                    <div class="text-xs text-green-700 font-semibold uppercase tracking-wider mb-1">Genre</div>
+                    <div class="text-base font-bold text-gray-900">${this.formatValue(performance.genre)}</div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="group bg-gradient-to-br from-amber-50 to-amber-100/50 rounded-xl p-5 border border-amber-200 hover:shadow-md transition-all">
+                <div class="flex items-start gap-4">
+                  <div class="w-12 h-12 bg-amber-500 rounded-xl flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform">
+                    <i class="fas fa-clock text-white text-lg"></i>
+                  </div>
+                  <div class="flex-1 min-w-0">
+                    <div class="text-xs text-amber-700 font-semibold uppercase tracking-wider mb-1">Duration</div>
+                    <div class="text-base font-bold text-gray-900">${this.formatValue(performance.duration)} ${performance.duration ? "min" : ""}</div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="group bg-gradient-to-br from-rose-50 to-rose-100/50 rounded-xl p-5 border border-rose-200 hover:shadow-md transition-all">
+                <div class="flex items-start gap-4">
+                  <div class="w-12 h-12 bg-rose-500 rounded-xl flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform">
+                    <i class="fas fa-map-marker-alt text-white text-lg"></i>
+                  </div>
+                  <div class="flex-1 min-w-0">
+                    <div class="text-xs text-rose-700 font-semibold uppercase tracking-wider mb-1">Venue</div>
+                    <div class="text-base font-bold text-gray-900">${this.formatValue(venue?.name || venue)}</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="space-y-4">
+              <div class="flex items-center gap-2">
+                <div class="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center">
+                  <i class="fas fa-align-left text-gray-600"></i>
+                </div>
+                <h3 class="text-sm font-bold text-gray-700 uppercase tracking-wider">About This Performance</h3>
+              </div>
+              <div class="relative bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30 rounded-2xl p-8 border border-slate-200 shadow-sm">
+                <div class="absolute top-4 left-4 text-indigo-200 opacity-20">
+                  <i class="fas fa-quote-left text-4xl"></i>
+                </div>
+                <div class="relative z-10">
+                  <p class="text-gray-800 leading-relaxed whitespace-pre-wrap text-base font-light">
                     ${this.formatValue(performance.description, "No description available")}
                   </p>
+                </div>
+                <div class="absolute bottom-4 right-4 text-indigo-200 opacity-20">
+                  <i class="fas fa-quote-right text-4xl"></i>
                 </div>
               </div>
             </div>
@@ -424,8 +622,9 @@ const PerformanceDetailsPage = {
 
             const totalSeats = st.totalSeats || this._currentPerformance?.totalSeats || this.calculateTotalSeatsFromSeatMap() || 0;
             const bookedSeats = this._bookingsLoaded ? this.calculateBookedSeatsForShowtime(showtimeId) : null;
-            const availableSeats = bookedSeats !== null ? Math.max(0, totalSeats - bookedSeats) : st.availableSeats || totalSeats;
-            const occupancyPercentage = bookedSeats !== null && totalSeats > 0 ? Math.round((bookedSeats / totalSeats) * 100) : 0;
+            const blockedSeats = this.calculateBlockedSeatsForShowtime(showtimeId);
+            const availableSeats = bookedSeats !== null ? Math.max(0, totalSeats - bookedSeats - blockedSeats) : st.availableSeats || totalSeats;
+            const occupancyPercentage = bookedSeats !== null && totalSeats > 0 ? Math.round(((bookedSeats + blockedSeats) / totalSeats) * 100) : 0;
 
             const isSelected = this._selectedShowtimeId === showtimeId;
             const selectedClass = isSelected
@@ -520,6 +719,235 @@ const PerformanceDetailsPage = {
     `;
   },
 
+  calculateStatistics(seatDetails) {
+    const total = Object.keys(seatDetails).length;
+    
+    let available = 0;
+    let booked = 0;
+    let reserved = 0;
+    let blocked = 0;
+    let revenue = 0;
+
+    Object.entries(seatDetails).forEach(([seatId, detail]) => {
+      const status = detail.status || "available";
+      
+      if (status === "available") {
+        available++;
+      } else if (status === "booked") {
+        booked++;
+        if (detail.seatTicket) {
+          const price = parseFloat(detail.seatTicket.price) || 0;
+          revenue += price;
+        }
+      } else if (status === "reserved") {
+        reserved++;
+      } else if (status === "blocked") {
+        blocked++;
+      }
+    });
+
+    const occupancyPercentage = total > 0
+      ? Math.round(((booked + reserved + blocked) / total) * 100)
+      : 0;
+
+    const sectionBreakdown = this.calculateSectionBreakdown(seatDetails);
+
+    return {
+      total,
+      available,
+      booked,
+      reserved,
+      blocked,
+      occupancyPercentage,
+      revenue,
+      sectionBreakdown
+    };
+  },
+
+  calculateSectionBreakdown(seatDetails) {
+    const sections = {};
+
+    if (!seatDetails || Object.keys(seatDetails).length === 0) {
+      return sections;
+    }
+
+    Object.entries(seatDetails).forEach(([seatId, detail]) => {
+      const sectionName = detail.section || "Main";
+      const status = detail.status || "available";
+
+      if (!sections[sectionName]) {
+        sections[sectionName] = {
+          total: 0,
+          available: 0,
+          booked: 0,
+          reserved: 0,
+          blocked: 0,
+          revenue: 0
+        };
+      }
+
+      sections[sectionName].total++;
+
+      if (status === "available") {
+        sections[sectionName].available++;
+      } else if (status === "booked") {
+        sections[sectionName].booked++;
+        if (detail.seatTicket) {
+          const price = parseFloat(detail.seatTicket.price) || 0;
+          sections[sectionName].revenue += price;
+        }
+      } else if (status === "reserved") {
+        sections[sectionName].reserved++;
+      } else if (status === "blocked") {
+        sections[sectionName].blocked++;
+      }
+    });
+
+    return sections;
+  },
+
+  renderStatisticsPanel(statistics, showSectionBreakdown = false) {
+    const occupancyColor = statistics.occupancyPercentage > 80
+      ? "text-red-600 bg-red-50 border-red-200"
+      : statistics.occupancyPercentage > 50
+        ? "text-amber-600 bg-amber-50 border-amber-200"
+        : "text-green-600 bg-green-50 border-green-200";
+
+    const sectionBreakdownHtml = showSectionBreakdown && Object.keys(statistics.sectionBreakdown).length > 1
+      ? this.renderSectionBreakdown(statistics.sectionBreakdown)
+      : "";
+
+    return `
+      <div id="statistics-panel" class="bg-white rounded-xl p-5 border border-gray-200 shadow-sm" role="region" aria-label="Seat availability statistics">
+        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-4">
+          <div class="grid grid-cols-2 sm:grid-cols-5 gap-3 flex-1">
+            <div class="flex items-center gap-3 px-4 py-3 bg-gray-50 rounded-lg" role="group" aria-label="Total seats: ${statistics.total}">
+              <div class="flex-shrink-0 w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center">
+                <i class="fas fa-chair text-gray-600" aria-hidden="true"></i>
+              </div>
+              <div>
+                <div class="text-xs text-gray-500 font-medium">Total</div>
+                <div class="text-lg font-bold text-gray-900">${statistics.total}</div>
+              </div>
+            </div>
+            <div class="flex items-center gap-3 px-4 py-3 bg-green-50 rounded-lg" role="group" aria-label="Available seats: ${statistics.available}">
+              <div class="flex-shrink-0 w-10 h-10 rounded-lg bg-green-100 flex items-center justify-center">
+                <i class="fas fa-check-circle text-green-600" aria-hidden="true"></i>
+              </div>
+              <div>
+                <div class="text-xs text-gray-500 font-medium">Available</div>
+                <div class="text-lg font-bold text-green-700">${statistics.available}</div>
+              </div>
+            </div>
+            <div class="flex items-center gap-3 px-4 py-3 bg-gray-50 rounded-lg" role="group" aria-label="Booked seats: ${statistics.booked}">
+              <div class="flex-shrink-0 w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center">
+                <i class="fas fa-ticket-alt text-gray-700" aria-hidden="true"></i>
+              </div>
+              <div>
+                <div class="text-xs text-gray-500 font-medium">Booked</div>
+                <div class="text-lg font-bold text-gray-900">${statistics.booked}</div>
+              </div>
+            </div>
+            <div class="flex items-center gap-3 px-4 py-3 bg-amber-50 rounded-lg" role="group" aria-label="Reserved seats: ${statistics.reserved}">
+              <div class="flex-shrink-0 w-10 h-10 rounded-lg bg-amber-100 flex items-center justify-center">
+                <i class="fas fa-clock text-amber-600" aria-hidden="true"></i>
+              </div>
+              <div>
+                <div class="text-xs text-gray-500 font-medium">Reserved</div>
+                <div class="text-lg font-bold text-amber-700">${statistics.reserved}</div>
+              </div>
+            </div>
+            <div class="flex items-center gap-3 px-4 py-3 bg-red-50 rounded-lg" role="group" aria-label="Blocked seats: ${statistics.blocked}">
+              <div class="flex-shrink-0 w-10 h-10 rounded-lg bg-red-100 flex items-center justify-center">
+                <i class="fas fa-ban text-red-600" aria-hidden="true"></i>
+              </div>
+              <div>
+                <div class="text-xs text-gray-500 font-medium">Blocked</div>
+                <div class="text-lg font-bold text-red-700">${statistics.blocked}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div class="flex items-center gap-3 px-5 py-3 ${occupancyColor} rounded-xl shadow-sm border-2" role="group" aria-label="Occupancy rate: ${statistics.occupancyPercentage} percent">
+            <i class="fas fa-chart-pie text-2xl" aria-hidden="true"></i>
+            <div>
+              <div class="text-xs font-medium opacity-75">Occupancy Rate</div>
+              <div class="text-2xl font-bold">${statistics.occupancyPercentage}%</div>
+            </div>
+          </div>
+          <div class="flex items-center gap-3 px-5 py-3 bg-indigo-50 rounded-xl shadow-sm border-2 border-indigo-200 text-indigo-600" role="group" aria-label="Total revenue: $${statistics.revenue.toFixed(2)}">
+            <i class="fas fa-dollar-sign text-2xl" aria-hidden="true"></i>
+            <div>
+              <div class="text-xs font-medium opacity-75">Total Revenue</div>
+              <div class="text-2xl font-bold">$${statistics.revenue.toFixed(2)}</div>
+            </div>
+          </div>
+        </div>
+        ${sectionBreakdownHtml}
+      </div>
+    `;
+  },
+
+  renderSectionBreakdown(sectionBreakdown) {
+    const sections = Object.entries(sectionBreakdown);
+
+    if (sections.length <= 1) {
+      return "";
+    }
+
+    return `
+      <div class="mt-4 pt-4 border-t border-gray-200">
+        <h3 class="text-sm font-bold text-gray-800 mb-3 flex items-center gap-2">
+          <i class="fas fa-layer-group text-indigo-600" aria-hidden="true"></i>
+          <span>Section Breakdown</span>
+        </h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+          ${sections.map(([sectionName, stats]) => {
+            const occupancy = stats.total > 0
+              ? Math.round(((stats.booked + stats.reserved) / stats.total) * 100)
+              : 0;
+
+            return `
+              <div class="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                <div class="font-semibold text-gray-900 mb-2 flex items-center justify-between">
+                  <span>${sectionName}</span>
+                  <span class="text-xs font-normal text-gray-500">${occupancy}%</span>
+                </div>
+                <div class="grid grid-cols-2 gap-2 text-xs">
+                  <div class="flex justify-between">
+                    <span class="text-gray-600">Total:</span>
+                    <span class="font-semibold text-gray-900">${stats.total}</span>
+                  </div>
+                  <div class="flex justify-between">
+                    <span class="text-gray-600">Available:</span>
+                    <span class="font-semibold text-green-700">${stats.available}</span>
+                  </div>
+                  <div class="flex justify-between">
+                    <span class="text-gray-600">Booked:</span>
+                    <span class="font-semibold text-gray-900">${stats.booked}</span>
+                  </div>
+                  <div class="flex justify-between">
+                    <span class="text-gray-600">Reserved:</span>
+                    <span class="font-semibold text-amber-700">${stats.reserved}</span>
+                  </div>
+                  <div class="flex justify-between">
+                    <span class="text-gray-600">Blocked:</span>
+                    <span class="font-semibold text-red-700">${stats.blocked}</span>
+                  </div>
+                  <div class="flex justify-between">
+                    <span class="text-gray-600">Revenue:</span>
+                    <span class="font-semibold text-indigo-700">$${stats.revenue.toFixed(2)}</span>
+                  </div>
+                </div>
+              </div>
+            `;
+          }).join("")}
+        </div>
+      </div>
+    `;
+  },
+
   renderSeatMapViewer() {
     return `
       <section id="seat-map-section" class="bg-white rounded-xl shadow-md border border-gray-100 p-6 lg:p-8 hover:shadow-lg transition-shadow duration-200" aria-labelledby="seat-map-heading">
@@ -596,27 +1024,6 @@ const PerformanceDetailsPage = {
       });
     }
 
-    const manageSeatsBtn = document.getElementById("manage-seats-btn");
-    const manageSeatsBtnMobile = document.getElementById("manage-seats-btn-mobile");
-
-    if (manageSeatsBtn) {
-      manageSeatsBtn.addEventListener("click", () => {
-        this.navigateToSeatManagement();
-      });
-    }
-
-    if (manageSeatsBtnMobile) {
-      manageSeatsBtnMobile.addEventListener("click", () => {
-        this.navigateToSeatManagement();
-      });
-    }
-
-    const editBtn = document.getElementById("edit-performance-btn");
-    if (editBtn) {
-      editBtn.addEventListener("click", () => {
-        this.handleEditPerformance();
-      });
-    }
 
     const deleteBtn = document.getElementById("delete-performance-btn");
     if (deleteBtn) {
@@ -626,18 +1033,1281 @@ const PerformanceDetailsPage = {
     }
 
     this.attachShowtimeHandlers();
+    this.attachEditModeToolbarHandlers();
+    this.attachSelectionToolbarHandlers();
+    this.attachKeyboardShortcuts();
   },
 
-  async handleEditPerformance() {
-    const performanceId = this._currentPerformance?.id;
-    if (!performanceId) {
-      console.error("No performance ID available");
+  attachKeyboardShortcuts() {
+    if (this._keyboardHandler) {
+      document.removeEventListener("keydown", this._keyboardHandler);
+    }
+
+    this._keyboardHandler = (e) => {
+      const target = e.target;
+      const isInputField = target.tagName === "INPUT" ||
+                          target.tagName === "TEXTAREA" ||
+                          target.tagName === "SELECT" ||
+                          target.isContentEditable;
+
+      if (isInputField) {
+        return;
+      }
+
+      const userAgent = navigator.userAgent.toLowerCase();
+      const isMac = userAgent.includes("mac") || userAgent.includes("macintosh");
+      const modifierKey = isMac ? e.metaKey : e.ctrlKey;
+
+      switch (e.key.toLowerCase()) {
+        case "escape":
+          if (this._editMode && this._selectedSeats.length > 0) {
+            e.preventDefault();
+            this.clearSeatSelection();
+          }
+          break;
+
+        case "a":
+          if (modifierKey && !e.shiftKey && this._editMode) {
+            e.preventDefault();
+            this.selectAllAvailableSeats();
+          }
+          break;
+
+        case "b":
+          if (!modifierKey && !e.shiftKey && !e.altKey && this._editMode && this._selectedSeats.length > 0) {
+            e.preventDefault();
+            this.handleToolbarAction("block");
+          }
+          break;
+
+        case "u":
+          if (!modifierKey && !e.shiftKey && !e.altKey && this._editMode && this._selectedSeats.length > 0) {
+            e.preventDefault();
+            this.handleToolbarAction("unblock");
+          }
+          break;
+
+        case "z":
+          if (modifierKey && e.shiftKey && this._editMode) {
+            e.preventDefault();
+            this.handleRedo();
+          } else if (modifierKey && !e.shiftKey && this._editMode) {
+            e.preventDefault();
+            this.handleUndo();
+          }
+          break;
+
+        default:
+          break;
+      }
+    };
+
+    document.addEventListener("keydown", this._keyboardHandler);
+
+    this.announceToScreenReader("Keyboard shortcuts enabled.");
+  },
+
+  async handleUndo() {
+    if (this._undoStack.length === 0) {
+      const Notyf = window.Notyf;
+      if (Notyf) {
+        const notyf = new Notyf({
+          duration: 2000,
+          position: { x: "right", y: "top" },
+        });
+        notyf.error("Nothing to undo");
+      }
+      this.announceToScreenReader("Nothing to undo");
       return;
     }
 
-    window.dispatchEvent(new CustomEvent("edit-performance", {
-      detail: { performanceId }
+    const change = this._undoStack.pop();
+
+    try {
+      await this.updateSeatStatus(change.seatIds, change.previousStatus, false);
+
+      this._redoStack.push(change);
+
+      const Notyf = window.Notyf;
+      if (Notyf) {
+        const notyf = new Notyf({
+          duration: 2000,
+          position: { x: "right", y: "top" },
+        });
+        notyf.success(`Undone: ${change.seatIds.length} seat(s) reverted to ${change.previousStatus}`);
+      }
+
+      this.announceToScreenReader(`Undone: ${change.seatIds.length} seats reverted to ${change.previousStatus}`);
+    } catch (error) {
+      console.error("Undo failed:", error);
+
+      this._undoStack.push(change);
+
+      const Notyf = window.Notyf;
+      if (Notyf) {
+        const notyf = new Notyf({
+          duration: 3000,
+          position: { x: "right", y: "top" },
+        });
+        notyf.error("Failed to undo: " + error.message);
+      }
+
+      this.announceToScreenReader("Failed to undo: " + error.message);
+    }
+  },
+
+  async handleRedo() {
+    if (this._redoStack.length === 0) {
+      const Notyf = window.Notyf;
+      if (Notyf) {
+        const notyf = new Notyf({
+          duration: 2000,
+          position: { x: "right", y: "top" },
+        });
+        notyf.error("Nothing to redo");
+      }
+      this.announceToScreenReader("Nothing to redo");
+      return;
+    }
+
+    const change = this._redoStack.pop();
+
+    try {
+      await this.updateSeatStatus(change.seatIds, change.newStatus, false);
+
+      this._undoStack.push(change);
+
+      const Notyf = window.Notyf;
+      if (Notyf) {
+        const notyf = new Notyf({
+          duration: 2000,
+          position: { x: "right", y: "top" },
+        });
+        notyf.success(`Redone: ${change.seatIds.length} seat(s) changed to ${change.newStatus}`);
+      }
+
+      this.announceToScreenReader(`Redone: ${change.seatIds.length} seats changed to ${change.newStatus}`);
+    } catch (error) {
+      console.error("Redo failed:", error);
+
+      this._redoStack.push(change);
+
+      const Notyf = window.Notyf;
+      if (Notyf) {
+        const notyf = new Notyf({
+          duration: 3000,
+          position: { x: "right", y: "top" },
+        });
+        notyf.error("Failed to redo: " + error.message);
+      }
+
+      this.announceToScreenReader("Failed to redo: " + error.message);
+    }
+  },
+
+  pushToUndoStack(seatIds, previousStatus, newStatus) {
+    const change = {
+      action: newStatus === "blocked" ? "block" : "unblock",
+      seatIds: [...seatIds],
+      previousStatus: previousStatus,
+      newStatus: newStatus,
+      timestamp: Date.now(),
+    };
+
+    this._undoStack.push(change);
+
+    if (this._undoStack.length > 10) {
+      this._undoStack.shift();
+    }
+
+    this._redoStack = [];
+  },
+
+  getModifierKeyLabel() {
+    const userAgent = navigator.userAgent.toLowerCase();
+    const isMac = userAgent.includes("mac") || userAgent.includes("macintosh");
+    return isMac ? "⌘" : "Ctrl";
+  },
+
+
+
+  attachEditModeToolbarHandlers() {
+    $("#select-all-seats").on("click", () => {
+      this.selectAllAvailableSeats();
+    });
+
+    $("#select-all-blocked").on("click", () => {
+      this.selectAllBlockedSeats();
+    });
+
+    $("#clear-selection").on("click", () => {
+      this.clearSeatSelection();
+    });
+
+    const batchOperationsBtn = document.getElementById("batch-operations-btn");
+    const batchOperationsMenu = document.getElementById("batch-operations-menu");
+
+    if (batchOperationsBtn && batchOperationsMenu) {
+      batchOperationsBtn.addEventListener("click", () => {
+        batchOperationsMenu.classList.toggle("hidden");
+      });
+
+      document.addEventListener("click", (e) => {
+        if (!batchOperationsBtn.contains(e.target) && !batchOperationsMenu.contains(e.target)) {
+          batchOperationsMenu.classList.add("hidden");
+        }
+      });
+    }
+
+    const batchOpItems = document.querySelectorAll(".batch-op-item");
+    batchOpItems.forEach(item => {
+      item.addEventListener("click", () => {
+        const action = item.getAttribute("data-action");
+        this.handleBatchOperation(action);
+        if (batchOperationsMenu) {
+          batchOperationsMenu.classList.add("hidden");
+        }
+      });
+    });
+
+    const filterSeatsBtn = document.getElementById("filter-seats-btn");
+    const filterSeatsMenu = document.getElementById("filter-seats-menu");
+
+    if (filterSeatsBtn && filterSeatsMenu) {
+      filterSeatsBtn.addEventListener("click", () => {
+        filterSeatsMenu.classList.toggle("hidden");
+      });
+
+      document.addEventListener("click", (e) => {
+        if (!filterSeatsBtn.contains(e.target) && !filterSeatsMenu.contains(e.target)) {
+          filterSeatsMenu.classList.add("hidden");
+        }
+      });
+    }
+
+    const filterItems = document.querySelectorAll(".filter-item");
+    filterItems.forEach(item => {
+      item.addEventListener("click", () => {
+        const filter = item.getAttribute("data-filter");
+        this.applySeatFilter(filter);
+        if (filterSeatsMenu) {
+          filterSeatsMenu.classList.add("hidden");
+        }
+      });
+    });
+  },
+
+  attachSelectionToolbarHandlers() {
+    const toolbarBlockBtn = document.getElementById("toolbar-block-btn");
+    if (toolbarBlockBtn) {
+      toolbarBlockBtn.addEventListener("click", () => {
+        this.handleToolbarAction("block");
+      });
+    }
+
+    const toolbarUnblockBtn = document.getElementById("toolbar-unblock-btn");
+    if (toolbarUnblockBtn) {
+      toolbarUnblockBtn.addEventListener("click", () => {
+        this.handleToolbarAction("unblock");
+      });
+    }
+
+    const toolbarClearBtn = document.getElementById("toolbar-clear-btn");
+    if (toolbarClearBtn) {
+      toolbarClearBtn.addEventListener("click", () => {
+        this.handleToolbarAction("clear");
+      });
+    }
+  },
+
+  selectAllAvailableSeats() {
+    if (!this._seatStatusMap) {
+      return;
+    }
+
+    this.clearSeatSelection();
+
+    const container = $(".seat-map-container");
+    if (!container.length) {
+      return;
+    }
+
+    const seatElements = container.find(".seat, .interactive-seat");
+    let selectedCount = 0;
+
+    seatElements.each((index, seatElement) => {
+      const $seat = $(seatElement);
+      const fullId = $seat.attr("data-full-id");
+
+      if (!fullId) {
+        return;
+      }
+
+      const seatStatus = this._seatStatusMap.get(fullId);
+      const status = seatStatus?.status || $seat.attr("data-status") || "available";
+
+      if (status === "available") {
+        this._selectedSeats.push(fullId);
+        this.addSeatHighlight(seatElement);
+        selectedCount++;
+      }
+    });
+
+    this.announceToScreenReader(`All available seats selected. ${selectedCount} seats selected.`);
+
+    const Notyf = window.Notyf;
+    if (Notyf) {
+      const notyf = new Notyf({
+        duration: 2000,
+        position: { x: "right", y: "top" },
+      });
+      notyf.success(`${selectedCount} available seats selected`);
+    }
+
+    this.refreshSelectionToolbar();
+  },
+
+  selectAllBlockedSeats() {
+    if (!this._seatStatusMap) {
+      return;
+    }
+
+    this.clearSeatSelection();
+
+    const container = $(".seat-map-container");
+    if (!container.length) {
+      return;
+    }
+
+    const seatElements = container.find(".seat, .interactive-seat");
+    let selectedCount = 0;
+
+    seatElements.each((index, seatElement) => {
+      const $seat = $(seatElement);
+      const fullId = $seat.attr("data-full-id");
+
+      if (!fullId) {
+        return;
+      }
+
+      const seatStatus = this._seatStatusMap.get(fullId);
+      const status = seatStatus?.status || $seat.attr("data-status");
+
+      if (status === "blocked") {
+        this._selectedSeats.push(fullId);
+        this.addSeatHighlight(seatElement);
+        selectedCount++;
+      }
+    });
+
+    if (selectedCount === 0) {
+      const Notyf = window.Notyf;
+      if (Notyf) {
+        const notyf = new Notyf({
+          duration: 2000,
+          position: { x: "right", y: "top" },
+        });
+        notyf.error("No blocked seats found");
+      }
+      return;
+    }
+
+    this.announceToScreenReader(`All blocked seats selected. ${selectedCount} seats selected.`);
+
+    const Notyf = window.Notyf;
+    if (Notyf) {
+      const notyf = new Notyf({
+        duration: 2000,
+        position: { x: "right", y: "top" },
+      });
+      notyf.success(`${selectedCount} blocked seats selected`);
+    }
+
+    this.refreshSelectionToolbar();
+  },
+
+  clearSeatSelection() {
+    if (this._selectedSeats.length === 0) {
+      return;
+    }
+
+    const container = document.querySelector(".seat-map-container");
+    if (container) {
+      this._selectedSeats.forEach(fullId => {
+        const seatElement = container.querySelector(`[data-full-id="${fullId}"]`);
+        if (seatElement) {
+          this.removeSeatHighlight(seatElement);
+        }
+      });
+    }
+
+    const count = this._selectedSeats.length;
+    this._selectedSeats = [];
+
+    this.announceToScreenReader(`Selection cleared. ${count} seats deselected.`);
+
+    const Notyf = window.Notyf;
+    if (Notyf) {
+      const notyf = new Notyf({
+        duration: 2000,
+        position: { x: "right", y: "top" },
+      });
+      notyf.success(`Selection cleared (${count} seats)`);
+    }
+
+    this.refreshSelectionToolbar();
+  },
+
+  async handleBatchOperation(action) {
+    if (!this._selectedShowtimeId) {
+      const Notyf = window.Notyf;
+      if (Notyf) {
+        const notyf = new Notyf({
+          duration: 3000,
+          position: { x: "right", y: "top" },
+        });
+        notyf.error("Please select a showtime first");
+      }
+      return;
+    }
+
+    switch (action) {
+      case "block-row":
+        await this.showBlockRowDialog();
+        break;
+
+      case "block-section":
+        await this.showBlockSectionDialog();
+        break;
+
+      case "select-by-status":
+        await this.showSelectByStatusDialog();
+        break;
+
+      default:
+        console.warn(`Unknown batch operation: ${action}`);
+    }
+  },
+
+  async showBlockRowDialog() {
+    const Swal = (await import("sweetalert2")).default;
+
+    const rowOptions = this.generateRowOptions();
+
+    if (rowOptions.length === 0) {
+      await Swal.fire({
+        title: "No Rows Available",
+        text: "No rows found in the current seat map.",
+        icon: "info",
+        confirmButtonText: "OK",
+        confirmButtonColor: "#4f46e5",
+        customClass: {
+          popup: "rounded-xl shadow-2xl",
+          confirmButton: "rounded-lg px-6 py-3 font-semibold"
+        }
+      });
+      return;
+    }
+
+    const result = await Swal.fire({
+      title: "Block Row",
+      html: `
+        <div class="text-left space-y-4">
+          <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-2">Select Row</label>
+            <select id="row-selector" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+              ${rowOptions.map(opt => `<option value="${opt.value}">${opt.label}</option>`).join("")}
+            </select>
+          </div>
+          <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+            <p class="text-sm text-yellow-800">
+              <i class="fas fa-exclamation-triangle mr-2"></i>
+              This will block all available seats in the selected row.
+            </p>
+          </div>
+        </div>
+      `,
+      icon: "question",
+      showCancelButton: true,
+      confirmButtonText: "Block Row",
+      cancelButtonText: "Cancel",
+      confirmButtonColor: "#dc2626",
+      cancelButtonColor: "#6b7280",
+      customClass: {
+        popup: "rounded-xl shadow-2xl",
+        confirmButton: "rounded-lg px-6 py-3 font-semibold",
+        cancelButton: "rounded-lg px-6 py-3 font-semibold"
+      },
+      preConfirm: () => {
+        const selector = document.getElementById("row-selector");
+        return selector ? selector.value : null;
+      }
+    });
+
+    if (result.isConfirmed && result.value) {
+      await this.executeBatchBlockRow(result.value);
+    }
+  },
+
+  async showBlockSectionDialog() {
+    const Swal = (await import("sweetalert2")).default;
+
+    const sectionOptions = this.generateSectionOptions();
+
+    if (sectionOptions.length === 0) {
+      await Swal.fire({
+        title: "No Sections Available",
+        text: "This venue does not have multiple sections.",
+        icon: "info",
+        confirmButtonText: "OK",
+        confirmButtonColor: "#4f46e5",
+        customClass: {
+          popup: "rounded-xl shadow-2xl",
+          confirmButton: "rounded-lg px-6 py-3 font-semibold"
+        }
+      });
+      return;
+    }
+
+    const result = await Swal.fire({
+      title: "Block Section",
+      html: `
+        <div class="text-left space-y-4">
+          <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-2">Select Section</label>
+            <select id="section-selector" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+              ${sectionOptions.map(opt => `<option value="${opt.value}">${opt.label}</option>`).join("")}
+            </select>
+          </div>
+          <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+            <p class="text-sm text-yellow-800">
+              <i class="fas fa-exclamation-triangle mr-2"></i>
+              This will block all available seats in the selected section.
+            </p>
+          </div>
+        </div>
+      `,
+      icon: "question",
+      showCancelButton: true,
+      confirmButtonText: "Block Section",
+      cancelButtonText: "Cancel",
+      confirmButtonColor: "#dc2626",
+      cancelButtonColor: "#6b7280",
+      customClass: {
+        popup: "rounded-xl shadow-2xl",
+        confirmButton: "rounded-lg px-6 py-3 font-semibold",
+        cancelButton: "rounded-lg px-6 py-3 font-semibold"
+      },
+      preConfirm: () => {
+        const selector = document.getElementById("section-selector");
+        return selector ? selector.value : null;
+      }
+    });
+
+    if (result.isConfirmed && result.value) {
+      await this.executeBatchBlockSection(result.value);
+    }
+  },
+
+  async showSelectByStatusDialog() {
+    const Swal = (await import("sweetalert2")).default;
+
+    const result = await Swal.fire({
+      title: "Select by Status",
+      html: `
+        <div class="text-left space-y-4">
+          <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-2">Select Status</label>
+            <select id="status-selector" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+              <option value="available">Available</option>
+              <option value="blocked">Blocked</option>
+            </select>
+          </div>
+          <div class="bg-blue-50 border border-blue-200 rounded-lg p-3">
+            <p class="text-sm text-blue-800">
+              <i class="fas fa-info-circle mr-2"></i>
+              This will select all seats matching the chosen status.
+            </p>
+          </div>
+        </div>
+      `,
+      icon: "question",
+      showCancelButton: true,
+      confirmButtonText: "Select Seats",
+      cancelButtonText: "Cancel",
+      confirmButtonColor: "#4f46e5",
+      cancelButtonColor: "#6b7280",
+      customClass: {
+        popup: "rounded-xl shadow-2xl",
+        confirmButton: "rounded-lg px-6 py-3 font-semibold",
+        cancelButton: "rounded-lg px-6 py-3 font-semibold"
+      },
+      preConfirm: () => {
+        const selector = document.getElementById("status-selector");
+        return selector ? selector.value : null;
+      }
+    });
+
+    if (result.isConfirmed && result.value) {
+      this.executeBatchSelectByStatus(result.value);
+    }
+  },
+
+  generateRowOptions() {
+    const performance = this._currentPerformance;
+    if (!performance || !performance.seatMap) {
+      return [];
+    }
+
+    const seatMap = performance.seatMap;
+    const rowSet = new Set();
+
+    if (seatMap.indexMap && typeof seatMap.indexMap === "object") {
+      Object.values(seatMap.indexMap).forEach(seatData => {
+        if (seatData.row) {
+          rowSet.add(seatData.row);
+        }
+      });
+    } else if (seatMap.rows) {
+      const rows = parseInt(seatMap.rows) || 0;
+      for (let i = 0; i < rows; i++) {
+        const rowLetter = String.fromCharCode(65 + i);
+        rowSet.add(rowLetter);
+      }
+    }
+
+    const sortedRows = Array.from(rowSet).sort();
+
+    return sortedRows.map(row => ({
+      value: row,
+      label: `Row ${row}`
     }));
+  },
+
+  generateSectionOptions() {
+    const venue = this._currentVenue;
+    if (!venue || !venue.layout || !venue.layout.sections) {
+      return [];
+    }
+
+    const sections = venue.layout.sections;
+
+    if (!Array.isArray(sections) || sections.length === 0) {
+      return [];
+    }
+
+    return sections.map(section => ({
+      value: section.name || section.id,
+      label: section.name || section.id || "Unnamed Section"
+    }));
+  },
+
+  async executeBatchBlockRow(rowIdentifier) {
+    const container = document.querySelector(".seat-map-container");
+    if (!container) {
+      return;
+    }
+
+    const seatElements = container.querySelectorAll(".seat, .interactive-seat");
+    const seatsToBlock = [];
+
+    seatElements.forEach(seatElement => {
+      const fullId = seatElement.getAttribute("data-full-id");
+      const status = seatElement.getAttribute("data-status");
+
+      if (!fullId) {
+        return;
+      }
+
+      const seatData = this._currentPerformance?.seatMap?.indexMap?.[fullId];
+      const seatRow = seatData?.row || fullId.charAt(0);
+
+      if (seatRow === rowIdentifier && (status === "available" || status === "blocked")) {
+        seatsToBlock.push(fullId);
+      }
+    });
+
+    if (seatsToBlock.length === 0) {
+      const Notyf = window.Notyf;
+      if (Notyf) {
+        const notyf = new Notyf({
+          duration: 3000,
+          position: { x: "right", y: "top" },
+        });
+        notyf.error(`No available seats found in row ${rowIdentifier}`);
+      }
+      return;
+    }
+
+    await this.executeBatchOperationWithProgress(
+      seatsToBlock,
+      "blocked",
+      `Blocking row ${rowIdentifier}`,
+      `Row ${rowIdentifier} blocked`
+    );
+  },
+
+  async executeBatchBlockSection(sectionIdentifier) {
+    const container = document.querySelector(".seat-map-container");
+    if (!container) {
+      return;
+    }
+
+    const seatElements = container.querySelectorAll(".seat, .interactive-seat");
+    const seatsToBlock = [];
+
+    seatElements.forEach(seatElement => {
+      const fullId = seatElement.getAttribute("data-full-id");
+      const status = seatElement.getAttribute("data-status");
+
+      if (!fullId) {
+        return;
+      }
+
+      const seatData = this._currentPerformance?.seatMap?.indexMap?.[fullId];
+      const seatSection = seatData?.sectionName || seatData?.section;
+
+      if (seatSection === sectionIdentifier && (status === "available" || status === "blocked")) {
+        seatsToBlock.push(fullId);
+      }
+    });
+
+    if (seatsToBlock.length === 0) {
+      const Notyf = window.Notyf;
+      if (Notyf) {
+        const notyf = new Notyf({
+          duration: 3000,
+          position: { x: "right", y: "top" },
+        });
+        notyf.error(`No available seats found in section ${sectionIdentifier}`);
+      }
+      return;
+    }
+
+    await this.executeBatchOperationWithProgress(
+      seatsToBlock,
+      "blocked",
+      `Blocking section ${sectionIdentifier}`,
+      `Section ${sectionIdentifier} blocked`
+    );
+  },
+
+  executeBatchSelectByStatus(statusFilter) {
+    const container = $(".seat-map-container");
+    if (!container.length) {
+      return;
+    }
+
+    this.clearSeatSelection();
+
+    const seatElements = container.find(".seat, .interactive-seat");
+    let selectedCount = 0;
+
+    seatElements.each((index, seatElement) => {
+      const $seat = $(seatElement);
+      const fullId = $seat.attr("data-full-id");
+
+      if (!fullId) {
+        return;
+      }
+
+      const seatStatus = this._seatStatusMap?.get(fullId);
+      const status = seatStatus?.status || $seat.attr("data-status") || "available";
+
+      if (status === statusFilter) {
+        this._selectedSeats.push(fullId);
+        this.addSeatHighlight(seatElement);
+        selectedCount++;
+      }
+    });
+
+    if (selectedCount === 0) {
+      const Notyf = window.Notyf;
+      if (Notyf) {
+        const notyf = new Notyf({
+          duration: 3000,
+          position: { x: "right", y: "top" },
+        });
+        notyf.error(`No ${statusFilter} seats found`);
+      }
+      return;
+    }
+
+    this.announceToScreenReader(`${selectedCount} ${statusFilter} seats selected`);
+
+    const Notyf = window.Notyf;
+    if (Notyf) {
+      const notyf = new Notyf({
+        duration: 2000,
+        position: { x: "right", y: "top" },
+      });
+      notyf.success(`${selectedCount} ${statusFilter} seats selected`);
+    }
+
+    this.refreshSelectionToolbar();
+  },
+
+  applySeatFilter(filter) {
+    if (filter === "clear") {
+      this.clearSeatFilter();
+      return;
+    }
+
+    this._seatFilter = filter;
+
+    const container = document.querySelector(".seat-map-container");
+    if (!container) {
+      return;
+    }
+
+    const seatElements = container.querySelectorAll(".seat, .interactive-seat");
+
+    seatElements.forEach(seatElement => {
+      const status = seatElement.getAttribute("data-status");
+
+      if (!status) {
+        return;
+      }
+
+      const shouldShow = this.shouldShowSeat(status, filter);
+
+      if (shouldShow) {
+        seatElement.style.opacity = "1";
+        seatElement.style.filter = "";
+        seatElement.style.pointerEvents = "auto";
+      } else {
+        seatElement.style.opacity = "0.15";
+        seatElement.style.filter = "grayscale(100%)";
+        seatElement.style.pointerEvents = "none";
+      }
+    });
+
+    const filterLabels = {
+      available: "available",
+      blocked: "blocked",
+      booked: "booked and reserved",
+    };
+
+    const filterLabel = filterLabels[filter] || filter;
+
+    this.announceToScreenReader(`Filter applied: showing only ${filterLabel} seats.`);
+
+    const Notyf = window.Notyf;
+    if (Notyf) {
+      const notyf = new Notyf({
+        duration: 2000,
+        position: { x: "right", y: "top" },
+      });
+      notyf.success(`Showing only ${filterLabel} seats`);
+    }
+  },
+
+  shouldShowSeat(status, filter) {
+    switch (filter) {
+      case "available":
+        return status === "available";
+      case "blocked":
+        return status === "blocked";
+      case "booked":
+        return status === "booked" || status === "reserved";
+      default:
+        return true;
+    }
+  },
+
+  clearSeatFilter() {
+    this._seatFilter = null;
+
+    const container = document.querySelector(".seat-map-container");
+    if (!container) {
+      return;
+    }
+
+    const seatElements = container.querySelectorAll(".seat, .interactive-seat");
+
+    seatElements.forEach(seatElement => {
+      seatElement.style.opacity = "1";
+      seatElement.style.filter = "";
+      seatElement.style.pointerEvents = "auto";
+    });
+
+    this.announceToScreenReader("Filters cleared. All seats are now visible.");
+
+    const Notyf = window.Notyf;
+    if (Notyf) {
+      const notyf = new Notyf({
+        duration: 2000,
+        position: { x: "right", y: "top" },
+      });
+      notyf.success("Filters cleared");
+    }
+  },
+
+  reapplySeatFilter() {
+    if (!this._seatFilter) {
+      return;
+    }
+
+    const container = document.querySelector(".seat-map-container");
+    if (!container) {
+      return;
+    }
+
+    const seatElements = container.querySelectorAll(".seat, .interactive-seat");
+
+    seatElements.forEach(seatElement => {
+      const status = seatElement.getAttribute("data-status");
+
+      if (!status) {
+        return;
+      }
+
+      const shouldShow = this.shouldShowSeat(status, this._seatFilter);
+
+      if (shouldShow) {
+        seatElement.style.opacity = "1";
+        seatElement.style.filter = "";
+        seatElement.style.pointerEvents = "auto";
+      } else {
+        seatElement.style.opacity = "0.15";
+        seatElement.style.filter = "grayscale(100%)";
+        seatElement.style.pointerEvents = "none";
+      }
+    });
+  },
+
+  async executeBatchOperationWithProgress(seatIds, status, progressMessage, successMessage) {
+    if (!seatIds || seatIds.length === 0) {
+      return;
+    }
+
+    const Swal = (await import("sweetalert2")).default;
+
+    const batchSize = 50;
+    const totalBatches = Math.ceil(seatIds.length / batchSize);
+    let completedBatches = 0;
+    let successCount = 0;
+    let failCount = 0;
+
+    if (seatIds.length > batchSize) {
+      Swal.fire({
+        title: progressMessage,
+        html: `
+          <div class="space-y-4">
+            <div class="text-sm text-gray-600">Processing ${seatIds.length} seats...</div>
+            <div class="w-full bg-gray-200 rounded-full h-4 overflow-hidden">
+              <div id="progress-bar" class="bg-indigo-600 h-4 rounded-full transition-all duration-300" style="width: 0%"></div>
+            </div>
+            <div id="progress-text" class="text-sm font-semibold text-gray-700">0%</div>
+          </div>
+        `,
+        allowOutsideClick: false,
+        allowEscapeKey: false,
+        showConfirmButton: false,
+        didOpen: () => {
+          Swal.showLoading();
+        }
+      });
+    }
+
+    for (let i = 0; i < seatIds.length; i += batchSize) {
+      const batch = seatIds.slice(i, i + batchSize);
+
+      try {
+        await this.updateSeatStatus(batch, status);
+        successCount += batch.length;
+      } catch (error) {
+        console.error(`Batch operation failed for batch ${completedBatches + 1}:`, error);
+        failCount += batch.length;
+      }
+
+      completedBatches++;
+
+      if (seatIds.length > batchSize) {
+        const progressPercentage = Math.round((completedBatches / totalBatches) * 100);
+        const progressBar = document.getElementById("progress-bar");
+        const progressText = document.getElementById("progress-text");
+
+        if (progressBar) {
+          progressBar.style.width = `${progressPercentage}%`;
+        }
+
+        if (progressText) {
+          progressText.textContent = `${progressPercentage}%`;
+        }
+      }
+    }
+
+    if (seatIds.length > batchSize) {
+      Swal.close();
+    }
+
+    const Notyf = window.Notyf;
+    if (Notyf) {
+      const notyf = new Notyf({
+        duration: 4000,
+        position: { x: "right", y: "top" },
+      });
+
+      if (failCount === 0) {
+        notyf.success(`${successMessage}: ${successCount} seat(s) updated successfully`);
+      } else if (successCount > 0) {
+        notyf.error(`Partial success: ${successCount} succeeded, ${failCount} failed`);
+      } else {
+        notyf.error(`Operation failed: ${failCount} seat(s) could not be updated`);
+      }
+    }
+
+    this.announceToScreenReader(`Batch operation complete. ${successCount} seats updated, ${failCount} failed.`);
+  },
+
+  async handleToolbarAction(action) {
+    if (this._selectedSeats.length === 0) {
+      return;
+    }
+
+    const Notyf = window.Notyf;
+    const notyf = Notyf ? new Notyf({
+      duration: 3000,
+      position: { x: "right", y: "top" },
+    }) : null;
+
+    switch (action) {
+      case "block":
+        await this.updateSeatStatus(this._selectedSeats, "blocked");
+        break;
+
+      case "unblock":
+        await this.updateSeatStatus(this._selectedSeats, "available");
+        break;
+
+      case "clear":
+        this.clearSeatSelection();
+        this.refreshSelectionToolbar();
+        break;
+
+      default:
+        console.warn(`Unknown toolbar action: ${action}`);
+    }
+  },
+
+  async updateSeatStatus(seatIds, status, trackInUndoStack = true) {
+    if (!seatIds || seatIds.length === 0) {
+      return;
+    }
+
+    if (!this._selectedShowtimeId) {
+      const Notyf = window.Notyf;
+      if (Notyf) {
+        const notyf = new Notyf({
+          duration: 3000,
+          position: { x: "right", y: "top" },
+        });
+        notyf.error("No showtime selected");
+      }
+      return;
+    }
+
+    const performanceId = this._currentPerformance?.id;
+    if (!performanceId) {
+      const Notyf = window.Notyf;
+      if (Notyf) {
+        const notyf = new Notyf({
+          duration: 3000,
+          position: { x: "right", y: "top" },
+        });
+        notyf.error("Invalid performance data");
+      }
+      return;
+    }
+
+    const container = document.querySelector(".seat-map-container");
+    if (!container) {
+      return;
+    }
+
+    const previousStates = new Map();
+    seatIds.forEach(seatId => {
+      const seatElement = container.querySelector(`[data-full-id="${seatId}"]`);
+      if (seatElement) {
+        const currentStatus = seatElement.getAttribute("data-status");
+        const rect = seatElement.querySelector("rect");
+        const currentFill = rect ? rect.getAttribute("fill") : null;
+        previousStates.set(seatId, { status: currentStatus, fill: currentFill, element: seatElement });
+      }
+    });
+
+    this.showSeatUpdateLoading(seatIds);
+
+    try {
+      const response = await fetch(
+        `/api/performances/${performanceId}/seats/batch-update`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            showtimeId: this._selectedShowtimeId,
+            seatIds: seatIds,
+            status: status,
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `Failed to update seats: ${response.statusText}`);
+      }
+
+      const result = await response.json();
+
+      this.updateSeatColorsImmediately(seatIds, status);
+
+      if (this._seatStatusMap) {
+        seatIds.forEach(seatId => {
+          const existingStatus = this._seatStatusMap.get(seatId);
+          if (existingStatus) {
+            existingStatus.status = status;
+          } else {
+            this._seatStatusMap.set(seatId, { status: status });
+          }
+        });
+      }
+
+      if (trackInUndoStack) {
+        const previousStatusValues = Array.from(previousStates.values()).map(s => s.status);
+        const mostCommonPreviousStatus = previousStatusValues.length > 0
+          ? previousStatusValues.sort((a, b) =>
+              previousStatusValues.filter(v => v === a).length - previousStatusValues.filter(v => v === b).length
+            ).pop()
+          : "available";
+
+        this.pushToUndoStack(seatIds, mostCommonPreviousStatus, status);
+      }
+
+      this.clearSeatSelection();
+      this.refreshSelectionToolbar();
+
+      const Notyf = window.Notyf;
+      if (Notyf) {
+        const notyf = new Notyf({
+          duration: 3000,
+          position: { x: "right", y: "top" },
+        });
+        const statusLabel = status === "blocked" ? "blocked" : "made available";
+        notyf.success(`${result.updated || seatIds.length} seat(s) ${statusLabel} successfully`);
+      }
+
+      this.announceToScreenReader(`${seatIds.length} seats updated to ${status}`);
+
+      this.updateShowtimeStats();
+      this.updateStatisticsPanel();
+
+    } catch (error) {
+      console.error("Failed to update seat status:", error);
+
+      this.revertSeatVisuals(previousStates);
+
+      const Notyf = window.Notyf;
+      if (Notyf) {
+        const notyf = new Notyf({
+          duration: 4000,
+          position: { x: "right", y: "top" },
+        });
+        notyf.error(error.message || "Failed to update seats. Please try again.");
+      }
+
+      this.announceToScreenReader(`Failed to update seats: ${error.message}`);
+    }
+  },
+
+  showSeatUpdateLoading(seatIds) {
+    const container = document.querySelector(".seat-map-container");
+    if (!container) {
+      return;
+    }
+
+    seatIds.forEach(seatId => {
+      const seatElement = container.querySelector(`[data-full-id="${seatId}"]`);
+      if (seatElement) {
+        const rect = seatElement.querySelector("rect");
+        if (rect) {
+          rect.classList.add("seat-updating");
+          rect.style.opacity = "0.6";
+          rect.style.animation = "pulse 1s ease-in-out infinite";
+        }
+      }
+    });
+  },
+
+  updateSeatColorsImmediately(seatIds, status) {
+    const container = document.querySelector(".seat-map-container");
+    if (!container) {
+      return;
+    }
+
+    const newColor = getSeatColor(status);
+
+    seatIds.forEach(seatId => {
+      const seatElement = container.querySelector(`[data-full-id="${seatId}"]`);
+      if (seatElement) {
+        const rect = seatElement.querySelector("rect");
+        if (rect) {
+          rect.classList.remove("seat-updating");
+          rect.style.opacity = "1";
+          rect.style.animation = "";
+          rect.setAttribute("fill", newColor);
+          seatElement.setAttribute("data-status", status);
+
+          seatElement.classList.add("seat-updated");
+          setTimeout(() => {
+            seatElement.classList.remove("seat-updated");
+          }, 1000);
+        }
+      }
+    });
+
+    if (this._seatFilter) {
+      this.reapplySeatFilter();
+    }
+  },
+
+  revertSeatVisuals(previousStates) {
+    previousStates.forEach((state, seatId) => {
+      const seatElement = state.element;
+      if (seatElement) {
+        const rect = seatElement.querySelector("rect");
+        if (rect) {
+          rect.classList.remove("seat-updating");
+          rect.style.opacity = "1";
+          rect.style.animation = "";
+
+          if (state.fill) {
+            rect.setAttribute("fill", state.fill);
+          }
+          if (state.status) {
+            seatElement.setAttribute("data-status", state.status);
+          }
+        }
+      }
+    });
+  },
+
+  refreshSelectionToolbar() {
+    const container = document.getElementById("performance-details-container");
+    if (container) {
+      const existingToolbar = document.getElementById("selection-toolbar");
+      if (existingToolbar) {
+        existingToolbar.remove();
+      }
+
+      if (this._selectedSeats.length > 0) {
+        const toolbarHtml = this.renderSelectionToolbar();
+        container.insertAdjacentHTML("beforeend", toolbarHtml);
+        this.attachSelectionToolbarHandlers();
+      }
+    }
   },
 
   async handleDeletePerformance() {
@@ -869,10 +2539,11 @@ const PerformanceDetailsPage = {
       }
     });
 
-    // Announce to screen readers
+    $("#edit-mode-toolbar").removeClass("hidden lg:hidden").addClass("lg:block");
+    $("#main-content").addClass("lg:pr-80");
+
     this.announceToScreenReader(`Showtime ${showtimeDate} selected. Loading seat map.`);
 
-    // Render seat map for selected showtime
     this.renderSeatMapForShowtime(showtimeId);
   },
 
@@ -906,8 +2577,9 @@ const PerformanceDetailsPage = {
 
       const totalSeats = showtime.totalSeats || this._currentPerformance?.totalSeats || this.calculateTotalSeatsFromSeatMap() || 0;
       const bookedSeats = this.calculateBookedSeatsForShowtime(showtimeId);
-      const availableSeats = Math.max(0, totalSeats - bookedSeats);
-      const occupancyPercentage = totalSeats > 0 ? Math.round((bookedSeats / totalSeats) * 100) : 0;
+      const blockedSeats = this.calculateBlockedSeatsForShowtime(showtimeId);
+      const availableSeats = Math.max(0, totalSeats - bookedSeats - blockedSeats);
+      const occupancyPercentage = totalSeats > 0 ? Math.round(((bookedSeats + blockedSeats) / totalSeats) * 100) : 0;
 
       const statsContainer = item.querySelector(".grid.grid-cols-2");
       if (statsContainer) {
@@ -977,6 +2649,22 @@ const PerformanceDetailsPage = {
     return bookedCount;
   },
 
+  calculateBlockedSeatsForShowtime(showtimeId) {
+    const performance = this._currentPerformance;
+    if (!performance?.seatMap?.blockedSeats || !showtimeId) {
+      return 0;
+    }
+
+    const blockedSeatsMap = performance.seatMap.blockedSeats;
+    const blockedSeatsForShowtime = blockedSeatsMap[showtimeId];
+
+    if (!blockedSeatsForShowtime || !Array.isArray(blockedSeatsForShowtime)) {
+      return 0;
+    }
+
+    return blockedSeatsForShowtime.length;
+  },
+
   async loadBookingData(retryCount = 0, maxRetries = 3) {
     if (this._bookingsLoading) {
       return;
@@ -1012,7 +2700,10 @@ const PerformanceDetailsPage = {
     }
 
     try {
-      const bookings = await bookingService.getBookingsByPerformance(performance.id);
+      const bookings = await bookingService.getBookingsByPerformance(performance.id, {
+        maxRetries: maxRetries,
+        retryDelay: 1000
+      });
 
       if (this._abortController.signal.aborted) {
         return;
@@ -1132,9 +2823,11 @@ const PerformanceDetailsPage = {
 
   renderSeatMapForShowtime(showtimeId) {
     console.log("=== renderSeatMapForShowtime DEBUG ===");
+    console.log("Showtime ID:", showtimeId);
     console.log("Performance:", this._currentPerformance);
     console.log("SeatMap:", this._currentPerformance?.seatMap);
     console.log("Venue:", this._currentVenue);
+    console.log("Bookings Data:", this._bookingsData);
 
     if (!this._bookingsData) {
       const contentContainer = document.getElementById("seat-map-content");
@@ -1148,10 +2841,34 @@ const PerformanceDetailsPage = {
       return;
     }
 
+    if (!this._currentPerformance?.seatMap) {
+      const contentContainer = document.getElementById("seat-map-content");
+      if (contentContainer) {
+        contentContainer.innerHTML = `
+          <div class="text-center py-12">
+            <div class="inline-flex items-center justify-center w-20 h-20 rounded-full bg-yellow-50 mb-4">
+              <i class="fas fa-exclamation-circle text-4xl text-yellow-500"></i>
+            </div>
+            <p class="text-gray-900 font-bold text-lg mb-2">Seat Map Not Configured</p>
+            <p class="text-sm text-gray-600 mt-2 max-w-md mx-auto">
+              This performance doesn't have a seat map configured.
+            </p>
+          </div>
+        `;
+      }
+      return;
+    }
+
     const showtimeBookings = this._bookingsData.filter(booking => {
       const bookingShowtimeId = booking.showtimeId || booking.showtime?.id;
-      return String(bookingShowtimeId) === String(showtimeId);
+      const matches = String(bookingShowtimeId) === String(showtimeId);
+      if (matches) {
+        console.log("Matched booking:", booking.bookingReference, "for showtime:", showtimeId);
+      }
+      return matches;
     });
+
+    console.log("Filtered bookings for showtime:", showtimeBookings.length);
 
     const contentContainer = document.getElementById("seat-map-content");
     if (contentContainer) {
@@ -1160,7 +2877,35 @@ const PerformanceDetailsPage = {
       setTimeout(() => {
         const container = document.querySelector(".seat-map-container");
         if (container) {
-          this.attachSeatTooltipHandlers(container);
+          if (!this._seatMapTooltip) {
+            this._seatMapTooltip = new SeatMapTooltip("seat-tooltip-performance");
+          }
+
+          const seatDetails = {};
+          if (this._currentPerformance?.seatMap?.indexMap) {
+            Object.keys(this._currentPerformance.seatMap.indexMap).forEach(fullId => {
+              const seatData = this._currentPerformance.seatMap.indexMap[fullId];
+              const seatStatus = this._seatStatusMap?.get(fullId);
+              const pricing = this._currentTicketTypes?.find(
+                ps => ps.sectionName?.toLowerCase() === seatData.sectionName?.toLowerCase()
+              );
+
+              const isBlocked = seatStatus?.status === "blocked";
+
+              seatDetails[fullId] = {
+                status: seatStatus?.status || "available",
+                booking: seatStatus?.booking,
+                seatTicket: seatStatus?.seatTicket,
+                tier: seatData.tier,
+                section: seatData.sectionName,
+                price: pricing ? parseFloat(pricing.basePrice) : 0,
+                updatedAt: isBlocked ? this._currentPerformance.updatedAt : undefined,
+              };
+            });
+          }
+
+          this._seatMapTooltip.attach(container, this._seatStatusMap, seatDetails);
+          this.attachSeatClickHandlers(container);
         }
 
         if (this._panzoomInstance) {
@@ -1169,6 +2914,8 @@ const PerformanceDetailsPage = {
         this._panzoomInstance = initSeatMapPanzoom(".seat-map-container");
       }, 100);
     }
+
+    this.startBookingPolling();
   },
 
   renderSeatMapViewerContent(showtimeId, bookings) {
@@ -1189,8 +2936,19 @@ const PerformanceDetailsPage = {
     }
 
     const seatMap = performance.seatMap;
-    this._seatStatusMap = buildSeatStatusMap(bookings, seatMap);
+
+    console.log("Building seat status map with:", {
+      bookingsCount: bookings.length,
+      seatMapType: seatMap.sections ? "sectioned" : "simple",
+      seatMapRows: seatMap.rows,
+      seatMapSeatsPerRow: seatMap.seatsPerRow || seatMap.seats,
+      seatMapTotal: seatMap.total
+    });
+
+    this._seatStatusMap = buildSeatStatusMap(bookings, seatMap, showtimeId);
     this._selectedShowtimeId = showtimeId;
+
+    console.log("Seat status map built with", this._seatStatusMap.size, "entries");
 
     const hasSections = seatMap.sections && seatMap.sections.length > 0;
 
@@ -1226,6 +2984,7 @@ const PerformanceDetailsPage = {
 
     for (let row = 0; row < rows; row++) {
       const rowLetter = String.fromCharCode(65 + row);
+      const sectionIndex = Math.floor(row / Math.max(1, Math.ceil(rows / 4)));
 
       for (let seat = 0; seat < seatsPerRow; seat++) {
         const seatNumber = seat + 1;
@@ -1234,16 +2993,21 @@ const PerformanceDetailsPage = {
         const seatStatus = this._seatStatusMap.get(seatId);
 
         if (seatStatus) {
+          const isBlocked = seatStatus.status === "blocked";
+
           seatDetails[seatId] = {
             status: seatStatus.status,
             booking: seatStatus.booking,
             seatTicket: seatStatus.seatTicket,
             price: seatStatus.seatTicket?.price || defaultPrice,
+            updatedAt: isBlocked ? this._currentPerformance?.updatedAt : undefined,
+            sectionIndex: seatStatus.status === "available" ? sectionIndex : undefined,
           };
         } else {
           seatDetails[seatId] = {
             status: "available",
             price: defaultPrice,
+            sectionIndex,
           };
         }
       }
@@ -1287,67 +3051,16 @@ const PerformanceDetailsPage = {
     }
 
     const legend = this.renderSeatMapLegend();
-
-    const bookedCount = Array.from(this._seatStatusMap.values()).filter(
-      s => s.status === "booked" || s.status === "reserved"
-    ).length;
-    const availableCount = totalSeats - bookedCount;
-    const occupancyPercentage = totalSeats > 0
-      ? Math.round((bookedCount / totalSeats) * 100)
-      : 0;
-
-    const occupancyColor = occupancyPercentage > 80
-      ? "text-red-600 bg-red-50"
-      : occupancyPercentage > 50
-        ? "text-amber-600 bg-amber-50"
-        : "text-green-600 bg-green-50";
+    const statistics = this.calculateStatistics(seatDetails);
+    const statisticsHtml = this.renderStatisticsPanel(statistics, false);
 
     setTimeout(() => {
-      this.announceToScreenReader(`Seat map loaded. ${totalSeats} total seats, ${availableCount} available, ${bookedCount} booked. ${occupancyPercentage}% occupancy.`);
+      this.announceToScreenReader(`Seat map loaded. ${statistics.total} total seats, ${statistics.available} available, ${statistics.booked} booked, ${statistics.reserved} reserved, ${statistics.blocked} blocked. ${statistics.occupancyPercentage}% occupancy. Total revenue: $${statistics.revenue.toFixed(2)}.`);
     }, 500);
 
     return `
       <div class="seat-map-viewer space-y-4">
-        <div class="bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl p-5 border border-gray-200 shadow-sm" role="region" aria-label="Seat availability statistics">
-          <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-            <div class="grid grid-cols-3 gap-4 flex-1">
-              <div class="flex items-center gap-3 px-4 py-3 bg-white rounded-lg shadow-sm" role="group" aria-label="Total seats: ${totalSeats}">
-                <div class="flex-shrink-0 w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center">
-                  <i class="fas fa-chair text-gray-600" aria-hidden="true"></i>
-                </div>
-                <div>
-                  <div class="text-xs text-gray-500 font-medium">Total Seats</div>
-                  <div class="text-lg font-bold text-gray-900">${totalSeats}</div>
-                </div>
-              </div>
-              <div class="flex items-center gap-3 px-4 py-3 bg-white rounded-lg shadow-sm" role="group" aria-label="Available seats: ${availableCount}">
-                <div class="flex-shrink-0 w-10 h-10 rounded-lg bg-green-100 flex items-center justify-center">
-                  <i class="fas fa-check-circle text-green-600" aria-hidden="true"></i>
-                </div>
-                <div>
-                  <div class="text-xs text-gray-500 font-medium">Available</div>
-                  <div class="text-lg font-bold text-green-700">${availableCount}</div>
-                </div>
-              </div>
-              <div class="flex items-center gap-3 px-4 py-3 bg-white rounded-lg shadow-sm" role="group" aria-label="Booked seats: ${bookedCount}">
-                <div class="flex-shrink-0 w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center">
-                  <i class="fas fa-ticket-alt text-gray-700" aria-hidden="true"></i>
-                </div>
-                <div>
-                  <div class="text-xs text-gray-500 font-medium">Booked</div>
-                  <div class="text-lg font-bold text-gray-900">${bookedCount}</div>
-                </div>
-              </div>
-            </div>
-            <div class="flex items-center gap-3 px-5 py-3 ${occupancyColor} rounded-xl shadow-sm border-2 ${occupancyPercentage > 80 ? "border-red-200" : occupancyPercentage > 50 ? "border-amber-200" : "border-green-200"}" role="group" aria-label="Occupancy rate: ${occupancyPercentage} percent">
-              <i class="fas fa-chart-pie text-2xl" aria-hidden="true"></i>
-              <div>
-                <div class="text-xs font-medium opacity-75">Occupancy Rate</div>
-                <div class="text-2xl font-bold">${occupancyPercentage}%</div>
-              </div>
-            </div>
-          </div>
-        </div>
+        ${statisticsHtml}
 
         <div class="seat-map-container bg-gradient-to-b from-white to-gray-50 rounded-xl p-6 border border-gray-200 shadow-inner overflow-auto" style="max-height: 1200px; min-height: 600px;" role="img" aria-label="Venue seat map showing ${rows} rows with ${seatsPerRow} seats per row">
           ${seatMapSVG}
@@ -1384,6 +3097,8 @@ const PerformanceDetailsPage = {
           price = parseFloat(pricing.basePrice) || 0;
         }
 
+        const isBlocked = seatStatus?.status === "blocked";
+
         seatDetails[fullId] = {
           status: seatStatus?.status || "available",
           booking: seatStatus?.booking,
@@ -1391,6 +3106,7 @@ const PerformanceDetailsPage = {
           tier: tier,
           section: sectionName,
           price: price,
+          updatedAt: isBlocked ? performance.updatedAt : undefined,
         };
       });
     }
@@ -1404,8 +3120,8 @@ const PerformanceDetailsPage = {
       seatMapSVG = SeatMap.generateFromLayout(
         layoutConfig,
         seatDetails,
-        [],
-        false
+        this._selectedSeats,
+        this._editMode
       );
     } catch (error) {
       console.error("Error generating sectioned seat map:", error);
@@ -1428,69 +3144,17 @@ const PerformanceDetailsPage = {
       });
     }
 
-    const bookedCount = Array.from(this._seatStatusMap.values()).filter(
-      s => s.status === "booked" || s.status === "reserved"
-    ).length;
-    const availableCount = totalSeats - bookedCount;
-    const occupancyPercentage = totalSeats > 0
-      ? Math.round((bookedCount / totalSeats) * 100)
-      : 0;
-
-    const occupancyColor = occupancyPercentage > 80
-      ? "text-red-600 bg-red-50"
-      : occupancyPercentage > 50
-        ? "text-amber-600 bg-amber-50"
-        : "text-green-600 bg-green-50";
-
     const legend = this.renderSeatMapLegend();
+    const statistics = this.calculateStatistics(seatDetails);
+    const statisticsHtml = this.renderStatisticsPanel(statistics, true);
 
-    // Announce seat map loaded to screen readers
     setTimeout(() => {
-      this.announceToScreenReader(`Seat map loaded with ${layoutConfig.sections.length} sections. ${totalSeats} total seats, ${availableCount} available, ${bookedCount} booked. ${occupancyPercentage}% occupancy.`);
+      this.announceToScreenReader(`Seat map loaded with ${layoutConfig.sections.length} sections. ${statistics.total} total seats, ${statistics.available} available, ${statistics.booked} booked, ${statistics.reserved} reserved, ${statistics.blocked} blocked. ${statistics.occupancyPercentage}% occupancy. Total revenue: $${statistics.revenue.toFixed(2)}.`);
     }, 500);
 
     return `
       <div class="seat-map-viewer space-y-4">
-        <div class="bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl p-5 border border-gray-200 shadow-sm" role="region" aria-label="Seat availability statistics">
-          <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-            <div class="grid grid-cols-3 gap-4 flex-1">
-              <div class="flex items-center gap-3 px-4 py-3 bg-white rounded-lg shadow-sm" role="group" aria-label="Total seats: ${totalSeats}">
-                <div class="flex-shrink-0 w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center">
-                  <i class="fas fa-chair text-gray-600" aria-hidden="true"></i>
-                </div>
-                <div>
-                  <div class="text-xs text-gray-500 font-medium">Total Seats</div>
-                  <div class="text-lg font-bold text-gray-900">${totalSeats}</div>
-                </div>
-              </div>
-              <div class="flex items-center gap-3 px-4 py-3 bg-white rounded-lg shadow-sm" role="group" aria-label="Available seats: ${availableCount}">
-                <div class="flex-shrink-0 w-10 h-10 rounded-lg bg-green-100 flex items-center justify-center">
-                  <i class="fas fa-check-circle text-green-600" aria-hidden="true"></i>
-                </div>
-                <div>
-                  <div class="text-xs text-gray-500 font-medium">Available</div>
-                  <div class="text-lg font-bold text-green-700">${availableCount}</div>
-                </div>
-              </div>
-              <div class="flex items-center gap-3 px-4 py-3 bg-white rounded-lg shadow-sm" role="group" aria-label="Booked seats: ${bookedCount}">
-                <div class="flex-shrink-0 w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center">
-                  <i class="fas fa-ticket-alt text-gray-700" aria-hidden="true"></i>
-                </div>
-                <div>
-                  <div class="text-xs text-gray-500 font-medium">Booked</div>
-                  <div class="text-lg font-bold text-gray-900">${bookedCount}</div>
-                </div>
-              </div>
-            </div>
-            <div class="flex items-center gap-3 px-5 py-3 ${occupancyColor} rounded-xl shadow-sm border-2 ${occupancyPercentage > 80 ? "border-red-200" : occupancyPercentage > 50 ? "border-amber-200" : "border-green-200"}" role="group" aria-label="Occupancy rate: ${occupancyPercentage} percent">
-              <i class="fas fa-chart-pie text-2xl" aria-hidden="true"></i>
-              <div>
-                <div class="text-xs font-medium opacity-75">Occupancy Rate</div>
-                <div class="text-2xl font-bold">${occupancyPercentage}%</div>
-              </div>
-            </div>
-          </div>
-        </div>
+        ${statisticsHtml}
 
         <div class="seat-map-container bg-gradient-to-b from-white to-gray-50 rounded-xl p-6 border border-gray-200 shadow-inner overflow-auto" style="max-height: 1200px; min-height: 700px;" role="img" aria-label="Venue seat map with sections: ${sectionNames.join(", ")}">
 
@@ -1565,205 +3229,52 @@ const PerformanceDetailsPage = {
     `;
   },
 
-  attachSeatTooltipHandlers(container) {
-    if (!container) {return;}
-
-    let tooltip = document.getElementById("seat-tooltip");
-    if (!tooltip) {
-      tooltip = document.createElement("div");
-      tooltip.id = "seat-tooltip";
-      tooltip.className = "seat-tooltip";
-      tooltip.style.cssText = `
-        position: fixed;
-        display: none;
-        background: white;
-        border: 1px solid #e5e7eb;
-        border-radius: 8px;
-        padding: 12px;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-        z-index: 10000;
-        pointer-events: none;
-        max-width: 280px;
-      `;
-      document.body.appendChild(tooltip);
-    }
-
-    const seatElements = container.querySelectorAll(".seat, .interactive-seat");
-
-    seatElements.forEach(seatElement => {
-      const seatId = seatElement.getAttribute("data-seat-id");
-      const fullId = seatElement.getAttribute("data-full-id");
-      const status = seatElement.getAttribute("data-status");
-      const zone = seatElement.getAttribute("data-zone");
-      const price = seatElement.getAttribute("data-price");
-
-      seatElement.addEventListener("mouseenter", (e) => {
-        if (this._hoverDebounceTimer) {
-          clearTimeout(this._hoverDebounceTimer);
-        }
-
-        this._hoverDebounceTimer = setTimeout(() => {
-          let tooltipContent = "";
-
-          if (status === "occupied" || status === "booked" || status === "reserved") {
-            const seatStatus = this._seatStatusMap?.get(fullId) || this._seatStatusMap?.get(seatId);
-
-            if (seatStatus && seatStatus.booking) {
-              tooltipContent = formatBookingTooltip(seatStatus.booking, seatStatus.seatTicket);
-            } else {
-              tooltipContent = this.formatUnavailableTooltip(fullId || seatId, status);
-            }
-          } else {
-            tooltipContent = this.formatAvailableTooltip(fullId || seatId, zone, price);
-          }
-
-          if (tooltipContent) {
-            tooltip.innerHTML = tooltipContent;
-            tooltip.style.display = "block";
-            this.positionTooltip(tooltip, e);
-          }
-        }, this._hoverDebounceDelay);
-      });
-
-      seatElement.addEventListener("mousemove", (e) => {
-        if (tooltip.style.display === "block") {
-          this.positionTooltip(tooltip, e);
-        }
-      });
-
-      seatElement.addEventListener("mouseleave", () => {
-        if (this._hoverDebounceTimer) {
-          clearTimeout(this._hoverDebounceTimer);
-          this._hoverDebounceTimer = null;
-        }
-
-        tooltip.style.display = "none";
-      });
-    });
-  },
-
-  formatAvailableTooltip(seatId, zone, price) {
-    const priceValue = parseFloat(price);
-    const formattedPrice = !isNaN(priceValue) ? `HKD ${priceValue.toFixed(2)}` : "Price not set";
-    const seatLabel = seatId.toUpperCase();
-    const zoneName = zone || "Unknown Section";
-
-    return `
-      <div class="booking-tooltip text-left text-sm">
-        <div class="flex items-center gap-2 mb-2">
-          <div class="w-3 h-3 rounded-full bg-green-500"></div>
-          <div class="font-semibold text-green-700">Available</div>
-        </div>
-        <div class="text-xs space-y-1">
-          <div class="flex justify-between gap-3">
-            <span class="text-gray-500">Seat:</span>
-            <span class="font-medium">${seatLabel}</span>
-          </div>
-          <div class="flex justify-between gap-3">
-            <span class="text-gray-500">Section:</span>
-            <span class="font-medium">${zoneName}</span>
-          </div>
-          <div class="flex justify-between gap-3">
-            <span class="text-gray-500">Price:</span>
-            <span class="font-semibold text-green-600">${formattedPrice}</span>
-          </div>
-        </div>
-      </div>
-    `.trim();
-  },
-
-  formatUnavailableTooltip(seatId, status) {
-    const seatLabel = seatId.toUpperCase();
-    const statusText = status === "blocked" ? "Blocked" : "Unavailable";
-    const statusColor = status === "blocked" ? "red" : "gray";
-
-    return `
-      <div class="booking-tooltip text-left text-sm">
-        <div class="flex items-center gap-2 mb-2">
-          <div class="w-3 h-3 rounded-full bg-${statusColor}-500"></div>
-          <div class="font-semibold text-${statusColor}-700">${statusText}</div>
-        </div>
-        <div class="text-xs space-y-1">
-          <div class="flex justify-between gap-3">
-            <span class="text-gray-500">Seat:</span>
-            <span class="font-medium">${seatLabel}</span>
-          </div>
-          <div class="text-gray-500 mt-2">
-            This seat is not available for booking.
-          </div>
-        </div>
-      </div>
-    `.trim();
-  },
-
-  positionTooltip(tooltip, event) {
-    const offset = 15;
-    const tooltipRect = tooltip.getBoundingClientRect();
-    const viewportWidth = window.innerWidth;
-    const viewportHeight = window.innerHeight;
-
-    let left = event.clientX + offset;
-    let top = event.clientY + offset;
-
-    if (left + tooltipRect.width > viewportWidth) {
-      left = event.clientX - tooltipRect.width - offset;
-    }
-
-    if (top + tooltipRect.height > viewportHeight) {
-      top = event.clientY - tooltipRect.height - offset;
-    }
-
-    if (left < 0) {
-      left = offset;
-    }
-
-    if (top < 0) {
-      top = offset;
-    }
-
-    tooltip.style.left = `${left}px`;
-    tooltip.style.top = `${top}px`;
-  },
-
   renderTicketTypesSection(ticketTypes) {
     if (!ticketTypes || ticketTypes.length === 0) {
       return `
-        <div class="pt-6 border-t border-gray-200">
-          <h3 class="text-sm font-bold text-gray-800 mb-3 flex items-center gap-2 uppercase tracking-wide">
-            <i class="fas fa-ticket-alt text-indigo-600"></i>
-            <span>Ticket Types</span>
-          </h3>
-          <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
-            <p class="text-sm text-blue-800 flex items-center gap-2">
-              <i class="fas fa-info-circle"></i>
-              <span>No ticket types configured. Pricing will be based on venue sections.</span>
-            </p>
+        <div class="mt-8 pt-8 border-t border-gray-200">
+          <div class="flex items-center gap-2 mb-4">
+            <i class="fas fa-ticket-alt text-gray-400"></i>
+            <h3 class="text-sm font-bold text-gray-700 uppercase tracking-wider">Ticket Types</h3>
+          </div>
+          <div class="bg-blue-50 border border-blue-200 rounded-xl p-5">
+            <div class="flex items-start gap-3">
+              <i class="fas fa-info-circle text-blue-600 text-lg mt-0.5"></i>
+              <p class="text-sm text-blue-800">No ticket types configured. Pricing will be based on venue sections.</p>
+            </div>
           </div>
         </div>
       `;
     }
 
     return `
-      <div class="pt-6 border-t border-gray-200">
-        <h3 class="text-sm font-bold text-gray-800 mb-4 flex items-center gap-2 uppercase tracking-wide">
-          <i class="fas fa-ticket-alt text-yellow-600"></i>
-          <span>Ticket Types</span>
-          <span class="ml-auto text-xs font-normal text-gray-500 bg-gray-100 px-2 py-1 rounded-full">${ticketTypes.length} ${ticketTypes.length === 1 ? "type" : "types"}</span>
-        </h3>
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+      <div class="mt-8 pt-8 border-t border-gray-200">
+        <div class="flex items-center justify-between mb-5">
+          <div class="flex items-center gap-2">
+            <i class="fas fa-ticket-alt text-gray-400"></i>
+            <h3 class="text-sm font-bold text-gray-700 uppercase tracking-wider">Ticket Types</h3>
+          </div>
+          <span class="text-xs font-semibold text-gray-500 bg-gray-100 px-3 py-1.5 rounded-full">${ticketTypes.length} ${ticketTypes.length === 1 ? "Type" : "Types"}</span>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
           ${ticketTypes
             .map(
               (tt) => `
-            <div class="bg-gradient-to-br from-white to-gray-50 rounded-lg p-4 border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
-              <div class="flex items-start justify-between mb-2">
-                <div class="flex-1">
-                  <div class="font-bold text-gray-900 text-base mb-1">${this.getSectionName(tt)}</div>
+            <div class="group relative bg-white rounded-xl p-6 border-2 border-gray-200 hover:border-indigo-300 hover:shadow-lg transition-all">
+              <div class="flex flex-col h-full">
+                <div class="mb-4">
+                  <div class="font-bold text-gray-900 text-lg mb-2">${this.getSectionName(tt)}</div>
                   ${tt.tier ? this.renderTierBadge(tt.tier) : ""}
                 </div>
+                <div class="mt-auto">
+                  <div class="flex items-baseline gap-1.5">
+                    <span class="text-sm text-gray-500 font-medium">HKD</span>
+                    <span class="text-3xl font-bold text-indigo-600">${this.formatNumber(tt.basePrice || tt.price, 0)}</span>
+                  </div>
+                </div>
               </div>
-              <div class="flex items-baseline gap-1 mt-3">
-                <span class="text-xs text-gray-500">HKD</span>
-                <span class="text-2xl font-bold text-indigo-600">${this.formatNumber(tt.basePrice || tt.price, 0)}</span>
+              <div class="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
+                <i class="fas fa-arrow-right text-indigo-600"></i>
               </div>
             </div>
           `
@@ -1812,26 +3323,561 @@ const PerformanceDetailsPage = {
     return `<span class="text-xs px-2 py-1 rounded font-medium ${color}">${label}</span>`;
   },
 
+  attachSeatClickHandlers(container) {
+    const seatElements = container.querySelectorAll(".seat, .interactive-seat");
+
+    seatElements.forEach(seatElement => {
+      const fullId = seatElement.getAttribute("data-full-id");
+      const status = seatElement.getAttribute("data-status");
+
+      if (!fullId) {
+        return;
+      }
+
+      if (status === "booked" || status === "reserved") {
+        seatElement.style.cursor = "not-allowed";
+      } else {
+        seatElement.style.cursor = "pointer";
+      }
+
+      seatElement.addEventListener("click", (e) => {
+        e.stopPropagation();
+        if (status !== "booked" && status !== "reserved") {
+          this.toggleSeatSelection(fullId, seatElement);
+        }
+      });
+
+      seatElement.addEventListener("contextmenu", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        this.showContextMenu(fullId, status, e);
+      });
+    });
+  },
+
+  toggleSeatSelection(fullId, seatElement) {
+    const seatStatus = this._seatStatusMap?.get(fullId);
+    const status = seatStatus?.status || "available";
+
+    if (status === "booked" || status === "reserved") {
+      const Notyf = window.Notyf;
+      if (Notyf) {
+        const notyf = new Notyf({
+          duration: 2000,
+          position: { x: "right", y: "top" },
+        });
+        notyf.error("Cannot select booked or reserved seats");
+      }
+      return;
+    }
+
+    const index = this._selectedSeats.indexOf(fullId);
+
+    if (index > -1) {
+      this._selectedSeats.splice(index, 1);
+      this.removeSeatHighlight(seatElement);
+    } else {
+      this._selectedSeats.push(fullId);
+      this.addSeatHighlight(seatElement);
+    }
+
+    this.announceToScreenReader(`Seat ${fullId} ${index > -1 ? "deselected" : "selected"}. ${this._selectedSeats.length} seats selected.`);
+
+    this.refreshSelectionToolbar();
+  },
+
+  addSeatHighlight(seatElement) {
+    const rect = seatElement.querySelector("rect");
+    if (rect) {
+      rect.setAttribute("stroke", "#eab308");
+      rect.setAttribute("stroke-width", "3");
+      rect.style.filter = "drop-shadow(0 0 4px rgba(234, 179, 8, 0.5))";
+    }
+    seatElement.classList.add("selected");
+  },
+
+  removeSeatHighlight(seatElement) {
+    const rect = seatElement.querySelector("rect");
+    if (rect) {
+      rect.removeAttribute("stroke");
+      rect.removeAttribute("stroke-width");
+      rect.style.filter = "";
+    }
+    seatElement.classList.remove("selected");
+  },
+
+  renderContextMenu(seatId, status, position) {
+    const actions = [];
+
+    if (status === "available") {
+      actions.push({
+        icon: "fa-ban",
+        label: "Block Seat",
+        action: "block",
+        color: "text-red-600",
+      });
+    } else if (status === "blocked") {
+      actions.push({
+        icon: "fa-check-circle",
+        label: "Make Available",
+        action: "unblock",
+        color: "text-green-600",
+      });
+    } else if (status === "booked" || status === "reserved") {
+      actions.push({
+        icon: "fa-info-circle",
+        label: "View Booking Details",
+        action: "view-booking",
+        color: "text-blue-600",
+      });
+    }
+
+    if (actions.length === 0) {
+      return "";
+    }
+
+    return `
+      <div
+        id="seat-context-menu"
+        class="fixed bg-white rounded-lg shadow-2xl border border-gray-200 py-2 z-[100] min-w-[200px]"
+        style="left: ${position.x}px; top: ${position.y}px;"
+        data-seat-id="${seatId}"
+      >
+        <div class="px-3 py-2 border-b border-gray-100">
+          <div class="text-xs font-semibold text-gray-500 uppercase">Seat ${seatId.toUpperCase()}</div>
+        </div>
+        ${actions
+          .map(
+            (action) => `
+          <button
+            class="context-menu-item w-full px-3 py-2 text-left text-sm hover:bg-gray-50 transition-colors flex items-center gap-3"
+            data-action="${action.action}"
+          >
+            <i class="fas ${action.icon} ${action.color}"></i>
+            <span class="text-gray-700">${action.label}</span>
+          </button>
+        `
+          )
+          .join("")}
+      </div>
+    `;
+  },
+
+  positionContextMenu(event) {
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+    const menuWidth = 200;
+    const menuHeight = 150;
+
+    let x = event.clientX;
+    let y = event.clientY;
+
+    if (x + menuWidth > viewportWidth) {
+      x = viewportWidth - menuWidth - 10;
+    }
+
+    if (y + menuHeight > viewportHeight) {
+      y = viewportHeight - menuHeight - 10;
+    }
+
+    if (x < 10) {
+      x = 10;
+    }
+
+    if (y < 10) {
+      y = 10;
+    }
+
+    return { x, y };
+  },
+
+  showContextMenu(seatId, status, event) {
+    event.preventDefault();
+    event.stopPropagation();
+
+    this.closeContextMenu();
+
+    const position = this.positionContextMenu(event);
+
+    const menuHtml = this.renderContextMenu(seatId, status, position);
+
+    if (!menuHtml) {
+      return;
+    }
+
+    document.body.insertAdjacentHTML("beforeend", menuHtml);
+
+    const menu = document.getElementById("seat-context-menu");
+    if (!menu) {
+      return;
+    }
+
+    this._contextMenu = menu;
+
+    const menuItems = menu.querySelectorAll(".context-menu-item");
+    menuItems.forEach((item) => {
+      item.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const action = item.getAttribute("data-action");
+        this.handleContextMenuAction(action, seatId, status);
+        this.closeContextMenu();
+      });
+    });
+
+    const closeOnOutsideClick = (e) => {
+      if (menu && !menu.contains(e.target)) {
+        this.closeContextMenu();
+        document.removeEventListener("click", closeOnOutsideClick);
+      }
+    };
+
+    setTimeout(() => {
+      document.addEventListener("click", closeOnOutsideClick);
+    }, 0);
+
+    const closeOnEscape = (e) => {
+      if (e.key === "Escape") {
+        this.closeContextMenu();
+        document.removeEventListener("keydown", closeOnEscape);
+      }
+    };
+
+    document.addEventListener("keydown", closeOnEscape);
+
+    menu.addEventListener("keydown", (e) => {
+      const items = Array.from(menu.querySelectorAll(".context-menu-item"));
+      const currentIndex = items.indexOf(document.activeElement);
+
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        const nextIndex = (currentIndex + 1) % items.length;
+        items[nextIndex]?.focus();
+      } else if (e.key === "ArrowUp") {
+        e.preventDefault();
+        const prevIndex = currentIndex <= 0 ? items.length - 1 : currentIndex - 1;
+        items[prevIndex]?.focus();
+      } else if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        if (document.activeElement && items.includes(document.activeElement)) {
+          document.activeElement.click();
+        }
+      }
+    });
+
+    if (menuItems.length > 0) {
+      menuItems[0].focus();
+    }
+
+    this.announceToScreenReader(`Context menu opened for seat ${seatId}. ${menuItems.length} actions available.`);
+  },
+
+  closeContextMenu() {
+    if (this._contextMenu) {
+      this._contextMenu.remove();
+      this._contextMenu = null;
+    }
+
+    const existingMenu = document.getElementById("seat-context-menu");
+    if (existingMenu) {
+      existingMenu.remove();
+    }
+  },
+
+  async handleContextMenuAction(action, seatId, status) {
+    switch (action) {
+      case "block":
+        await this.updateSeatStatus([seatId], "blocked");
+        break;
+
+      case "unblock":
+        await this.updateSeatStatus([seatId], "available");
+        break;
+
+      case "view-booking":
+        await this.viewBookingDetails(seatId);
+        break;
+
+      default:
+        console.warn(`Unknown context menu action: ${action}`);
+    }
+  },
+
+  async viewBookingDetails(seatId) {
+    const seatStatus = this._seatStatusMap?.get(seatId);
+
+    if (!seatStatus || !seatStatus.booking) {
+      const Notyf = window.Notyf;
+      if (Notyf) {
+        const notyf = new Notyf({
+          duration: 3000,
+          position: { x: "right", y: "top" },
+        });
+        notyf.error("No booking information available for this seat");
+      }
+      return;
+    }
+
+    const booking = seatStatus.booking;
+    const seatTicket = seatStatus.seatTicket;
+
+    const Swal = (await import("sweetalert2")).default;
+
+    await Swal.fire({
+      title: `Booking Details - Seat ${seatId.toUpperCase()}`,
+      html: `
+        <div class="text-left space-y-4">
+          <div class="bg-indigo-50 border border-indigo-200 rounded-lg p-4">
+            <div class="grid grid-cols-2 gap-3 text-sm">
+              <div>
+                <div class="text-xs text-gray-500 font-semibold uppercase mb-1">Booking Reference</div>
+                <div class="font-bold text-gray-900">${booking.bookingReference || "N/A"}</div>
+              </div>
+              <div>
+                <div class="text-xs text-gray-500 font-semibold uppercase mb-1">Status</div>
+                <div class="font-bold text-gray-900 capitalize">${booking.status || "N/A"}</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="bg-gray-50 border border-gray-200 rounded-lg p-4">
+            <div class="text-xs text-gray-500 font-semibold uppercase mb-2">Customer Information</div>
+            <div class="space-y-2 text-sm">
+              <div class="flex items-center gap-2">
+                <i class="fas fa-user text-gray-400"></i>
+                <span class="text-gray-900">${booking.customerName || booking.user?.name || "N/A"}</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <i class="fas fa-envelope text-gray-400"></i>
+                <span class="text-gray-900">${booking.customerEmail || booking.user?.email || "N/A"}</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="bg-green-50 border border-green-200 rounded-lg p-4">
+            <div class="text-xs text-gray-500 font-semibold uppercase mb-2">Ticket Information</div>
+            <div class="space-y-2 text-sm">
+              <div class="flex justify-between">
+                <span class="text-gray-600">Ticket Type:</span>
+                <span class="font-semibold text-gray-900">${seatTicket?.ticketType || "Standard"}</span>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-gray-600">Price:</span>
+                <span class="font-bold text-green-700">HKD ${seatTicket?.price || 0}</span>
+              </div>
+            </div>
+          </div>
+
+          ${booking.bookingDate ? `
+            <div class="text-xs text-gray-500 text-center pt-2 border-t border-gray-200">
+              Booked on ${dayjs(booking.bookingDate).format("MMM D, YYYY [at] h:mm A")}
+            </div>
+          ` : ""}
+        </div>
+      `,
+      icon: "info",
+      confirmButtonText: "Close",
+      confirmButtonColor: "#4f46e5",
+      customClass: {
+        popup: "rounded-xl shadow-2xl",
+        confirmButton: "rounded-lg px-6 py-3 font-semibold"
+      }
+    });
+  },
+
+  startBookingPolling() {
+    if (this._pollingInterval) {
+      clearInterval(this._pollingInterval);
+    }
+
+    this._pollingInterval = setInterval(async () => {
+      if (!this._selectedShowtimeId) {
+        return;
+      }
+
+      if (!this._currentPerformance?.id) {
+        return;
+      }
+
+      try {
+        const bookings = await bookingService.getBookingsByPerformance(
+          this._currentPerformance.id,
+          { maxRetries: 1, retryDelay: 500 }
+        );
+
+        const hasChanges = this.detectBookingChanges(bookings);
+
+        if (hasChanges) {
+          this._bookingsData = bookings;
+          this._seatStatusMap = buildSeatStatusMap(
+            bookings.filter(b => {
+              const bookingShowtimeId = b.showtimeId || b.showtime?.id;
+              return String(bookingShowtimeId) === String(this._selectedShowtimeId);
+            }),
+            this._currentPerformance.seatMap,
+            this._selectedShowtimeId
+          );
+
+          this.updateAffectedSeats();
+          this.updateShowtimeStats();
+        }
+      } catch (error) {
+        console.error("Polling error:", error);
+      }
+    }, 30000);
+  },
+
+  detectBookingChanges(newBookings) {
+    if (!this._bookingsData) {
+      return true;
+    }
+
+    const oldMap = new Map(
+      this._bookingsData.map((b) => [b.id, b.status])
+    );
+    const newMap = new Map(
+      newBookings.map((b) => [b.id, b.status])
+    );
+
+    if (oldMap.size !== newMap.size) {
+      return true;
+    }
+
+    for (const [id, status] of newMap) {
+      if (oldMap.get(id) !== status) {
+        return true;
+      }
+    }
+
+    return false;
+  },
+
+  updateAffectedSeats() {
+    const container = document.querySelector(".seat-map-container");
+    if (!container) {
+      return;
+    }
+
+    const seatElements = container.querySelectorAll(".seat, .interactive-seat");
+
+    seatElements.forEach((seatElement) => {
+      const fullId = seatElement.getAttribute("data-full-id");
+      const currentStatus = seatElement.getAttribute("data-status");
+      const newStatus = this._seatStatusMap?.get(fullId)?.status || "available";
+
+      if (currentStatus !== newStatus) {
+        const newColor = getSeatColor(newStatus);
+        const rect = seatElement.querySelector("rect");
+        if (rect) {
+          rect.setAttribute("fill", newColor);
+          seatElement.setAttribute("data-status", newStatus);
+
+          seatElement.classList.add("seat-updated");
+          setTimeout(() => {
+            seatElement.classList.remove("seat-updated");
+          }, 1000);
+        }
+      }
+    });
+
+    if (this._seatFilter) {
+      this.reapplySeatFilter();
+    }
+
+    this.updateStatisticsPanel();
+  },
+
+  updateStatisticsPanel() {
+    const statisticsPanel = document.getElementById("statistics-panel");
+    if (!statisticsPanel) {
+      console.log("Statistics panel not found in DOM");
+      return;
+    }
+
+    const performance = this._currentPerformance;
+    if (!performance || !performance.seatMap) {
+      console.log("No performance or seat map");
+      return;
+    }
+
+    if (!this._seatStatusMap || this._seatStatusMap.size === 0) {
+      console.log("No seat status map or empty");
+      return;
+    }
+
+    const seatMap = performance.seatMap;
+    const seatDetails = {};
+
+    if (seatMap.indexMap && typeof seatMap.indexMap === "object") {
+      Object.entries(seatMap.indexMap).forEach(([fullId, seatData]) => {
+        const seatStatus = this._seatStatusMap?.get(fullId);
+        seatDetails[fullId] = {
+          status: seatStatus?.status || "available",
+          section: seatData.sectionName || seatData.section || "Main",
+          booking: seatStatus?.booking,
+          seatTicket: seatStatus?.seatTicket,
+        };
+      });
+    } else {
+      this._seatStatusMap.forEach((seatStatus, seatId) => {
+        seatDetails[seatId] = {
+          status: seatStatus.status || "available",
+          section: "Main",
+          booking: seatStatus.booking,
+          seatTicket: seatStatus.seatTicket,
+        };
+      });
+    }
+
+    console.log("Updating statistics with", Object.keys(seatDetails).length, "seats");
+
+    const statistics = this.calculateStatistics(seatDetails);
+    const hasSections = seatMap.sections && Array.isArray(seatMap.sections) && seatMap.sections.length > 0;
+    
+    console.log("Statistics calculated:", statistics);
+    console.log("Has sections:", hasSections);
+
+    const newStatisticsHtml = this.renderStatisticsPanel(statistics, hasSections);
+
+    const tempDiv = document.createElement("div");
+    tempDiv.innerHTML = newStatisticsHtml;
+    const newPanel = tempDiv.firstElementChild;
+
+    if (newPanel) {
+      statisticsPanel.replaceWith(newPanel);
+      console.log("Statistics panel updated successfully");
+    } else {
+      console.log("Failed to create new panel element");
+    }
+  },
+
   cleanup() {
-    // Abort any pending requests
+    if (this._pollingInterval) {
+      clearInterval(this._pollingInterval);
+      this._pollingInterval = null;
+    }
+
     if (this._abortController) {
       this._abortController.abort();
       this._abortController = null;
     }
 
-    // Clear any pending debounce timers
     if (this._hoverDebounceTimer) {
       clearTimeout(this._hoverDebounceTimer);
       this._hoverDebounceTimer = null;
     }
 
-    // Remove tooltip element
-    const tooltip = document.getElementById("seat-tooltip");
-    if (tooltip) {
-      tooltip.remove();
+    if (this._seatMapTooltip) {
+      this._seatMapTooltip.destroy();
+      this._seatMapTooltip = null;
     }
 
-    // Reset state
+    this.closeContextMenu();
+
+    if (this._keyboardHandler) {
+      document.removeEventListener("keydown", this._keyboardHandler);
+      this._keyboardHandler = null;
+    }
+
     this._currentPerformance = null;
     this._currentVenue = null;
     this._currentShowtimes = null;
@@ -1842,9 +3888,11 @@ const PerformanceDetailsPage = {
     this._bookingsError = null;
     this._selectedShowtimeId = null;
     this._seatStatusMap = null;
-
-    // Note: We keep the cache intact for potential reuse
-    // Cache will naturally expire based on TTL
+    this._editMode = true;
+    this._selectedSeats = [];
+    this._contextMenu = null;
+    this._undoStack = [];
+    this._redoStack = [];
   },
 };
 

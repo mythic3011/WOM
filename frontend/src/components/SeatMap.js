@@ -81,50 +81,78 @@ export const SeatMap = {
   },
 
   createLegend(sections, showSystemColors = true) {
-    const legendItems = [];
+    let legendHTML = "<div class=\"legend-container space-y-3\">";
 
     if (showSystemColors) {
-      legendItems.push(
-        { label: "Available", color: "#10b981", useInlineStyle: true },
-        { label: "Selected", color: "#eab308", useInlineStyle: true },
-        { label: "Blocked", color: "#ef4444", useInlineStyle: true },
-        { label: "Reserved", color: "#f59e0b", useInlineStyle: true }
-      );
+      legendHTML += `
+        <div class="legend-section">
+          <div class="text-xs font-semibold text-gray-600 mb-2">Seat Status</div>
+          <div class="flex flex-wrap gap-3">
+            <div class="flex items-center gap-1.5">
+              <div class="w-4 h-4 rounded" style="background-color: #10b981"></div>
+              <span class="text-xs text-gray-700">Available</span>
+            </div>
+            <div class="flex items-center gap-1.5">
+              <div class="w-4 h-4 rounded" style="background-color: #eab308"></div>
+              <span class="text-xs text-gray-700">Selected</span>
+            </div>
+            <div class="flex items-center gap-1.5">
+              <div class="w-4 h-4 rounded" style="background-color: #ef4444"></div>
+              <span class="text-xs text-gray-700">Blocked</span>
+            </div>
+            <div class="flex items-center gap-1.5">
+              <div class="w-4 h-4 rounded" style="background-color: #f59e0b"></div>
+              <span class="text-xs text-gray-700">Reserved</span>
+            </div>
+            <div class="flex items-center gap-1.5">
+              <div class="w-4 h-4 rounded" style="background-color: #374151"></div>
+              <span class="text-xs text-gray-700">Booked</span>
+            </div>
+          </div>
+        </div>
+      `;
     }
 
     if (sections && sections.length > 0) {
-      sections
-        .filter(section => section && (section.sectionName || section.section || section.name))
-        .forEach((section, idx) => {
-          const color = getSectionColor(idx);
-          const sectionName = section.sectionName || section.section || section.name || `Section ${idx + 1}`;
-          const sectionCode = section.sectionCode || section.tier || "";
-          const label = sectionCode ? `${sectionName} (${sectionCode})` : sectionName;
-          legendItems.push({
-            label: label,
-            color: color,
-            useInlineStyle: true,
-          });
-        });
-    }
+      const validSections = sections.filter(
+        (section) =>
+          section && (section.sectionName || section.section || section.name)
+      );
 
-    return `
-      <div class="flex flex-wrap gap-3 justify-center text-xs">
-        ${legendItems
-        .map((item) => {
-          const colorStyle = item.useInlineStyle
-            ? `style="background-color: ${item.color}"`
-            : `class="${item.colorClass}"`;
-          return `
-            <div class="flex items-center gap-1">
-              <div class="w-4 h-4 rounded" ${colorStyle}></div>
-              <span class="text-gray-700">${item.label}</span>
+      if (validSections.length > 0) {
+        legendHTML += `
+          <div class="legend-section">
+            <div class="text-xs font-semibold text-gray-600 mb-2">Pricing Zones</div>
+            <div class="flex flex-wrap gap-3">
+        `;
+
+        validSections.forEach((section, idx) => {
+          const color = getSectionColor(idx);
+          const sectionName =
+            section.sectionName ||
+            section.section ||
+            section.name ||
+            `Section ${idx + 1}`;
+          const tier = section.tier || section.sectionCode || "";
+          const label = tier ? `${sectionName} (${tier})` : sectionName;
+
+          legendHTML += `
+            <div class="flex items-center gap-1.5">
+              <div class="w-4 h-4 rounded" style="background-color: ${color}"></div>
+              <span class="text-xs text-gray-700">${label}</span>
             </div>
           `;
-        })
-        .join("")}
-      </div>
-    `;
+        });
+
+        legendHTML += `
+            </div>
+          </div>
+        `;
+      }
+    }
+
+    legendHTML += "</div>";
+    return legendHTML;
   },
 
   createSeatPlanWithStats(rows, seats, seatDetails, sections) {

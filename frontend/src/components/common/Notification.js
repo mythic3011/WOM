@@ -62,7 +62,7 @@ export const Notification = {
             }
           </div>
           ${!persistent
-                ? `<button class="text-gray-400 hover:text-gray-600 transition-colors" onclick="EnhancedNotification.close('${id}')">
+                ? `<button class="text-gray-400 hover:text-gray-600 transition-colors" onclick="Notification.close('${id}')">
                 <i class="fas fa-times"></i>
               </button>`
                 : ""

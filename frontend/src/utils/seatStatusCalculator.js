@@ -8,14 +8,15 @@
 import { getSeatStatusColor } from "./colors.js";
 
 /**
- * Build seat status map from bookings
+ * Build seat status map from bookings and blocked seats
  * Optimized for large venues with many bookings
  *
  * @param {Array} bookings - Array of booking objects with seatTickets
  * @param {Object} seatMap - Performance seat map configuration
+ * @param {string} showtimeId - Optional showtime ID to get blocked seats for specific showtime
  * @returns {Map} Map of seatId -> {status, booking, seatTicket}
  */
-export function buildSeatStatusMap(bookings, seatMap) {
+export function buildSeatStatusMap(bookings, seatMap, showtimeId = null) {
   const statusMap = new Map();
 
   // Return empty map if no valid inputs
@@ -54,6 +55,7 @@ export function buildSeatStatusMap(bookings, seatMap) {
       userName: booking.userName,
       userEmail: booking.userEmail,
       status: booking.status,
+      bookingDate: booking.bookingDate || booking.createdAt,
     };
 
     // Process seat tickets with optimized loop
@@ -82,6 +84,26 @@ export function buildSeatStatusMap(bookings, seatMap) {
           row: seatTicket.row,
         },
       });
+    }
+  }
+
+  // Add blocked seats from seatMap
+  if (seatMap && seatMap.blockedSeats && showtimeId) {
+    const blockedSeatsForShowtime = seatMap.blockedSeats[showtimeId];
+    
+    if (blockedSeatsForShowtime && Array.isArray(blockedSeatsForShowtime)) {
+      for (let i = 0; i < blockedSeatsForShowtime.length; i++) {
+        const seatId = blockedSeatsForShowtime[i];
+        
+        // Only mark as blocked if not already booked/reserved
+        if (!statusMap.has(seatId)) {
+          statusMap.set(seatId, {
+            status: "blocked",
+            booking: null,
+            seatTicket: null,
+          });
+        }
+      }
     }
   }
 
@@ -114,7 +136,7 @@ export function getSeatColor(status) {
  * @param {Object} seatTicket - Seat ticket object with ticket type and price
  * @returns {string} HTML tooltip content
  */
-export function formatBookingTooltip(booking, seatTicket) {
+export function formatBookingTooltip(booking, seatTicket, displayStatus) {
   if (!booking || !seatTicket) {
     return "";
   }
@@ -136,11 +158,38 @@ export function formatBookingTooltip(booking, seatTicket) {
   };
   const statusColor = statusColors[bookingStatus] || "gray";
 
+  let expirationHtml = "";
+  if (displayStatus === "reserved" && bookingStatus === "pending") {
+    const reservationTimeout = 15;
+    const bookingDate = booking.bookingDate ? new Date(booking.bookingDate) : new Date();
+    const expirationDate = new Date(bookingDate.getTime() + reservationTimeout * 60000);
+    const now = new Date();
+    const minutesRemaining = Math.max(0, Math.floor((expirationDate - now) / 60000));
+
+    const formattedExpiration = expirationDate.toLocaleString("en-HK", {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+
+    const expirationColor = minutesRemaining <= 5 ? "red" : "amber";
+
+    expirationHtml = `
+      <div class="flex justify-between gap-3 pt-1 border-t border-gray-200">
+        <span class="text-gray-500">Expires At:</span>
+        <span class="font-medium text-${expirationColor}-600">${formattedExpiration}</span>
+      </div>
+      <div class="flex justify-between gap-3">
+        <span class="text-gray-500">Time Left:</span>
+        <span class="font-semibold text-${expirationColor}-600">${minutesRemaining} min</span>
+      </div>
+    `;
+  }
+
   const tooltipHTML = `
     <div class="booking-tooltip text-left text-sm">
       <div class="flex items-center gap-2 mb-2">
         <div class="w-3 h-3 rounded-full bg-${statusColor}-500"></div>
-        <div class="font-semibold text-${statusColor}-700 capitalize">${bookingStatus}</div>
+        <div class="font-semibold text-${statusColor}-700 capitalize">${displayStatus || bookingStatus}</div>
       </div>
       <div class="text-xs space-y-1">
         <div class="flex justify-between gap-3">
@@ -163,6 +212,7 @@ export function formatBookingTooltip(booking, seatTicket) {
           <span class="text-gray-500">Price:</span>
           <span class="font-semibold text-${statusColor}-600">${formattedPrice}</span>
         </div>
+        ${expirationHtml}
       </div>
     </div>
   `.trim();
@@ -241,14 +291,25 @@ export function getBookedSeats(statusMap) {
 export function calculateBookingStatistics(statusMap, totalSeats) {
   const bookedSeats = getBookedSeats(statusMap);
   const bookedCount = bookedSeats.length;
-  const availableCount = totalSeats - bookedCount;
+  
+  let blockedCount = 0;
+  if (statusMap) {
+    statusMap.forEach((seatStatus) => {
+      if (seatStatus.status === "blocked") {
+        blockedCount++;
+      }
+    });
+  }
+  
+  const availableCount = Math.max(0, totalSeats - bookedCount - blockedCount);
   const occupancyPercentage = totalSeats > 0
-    ? Math.round((bookedCount / totalSeats) * 100)
+    ? Math.round(((bookedCount + blockedCount) / totalSeats) * 100)
     : 0;
 
   return {
     totalSeats,
     bookedSeats: bookedCount,
+    blockedSeats: blockedCount,
     availableSeats: availableCount,
     occupancyPercentage,
     isHighOccupancy: occupancyPercentage > 80,

@@ -308,6 +308,13 @@ export default {
       return acc;
     }, {});
 
+    const blockedSeats = this.getBlockedSeatsForShowtime(this.selectedShowtimeId);
+    blockedSeats.forEach(seatId => {
+      if (!seatDetails[seatId]) {
+        seatDetails[seatId] = { status: "blocked" };
+      }
+    });
+
     if (pricingSections.length > 0 && layout.sections) {
       layout.sections.forEach((section, sectionIndex) => {
         const pricing = pricingSections.find((ps) => {
@@ -469,6 +476,21 @@ export default {
         </div>
       </div>
     `;
+  },
+
+  getBlockedSeatsForShowtime(showtimeId) {
+    if (!this.performanceData?.seatMap?.blockedSeats || !showtimeId) {
+      return [];
+    }
+
+    const blockedSeatsMap = this.performanceData.seatMap.blockedSeats;
+    const blockedSeatsForShowtime = blockedSeatsMap[showtimeId];
+
+    if (!blockedSeatsForShowtime || !Array.isArray(blockedSeatsForShowtime)) {
+      return [];
+    }
+
+    return blockedSeatsForShowtime;
   },
 
   async getBookedSeats() {

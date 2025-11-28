@@ -77,10 +77,10 @@ export default {
         performanceService.getAll(),
         fetch("/api/venues").then((r) => r.json()),
       ]);
-      
+
       this.performances = performances;
       this.venues = venuesResponse.data?.venues || [];
-      
+
       this.performanceFilter = new PerformanceFilter("#performanceFilterContainer", {
         enableURLSync: true,
         debounceDelay: 300,
@@ -91,14 +91,14 @@ export default {
         venues: this.venues,
         performances: this.performances,
       });
-      
+
       this.performanceFilter.render();
-      
+
       this.performanceFilter.onFilterChange((filters) => {
         const filtered = this.performanceFilter.applyFilters(this.performances);
         this.displayPerformances(filtered);
       });
-      
+
       this.renderStatsBar();
       this.displayPerformances(this.performances);
       this.setupEventListeners();

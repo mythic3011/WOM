@@ -14,6 +14,7 @@ export { createImageUpload, initImageUpload, getImageFile, getImageDataURL, clea
 export { PerformanceFormSections } from "./PerformanceFormSections.js";
 export { ShowtimeActions } from "./ShowtimeActions.js";
 export { SeatMap } from "./SeatMap.js";
+export { SeatMapViewer, createSeatMapViewer } from "./SeatMapViewer.js";
 export { SeatLayoutEditor } from "./SeatLayoutEditor.js";
 export { SeatLayoutCustomizer } from "./SeatLayoutCustomizer.js";
 export { VenueLayoutEditor } from "./VenueLayoutEditor.js";

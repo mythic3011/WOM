@@ -348,3 +348,32 @@ export const listPerformancesValidator = [
 
   query("search").optional().trim(),
 ];
+
+export const batchUpdateSeatsValidator = [
+  param("id").isInt({ min: 1 }).withMessage("Invalid performance ID"),
+
+  body("showtimeId")
+    .notEmpty()
+    .withMessage("Showtime ID is required")
+    .isString()
+    .withMessage("Showtime ID must be a string"),
+
+  body("seatIds")
+    .notEmpty()
+    .withMessage("Seat IDs are required")
+    .isArray({ min: 1 })
+    .withMessage("Seat IDs must be a non-empty array"),
+
+  body("seatIds.*")
+    .isString()
+    .withMessage("Each seat ID must be a string")
+    .trim()
+    .notEmpty()
+    .withMessage("Seat IDs cannot be empty strings"),
+
+  body("status")
+    .notEmpty()
+    .withMessage("Status is required")
+    .isIn(["available", "blocked"])
+    .withMessage("Status must be either 'available' or 'blocked'"),
+];

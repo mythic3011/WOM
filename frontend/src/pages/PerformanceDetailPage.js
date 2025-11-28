@@ -5,7 +5,6 @@ import { getTierColors, getTierLabel } from "@config/tierConfig.js";
 import { performanceService } from "@services/performanceService.js";
 import { ZonePricing } from "@utils/booking/zonePricing.js";
 import { getStatusBadge } from "@utils/status.js";
-import { notify } from "@utils/ui/notification.js";
 import { getPerformanceImageUrl, getImageFallbackSvg } from "@utils/imageUtils.js";
 
 export default {
@@ -36,6 +35,8 @@ export default {
       this.showError();
     }
   },
+
+
 
   getBookingUrl(perf) {
     const hasShowtimes = perf.showtimes && perf.showtimes.length > 0;
@@ -109,6 +110,8 @@ export default {
             </div>
 
             ${this.renderPricingZones(perf.pricingSections)}
+
+            ${this.renderSeatMapSection(perf)}
 
             <div class="flex gap-4">
               <a href="${bookingUrl}" data-link class="flex-1 px-6 py-3 bg-indigo-600 text-white text-center rounded-lg hover:bg-indigo-700 transition font-semibold">
@@ -222,6 +225,10 @@ export default {
     `;
   },
 
+  renderSeatMapSection(performance) {
+    return "";
+  },
+
   showNotFound() {
     $("#performanceDetail").html(`
       <div class="text-center py-20">
@@ -247,4 +254,6 @@ export default {
       </div>
     `);
   },
+
+
 };

@@ -190,7 +190,7 @@ export default {
         "performances"
       );
       this.venues = ResponseExtractor.extract(venuesResponse, "venues");
-      
+
       this.performanceFilter = new PerformanceFilter("#performanceFilterContainer", {
         enableURLSync: true,
         debounceDelay: 300,
@@ -201,14 +201,14 @@ export default {
         venues: this.venues,
         performances: this.performances,
       });
-      
+
       this.performanceFilter.render();
-      
+
       this.performanceFilter.onFilterChange((filters) => {
         const filtered = this.performanceFilter.applyFilters(this.performances);
         this.displayPerformances(filtered);
       });
-      
+
       this.displayPerformances(this.performances);
       this.setupEventListeners();
     } catch (error) {

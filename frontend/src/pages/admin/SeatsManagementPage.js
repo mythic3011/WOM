@@ -7,7 +7,6 @@ import { performanceService } from "@services/performanceService.js";
 import { bookingService } from "@services/bookingService.js";
 import { getSeatColor, buildSeatDetails, buildSeatStatusMap, formatBookingTooltip } from "@utils/seatStatusCalculator.js";
 import { getSeatStatusColor, getSectionColor } from "@utils/colors.js";
-import { attachSeatTooltipListeners } from "@utils/booking/seatTooltip.js";
 import { seatUtils } from "@utils/booking/seatUtils.js";
 import { initializeSeatDetails } from "@utils/booking/seatUtils.js";
 import { initSeatMapPanzoom } from "@utils/panzoomSeatMap.js";
@@ -15,6 +14,7 @@ import { reportingUtils } from "@utils/reports/reporting.js";
 import { keyboard } from "@utils/ui/keyboard.js";
 import { notify } from "@utils/ui/notification.js";
 import { URLQueryManager } from "@utils/core/URLQueryManager.js";
+import { SeatMapTooltip } from "@utils/ui/seatMapTooltip.js";
 
 export default {
   title: "Seat Management | Admin",
@@ -29,6 +29,8 @@ export default {
   seatStatusMap: null,
   bookingsLoading: false,
   bookingsLoaded: false,
+  mainViewTooltip: null,
+  editModalTooltip: null,
 
   async render() {
     return `
@@ -333,15 +335,15 @@ export default {
   },
 
   setupEventListeners() {
-    $("#performanceSelect").on("change", (e) =>
+    $("#performanceSelect").off("change").on("change", (e) =>
       this.handlePerformanceChange(e)
     );
-    $("#showtimeSelect").on("change", async (e) => await this.handleShowtimeChange(e));
-    $("#editSeatsBtn").on("click", () => this.editSeats());
-    $("#advancedSelectionBtn").on("click", () => this.advancedSelection());
-    $("#batchOperationsBtn").on("click", () => this.batchOperations());
-    $("#generateReportBtn").on("click", () => this.generateReport());
-    $("#exportSeatsBtn").on("click", () => this.exportSeatMap());
+    $("#showtimeSelect").off("change").on("change", async (e) => await this.handleShowtimeChange(e));
+    $("#editSeatsBtn").off("click").on("click", () => this.editSeats());
+    $("#advancedSelectionBtn").off("click").on("click", () => this.advancedSelection());
+    $("#batchOperationsBtn").off("click").on("click", () => this.batchOperations());
+    $("#generateReportBtn").off("click").on("click", () => this.generateReport());
+    $("#exportSeatsBtn").off("click").on("click", () => this.exportSeatMap());
   },
 
   async handlePerformanceChange(e, options = {}) {
@@ -547,6 +549,17 @@ export default {
   },
 
   renderSectionedSeatMap(showtime, performance, venueLayout) {
+    if (!venueLayout?.sections || venueLayout.sections.length === 0) {
+      $("#seatMapContainer").html(`
+        <div class="text-center py-12">
+          <i class="fas fa-exclamation-triangle text-yellow-500 text-4xl mb-4"></i>
+          <p class="text-gray-700 font-semibold mb-2">Seat Map Configuration Not Available</p>
+          <p class="text-sm text-gray-500">This venue does not have a seat layout configured.</p>
+        </div>
+      `);
+      return;
+    }
+
     const seatMap = performance?.seatMap;
     const pricingSections = performance?.pricingSections || [];
     const statusMap = this.seatStatusMap || new Map();
@@ -577,12 +590,23 @@ export default {
       seatMapHTML = `
         <div class="text-center py-12">
           <i class="fas fa-exclamation-triangle text-red-500 text-4xl mb-4"></i>
-          <p class="text-red-600">Error generating seat map: ${error.message}</p>
+          <p class="text-red-600 font-semibold mb-2">Error Generating Seat Map</p>
+          <p class="text-sm text-gray-600">${error.message}</p>
         </div>
       `;
     }
 
     $("#seatMapContainer").html(seatMapHTML);
+
+    setTimeout(() => {
+      const container = document.getElementById("seatMapContainer");
+      if (container) {
+        if (!this.mainViewTooltip) {
+          this.mainViewTooltip = new SeatMapTooltip("seat-tooltip-main");
+        }
+        this.mainViewTooltip.attach(container, statusMap, seatDetails);
+      }
+    }, 50);
   },
 
   renderSimpleSeatMap(showtime, _performance) {
@@ -601,6 +625,18 @@ export default {
       showtime.seatDetails
     );
     $("#seatMapContainer").html(seatMapHTML);
+
+    setTimeout(() => {
+      const container = document.getElementById("seatMapContainer");
+      if (container) {
+        const statusMap = this.seatStatusMap || new Map();
+        const seatDetails = showtime.seatDetails || {};
+        if (!this.mainViewTooltip) {
+          this.mainViewTooltip = new SeatMapTooltip("seat-tooltip-main");
+        }
+        this.mainViewTooltip.attach(container, statusMap, seatDetails);
+      }
+    }, 50);
   },
 
   getSeatColorForDetail(seatDetail) {
@@ -627,7 +663,7 @@ export default {
     if (venueLayout?.sections && venueLayout.sections.length > 0) {
       sections = venueLayout.sections.map((section, index) => ({
         sectionName: section.name || `Section ${index + 1}`,
-        sectionCode: section.tier || "",
+        tier: section.tier || "",
       }));
     } else {
       sections = performance?.pricingSections || [];
@@ -878,7 +914,10 @@ export default {
           const statusMap = this.seatStatusMap || new Map();
           const seatDetails = buildSeatDetails(seatMap, statusMap, pricingSections);
 
-          this.attachEnhancedTooltipHandlers(container, statusMap, seatDetails);
+          if (!this.editModalTooltip) {
+            this.editModalTooltip = new SeatMapTooltip("seat-tooltip-edit");
+          }
+          this.editModalTooltip.attach(container, statusMap, seatDetails);
         }
 
         if (modalPanzoomInstance) {
@@ -912,7 +951,23 @@ export default {
         renderMap();
 
         document.getElementById("select-all").addEventListener("click", () => {
-          selectedSeats = Object.keys(showtime.seatDetails);
+          const performance = this.selectedPerformance;
+          const seatMap = performance?.seatMap;
+          const venue = performance?.venue;
+          const venueLayout = venue?.layout;
+          const statusMap = this.seatStatusMap || new Map();
+
+          if (venueLayout?.sections && venueLayout.sections.length > 0 && seatMap?.indexMap) {
+            selectedSeats = Object.keys(seatMap.indexMap).filter((fullId) => {
+              const seatStatus = statusMap.get(fullId);
+              return !seatStatus || (seatStatus.status !== "booked" && seatStatus.status !== "reserved");
+            });
+          } else {
+            selectedSeats = Object.keys(showtime.seatDetails).filter((seatId) => {
+              const seatStatus = statusMap.get(seatId);
+              return !seatStatus || (seatStatus.status !== "booked" && seatStatus.status !== "reserved");
+            });
+          }
           renderMap();
         });
 
@@ -1099,14 +1154,28 @@ export default {
 
   exportSeatMap() {
     const showtime = this.selectedShowtime;
-    const layout = showtime.seatLayout || { rows: 5, seatsPerRow: 8 };
+    const performance = this.selectedPerformance;
+    const venue = performance?.venue;
+    const venueLayout = venue?.layout;
+    const seatMap = performance?.seatMap;
+    const pricingSections = performance?.pricingSections || [];
 
     const data = {
-      performance: this.selectedPerformance.title,
+      performance: performance.title,
+      composer: performance.composer,
       showtime: dayjs(showtime.dateTime).format("YYYY-MM-DD HH:mm"),
-      venue: showtime.venueName,
-      layout: layout,
-      seats: showtime.seatDetails,
+      venue: {
+        id: venue?.id,
+        name: showtime.venueName || venue?.name,
+        layout: venueLayout,
+      },
+      seatMap: {
+        indexMap: seatMap?.indexMap || {},
+      },
+      pricingSections: pricingSections,
+      seatDetails: showtime.seatDetails || {},
+      exportedAt: dayjs().format("YYYY-MM-DD HH:mm:ss"),
+      version: "2.0",
     };
 
     const dataStr = JSON.stringify(data, null, 2);
@@ -1114,7 +1183,7 @@ export default {
     const url = URL.createObjectURL(dataBlob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = `seat-map-${this.selectedPerformance.title.replace(
+    link.download = `seat-map-${performance.title.replace(
       /\s+/g,
       "-"
     )}-${dayjs().format("YYYY-MM-DD")}.json`;
@@ -1139,13 +1208,44 @@ export default {
 
   async advancedSelection() {
     const showtime = this.selectedShowtime;
-    const layout = showtime.seatLayout || { rows: 5, seatsPerRow: 8 };
-    const seatDetails = showtime.seatDetails || {};
+    const performance = this.selectedPerformance;
+    const seatMap = performance?.seatMap;
+    const venue = performance?.venue;
+    const venueLayout = venue?.layout;
 
-    const rows = layout.rows || 8;
-    const rowLetters = [];
-    for (let i = 0; i < rows; i++) {
-      rowLetters.push(String.fromCharCode(65 + i));
+    let seatDetails = {};
+    let rowLetters = [];
+
+    if (venueLayout?.sections && venueLayout.sections.length > 0 && seatMap?.indexMap) {
+      const pricingSections = performance?.pricingSections || [];
+      const statusMap = this.seatStatusMap || new Map();
+      seatDetails = buildSeatDetails(seatMap, statusMap, pricingSections);
+
+      if (showtime.seatDetails) {
+        Object.entries(showtime.seatDetails).forEach(([seatId, detail]) => {
+          if (seatDetails[seatId]) {
+            seatDetails[seatId].status = detail.status || seatDetails[seatId].status;
+            if (detail.sectionIndex !== undefined) {
+              seatDetails[seatId].sectionIndex = detail.sectionIndex;
+            }
+          }
+        });
+      }
+
+      const uniqueRows = new Set();
+      Object.values(seatMap.indexMap).forEach((seat) => {
+        if (seat.rowLabel) {
+          uniqueRows.add(seat.rowLabel.toUpperCase());
+        }
+      });
+      rowLetters = Array.from(uniqueRows).sort();
+    } else {
+      const layout = showtime.seatLayout || { rows: 5, seatsPerRow: 8 };
+      seatDetails = showtime.seatDetails || {};
+      const rows = layout.rows || 8;
+      for (let i = 0; i < rows; i++) {
+        rowLetters.push(String.fromCharCode(65 + i));
+      }
     }
 
     const result = await Swal.fire({
@@ -1273,7 +1373,7 @@ export default {
 
         $(".row-select-btn").on("click", function () {
           const row = $(this).data("row");
-          const rowSeats = seatUtils.selectRow(seatDetails, layout, row);
+          const rowSeats = seatUtils.selectRow(seatDetails, null, row);
           selectedSeats = [...new Set([...selectedSeats, ...rowSeats])];
           $(this).addClass("bg-indigo-500 text-white");
           updateCount();
@@ -1284,7 +1384,7 @@ export default {
           const endRow = $("#rowRangeEnd").val();
           const rangeSeats = seatUtils.selectRowRange(
             seatDetails,
-            layout,
+            null,
             startRow,
             endRow
           );
@@ -1297,7 +1397,7 @@ export default {
           const pattern = $(this).data("pattern");
           const patternSeats = seatUtils.selectPattern(
             seatDetails,
-            layout,
+            null,
             pattern
           );
           selectedSeats = [...new Set([...selectedSeats, ...patternSeats])];
@@ -1318,7 +1418,7 @@ export default {
 
         $(".row-select-btn.bg-indigo-500").each(function () {
           const row = $(this).data("row");
-          selectedSeats.push(...seatUtils.selectRow(seatDetails, layout, row));
+          selectedSeats.push(...seatUtils.selectRow(seatDetails, null, row));
         });
 
         return [...new Set(selectedSeats)];
@@ -1412,175 +1512,15 @@ export default {
     });
   },
 
-  attachEnhancedTooltipHandlers(container, seatStatusMap, seatDetails) {
-    if (!container) {return;}
-
-    let tooltip = document.getElementById("seat-tooltip-edit");
-    if (!tooltip) {
-      tooltip = document.createElement("div");
-      tooltip.id = "seat-tooltip-edit";
-      tooltip.className = "seat-tooltip";
-      tooltip.style.cssText = `
-        position: fixed;
-        display: none;
-        background: white;
-        border: 1px solid #e5e7eb;
-        border-radius: 8px;
-        padding: 12px;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-        z-index: 10000;
-        pointer-events: none;
-        max-width: 280px;
-      `;
-      document.body.appendChild(tooltip);
-    }
-
-    const seatElements = container.querySelectorAll(".seat, .interactive-seat");
-
-    seatElements.forEach(seatElement => {
-      const seatId = seatElement.getAttribute("data-seat-id");
-      const fullId = seatElement.getAttribute("data-full-id");
-      const status = seatElement.getAttribute("data-status");
-      const zone = seatElement.getAttribute("data-zone");
-      const price = seatElement.getAttribute("data-price");
-
-      seatElement.addEventListener("mouseenter", (e) => {
-        if (this._hoverDebounceTimer) {
-          clearTimeout(this._hoverDebounceTimer);
-        }
-
-        this._hoverDebounceTimer = setTimeout(() => {
-          let tooltipContent = "";
-
-          if (status === "booked" || status === "reserved") {
-            const seatStatus = seatStatusMap?.get(fullId) || seatStatusMap?.get(seatId);
-
-            if (seatStatus && seatStatus.booking) {
-              tooltipContent = formatBookingTooltip(seatStatus.booking, seatStatus.seatTicket);
-            } else {
-              tooltipContent = this.formatUnavailableTooltip(fullId || seatId, status);
-            }
-          } else if (status === "blocked") {
-            tooltipContent = this.formatUnavailableTooltip(fullId || seatId, status);
-          } else {
-            const seatDetail = seatDetails[fullId] || seatDetails[seatId];
-            tooltipContent = this.formatAvailableTooltip(
-              fullId || seatId,
-              zone || seatDetail?.section,
-              price || seatDetail?.price,
-              seatDetail?.tier
-            );
-          }
-
-          if (tooltipContent) {
-            tooltip.innerHTML = tooltipContent;
-            tooltip.style.display = "block";
-            this.positionTooltip(tooltip, e);
-          }
-        }, 150);
-      });
-
-      seatElement.addEventListener("mousemove", (e) => {
-        if (tooltip.style.display === "block") {
-          this.positionTooltip(tooltip, e);
-        }
-      });
-
-      seatElement.addEventListener("mouseleave", () => {
-        if (this._hoverDebounceTimer) {
-          clearTimeout(this._hoverDebounceTimer);
-          this._hoverDebounceTimer = null;
-        }
-
-        tooltip.style.display = "none";
-      });
-    });
-  },
-
-  formatAvailableTooltip(seatId, zone, price, tier) {
-    const priceValue = parseFloat(price);
-    const formattedPrice = !isNaN(priceValue) && priceValue > 0
-      ? `HKD ${priceValue.toFixed(2)}`
-      : "Price not set";
-    const seatLabel = seatId ? seatId.toUpperCase() : "Unknown";
-    const zoneName = zone || "Unknown Section";
-
-    return `
-      <div class="booking-tooltip text-left text-sm">
-        <div class="flex items-center gap-2 mb-2">
-          <div class="w-3 h-3 rounded-full bg-green-500"></div>
-          <div class="font-semibold text-green-700">Available</div>
-        </div>
-        <div class="text-xs space-y-1">
-          <div class="flex justify-between gap-3">
-            <span class="text-gray-500">Seat ID:</span>
-            <span class="font-medium">${seatLabel}</span>
-          </div>
-          <div class="flex justify-between gap-3">
-            <span class="text-gray-500">Section:</span>
-            <span class="font-medium">${zoneName}</span>
-          </div>
-          ${tier ? `
-          <div class="flex justify-between gap-3">
-            <span class="text-gray-500">Tier:</span>
-            <span class="font-medium">${tier}</span>
-          </div>
-          ` : ""}
-          <div class="flex justify-between gap-3">
-            <span class="text-gray-500">Price:</span>
-            <span class="font-semibold text-green-600">${formattedPrice}</span>
-          </div>
-        </div>
-      </div>
-    `.trim();
-  },
-
-  formatUnavailableTooltip(seatId, status) {
-    const seatLabel = seatId ? seatId.toUpperCase() : "Unknown";
-    const statusText = status === "blocked" ? "Blocked" : "Unavailable";
-    const statusColor = status === "blocked" ? "red" : "gray";
-
-    return `
-      <div class="booking-tooltip text-left text-sm">
-        <div class="flex items-center gap-2 mb-2">
-          <div class="w-3 h-3 rounded-full bg-${statusColor}-500"></div>
-          <div class="font-semibold text-${statusColor}-700">${statusText}</div>
-        </div>
-        <div class="text-xs space-y-1">
-          <div class="flex justify-between gap-3">
-            <span class="text-gray-500">Seat:</span>
-            <span class="font-medium">${seatLabel}</span>
-          </div>
-          <div class="text-gray-500 mt-2">
-            This seat is not available for selection.
-          </div>
-        </div>
-      </div>
-    `.trim();
-  },
-
-  positionTooltip(tooltip, event) {
-    const offset = 15;
-    const tooltipWidth = tooltip.offsetWidth;
-    const tooltipHeight = tooltip.offsetHeight;
-    const viewportWidth = window.innerWidth;
-    const viewportHeight = window.innerHeight;
-
-    let x = event.clientX + offset;
-    let y = event.clientY + offset;
-
-    if (x + tooltipWidth > viewportWidth) {
-      x = event.clientX - tooltipWidth - offset;
-    }
-    if (y + tooltipHeight > viewportHeight) {
-      y = event.clientY - tooltipHeight - offset;
-    }
-
-    tooltip.style.left = `${x}px`;
-    tooltip.style.top = `${y}px`;
-  },
-
   cleanup() {
+    $("#performanceSelect").off("change");
+    $("#showtimeSelect").off("change");
+    $("#editSeatsBtn").off("click");
+    $("#advancedSelectionBtn").off("click");
+    $("#batchOperationsBtn").off("click");
+    $("#generateReportBtn").off("click");
+    $("#exportSeatsBtn").off("click");
+
     if (this.unsubscribeURLChanges) {
       this.unsubscribeURLChanges();
       this.unsubscribeURLChanges = null;
@@ -1594,6 +1534,16 @@ export default {
     if (this.panzoomInstance) {
       this.panzoomInstance.dispose();
       this.panzoomInstance = null;
+    }
+
+    if (this.mainViewTooltip) {
+      this.mainViewTooltip.destroy();
+      this.mainViewTooltip = null;
+    }
+
+    if (this.editModalTooltip) {
+      this.editModalTooltip.destroy();
+      this.editModalTooltip = null;
     }
 
     this.bookingsData = null;

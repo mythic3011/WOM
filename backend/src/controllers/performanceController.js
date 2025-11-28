@@ -276,3 +276,43 @@ export const uploadPerformanceImage = async (req, res, next) => {
     next(error);
   }
 };
+
+export const batchUpdateSeats = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { showtimeId, seatIds, status } = req.body;
+
+    const result = await performanceService.batchUpdateSeatStatus(
+      id,
+      showtimeId,
+      seatIds,
+      status
+    );
+
+    res.json({
+      success: true,
+      message: `Successfully updated ${result.updated} seat(s)`,
+      data: result,
+    });
+  } catch (error) {
+    if (error.message === "Performance not found") {
+      return res.status(404).json({
+        success: false,
+        message: error.message,
+      });
+    }
+    if (error.message.includes("Invalid seat IDs")) {
+      return res.status(400).json({
+        success: false,
+        message: error.message,
+      });
+    }
+    if (error.message.includes("Cannot modify booked seats")) {
+      return res.status(400).json({
+        success: false,
+        message: error.message,
+      });
+    }
+    next(error);
+  }
+};

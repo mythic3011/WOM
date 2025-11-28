@@ -7,6 +7,7 @@ import {
   getPerformanceAvailability,
   updatePerformanceAvailability,
   calculateSeatPrice,
+  updatePerformanceStatusByAvailability,
 } from "./performanceService.js";
 import { buildWhereClause, applyDateRangeFilter } from "./helpers/filters.js";
 import { findEntityOrThrow } from "./helpers/entityHelpers.js";
@@ -198,6 +199,7 @@ export const createBooking = async (bookingData, userId) => {
   });
 
   await updatePerformanceAvailability(performanceId);
+  await updatePerformanceStatusByAvailability(performanceId);
 
   return booking;
 };
@@ -327,8 +329,9 @@ export const updateBooking = async (id, updates, userId = null, isAdmin = false)
 
   await booking.update(updates);
 
-  if (updates.status === "cancelled") {
+  if (updates.status === "cancelled" || updates.status === "confirmed") {
     await updatePerformanceAvailability(booking.performanceId);
+    await updatePerformanceStatusByAvailability(booking.performanceId);
   }
 
   return booking;

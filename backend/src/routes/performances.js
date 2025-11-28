@@ -8,6 +8,7 @@ import {
   getPerformanceValidator,
   deletePerformanceValidator,
   listPerformancesValidator,
+  batchUpdateSeatsValidator,
 } from "#middleware/validators/performanceValidators.js";
 import { uploadSingle } from "#config/multer.js";
 import { validateTimeFields, validateShowtimeFields } from "#middleware/timeValidation.js";
@@ -793,6 +794,138 @@ router.get(
   getPerformanceValidator,
   validate,
   performanceController.getSeatsWithBookingInfo
+);
+
+/**
+ * @openapi
+ * /api/performances/{id}/seats/batch-update:
+ *   post:
+ *     tags: [Performances]
+ *     summary: Batch update seat status (Admin only)
+ *     description: |
+ *       Updates the status of multiple seats for a specific showtime. Allows blocking or unblocking seats in bulk.
+ *       
+ *       **Admin Only:**
+ *       - Requires authentication with admin role
+ *       
+ *       **Validation:**
+ *       - All seat IDs must exist in the performance seat map
+ *       - Cannot modify seats that are already booked or reserved
+ *       - Showtime ID must be valid
+ *       
+ *       **Status Options:**
+ *       - `blocked`: Mark seats as unavailable for booking
+ *       - `available`: Make previously blocked seats available again
+ *       
+ *       **Error Handling:**
+ *       - Returns 400 if any seat IDs are invalid
+ *       - Returns 400 if attempting to modify booked/reserved seats
+ *       - Returns 404 if performance not found
+ *       
+ *       **Related Endpoints:**
+ *       - GET /api/performances/{id}/seats - Get seat details with booking info
+ *       - GET /api/performances/{id}/seatmap - View current seat map
+ *     security:
+ *       - sessionAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Performance ID
+ *         example: 1
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - showtimeId
+ *               - seatIds
+ *               - status
+ *             properties:
+ *               showtimeId:
+ *                 type: string
+ *                 description: Showtime identifier
+ *                 example: "showtime-1"
+ *               seatIds:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                 description: Array of seat IDs to update
+ *                 example: ["stalls-a1", "stalls-a2", "circle-b5"]
+ *               status:
+ *                 type: string
+ *                 enum: [available, blocked]
+ *                 description: New status for the seats
+ *                 example: "blocked"
+ *     responses:
+ *       200:
+ *         description: Seats updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: Successfully updated 3 seat(s)
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     success:
+ *                       type: boolean
+ *                       example: true
+ *                     updated:
+ *                       type: integer
+ *                       example: 3
+ *                     failed:
+ *                       type: integer
+ *                       example: 0
+ *                     seats:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           seatId:
+ *                             type: string
+ *                           status:
+ *                             type: string
+ *                           updatedAt:
+ *                             type: string
+ *                             format: date-time
+ *       400:
+ *         description: Invalid request or attempting to modify booked seats
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: Cannot modify booked seats stalls-a1, stalls-a2
+ *       401:
+ *         $ref: '#/components/responses/Unauthorized'
+ *       403:
+ *         $ref: '#/components/responses/Forbidden'
+ *       404:
+ *         $ref: '#/components/responses/NotFound'
+ */
+router.post(
+  "/:id/seats/batch-update",
+  isAuthenticated,
+  isAdmin,
+  batchUpdateSeatsValidator,
+  validate,
+  performanceController.batchUpdateSeats
 );
 
 /**

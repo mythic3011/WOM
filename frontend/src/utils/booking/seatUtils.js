@@ -1,13 +1,13 @@
 export const selectRow = (seatDetails, layout, rowLetter) => {
   const selectedSeats = [];
-  const seatsPerRow = layout.seatsPerRow || 10;
+  const rowLetterLower = rowLetter.toLowerCase();
 
-  for (let i = 1; i <= seatsPerRow; i++) {
-    const seatId = `${rowLetter}${i}`;
-    if (seatDetails[seatId]) {
-      selectedSeats.push(seatId);
+  Object.keys(seatDetails).forEach((fullId) => {
+    const parsed = parseSeatId(fullId);
+    if (parsed && parsed.rowLabel.toLowerCase() === rowLetterLower) {
+      selectedSeats.push(fullId);
     }
-  }
+  });
 
   return selectedSeats;
 };
@@ -253,51 +253,61 @@ export const filterSeats = (seatDetails, filters) => {
 
 export const selectPattern = (seatDetails, layout, pattern) => {
   const selectedSeats = [];
-  const rows = layout.rows || 8;
-  const seatsPerRow = layout.seatsPerRow || 10;
 
-  for (let i = 0; i < rows; i++) {
-    const rowLetter = String.fromCharCode(65 + i);
-    for (let j = 1; j <= seatsPerRow; j++) {
-      const seatId = `${rowLetter}${j}`;
-      if (!seatDetails[seatId]) {continue;}
+  const allSeats = Object.keys(seatDetails).map((fullId) => {
+    const parsed = parseSeatId(fullId);
+    if (!parsed) {return null;}
 
-      let shouldSelect = false;
+    const rowCode = parsed.rowLabel.toUpperCase().charCodeAt(0) - 65;
+    return {
+      fullId,
+      rowIndex: rowCode,
+      seatNumber: parsed.seatNumber,
+    };
+  }).filter(Boolean);
 
-      switch (pattern) {
-        case "alternating":
-          shouldSelect = (i + j) % 2 === 0;
-          break;
-        case "checkerboard":
-          shouldSelect =
-            (i % 2 === 0 && j % 2 === 1) || (i % 2 === 1 && j % 2 === 0);
-          break;
-        case "front":
-          shouldSelect = i < Math.floor(rows / 3);
-          break;
-        case "back":
-          shouldSelect = i >= Math.ceil((rows * 2) / 3);
-          break;
-        case "center":
-          shouldSelect =
-            j > Math.floor(seatsPerRow / 3) &&
-            j <= Math.ceil((seatsPerRow * 2) / 3);
-          break;
-        case "sides":
-          shouldSelect =
-            j <= Math.floor(seatsPerRow / 3) ||
-            j > Math.ceil((seatsPerRow * 2) / 3);
-          break;
-        case "aisle":
-          shouldSelect = j === 1 || j === seatsPerRow;
-          break;
-      }
+  if (allSeats.length === 0) {return [];}
 
-      if (shouldSelect) {
-        selectedSeats.push(seatId);
-      }
+  const maxRow = Math.max(...allSeats.map(s => s.rowIndex));
+  const maxSeat = Math.max(...allSeats.map(s => s.seatNumber));
+
+  allSeats.forEach(({ fullId, rowIndex, seatNumber }) => {
+    let shouldSelect = false;
+
+    switch (pattern) {
+      case "alternating":
+        shouldSelect = (rowIndex + seatNumber) % 2 === 0;
+        break;
+      case "checkerboard":
+        shouldSelect =
+          (rowIndex % 2 === 0 && seatNumber % 2 === 1) ||
+          (rowIndex % 2 === 1 && seatNumber % 2 === 0);
+        break;
+      case "front":
+        shouldSelect = rowIndex < Math.floor(maxRow / 3);
+        break;
+      case "back":
+        shouldSelect = rowIndex >= Math.ceil((maxRow * 2) / 3);
+        break;
+      case "center":
+        shouldSelect =
+          seatNumber > Math.floor(maxSeat / 3) &&
+          seatNumber <= Math.ceil((maxSeat * 2) / 3);
+        break;
+      case "sides":
+        shouldSelect =
+          seatNumber <= Math.floor(maxSeat / 3) ||
+          seatNumber > Math.ceil((maxSeat * 2) / 3);
+        break;
+      case "aisle":
+        shouldSelect = seatNumber === 1 || seatNumber === maxSeat;
+        break;
     }
-  }
+
+    if (shouldSelect) {
+      selectedSeats.push(fullId);
+    }
+  });
 
   return selectedSeats;
 };

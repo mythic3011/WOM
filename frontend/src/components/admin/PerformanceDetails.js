@@ -191,8 +191,9 @@ export const PerformanceDetails = {
 
             // Calculate booked seats from booking data for this showtime
             const bookedSeats = this.calculateBookedSeatsForShowtime(showtimeId);
-            const availableSeats = totalSeats - bookedSeats;
-            const occupancyPercentage = totalSeats > 0 ? Math.round((bookedSeats / totalSeats) * 100) : 0;
+            const blockedSeats = this.calculateBlockedSeatsForShowtime(showtimeId);
+            const availableSeats = Math.max(0, totalSeats - bookedSeats - blockedSeats);
+            const occupancyPercentage = totalSeats > 0 ? Math.round(((bookedSeats + blockedSeats) / totalSeats) * 100) : 0;
 
             const isSelected = this._selectedShowtimeId === showtimeId;
             const selectedClass = isSelected ? "border-indigo-500 bg-indigo-50" : "border-gray-200 hover:border-indigo-300";
@@ -283,6 +284,15 @@ export const PerformanceDetails = {
     });
 
     return bookedCount;
+  },
+
+  calculateBlockedSeatsForShowtime(showtimeId) {
+    if (!this._currentPerformance?.seatMap?.blockedSeats) {
+      return 0;
+    }
+
+    const blockedSeats = this._currentPerformance.seatMap.blockedSeats[showtimeId];
+    return Array.isArray(blockedSeats) ? blockedSeats.length : 0;
   },
 
   async loadBookingData() {

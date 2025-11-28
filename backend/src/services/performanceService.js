@@ -8,6 +8,113 @@ import logger from "#config/logger.js";
 const availabilityCache = new Map();
 const CACHE_TTL = 30000;
 
+export const updatePerformanceStatusByAvailability = async (performanceId) => {
+  try {
+    const performance = await Performance.findByPk(performanceId, {
+      include: [{
+        model: Venue,
+        as: "venue",
+      }],
+    });
+
+    if (!performance) {
+      logger.warn(`Performance ${performanceId} not found for status update`);
+      return null;
+    }
+
+    const totalSeats = performance.totalSeats || 0;
+    if (totalSeats === 0) {
+      return performance;
+    }
+
+    const bookings = await Booking.findAll({
+      where: {
+        performanceId: performance.id,
+        status: { [Op.in]: ["confirmed", "pending"] },
+      },
+      attributes: ["showtimeId", "seatTickets"],
+    });
+
+    let totalBookedSeats = 0;
+    const showtimeBookings = {};
+
+    for (const booking of bookings) {
+      const showtimeId = booking.showtimeId;
+      const seats = booking.seatTickets || [];
+      
+      if (showtimeId) {
+        if (!showtimeBookings[showtimeId]) {
+          showtimeBookings[showtimeId] = new Set();
+        }
+        seats.forEach(seat => {
+          const seatId = seat.seatId || seat.id;
+          if (seatId) {
+            showtimeBookings[showtimeId].add(seatId);
+          }
+        });
+      }
+      
+      totalBookedSeats += seats.length;
+    }
+
+    const blockedSeatsSet = new Set();
+    if (performance.seatMap?.blockedSeats) {
+      Object.values(performance.seatMap.blockedSeats).forEach(blockedList => {
+        if (Array.isArray(blockedList)) {
+          blockedList.forEach(seatId => blockedSeatsSet.add(seatId));
+        }
+      });
+    }
+    const totalBlockedSeats = blockedSeatsSet.size;
+
+    const availableSeats = Math.max(0, totalSeats - totalBookedSeats - totalBlockedSeats);
+    const occupancyPercentage = totalSeats > 0 ? (totalBookedSeats + totalBlockedSeats) / totalSeats : 0;
+
+    let newStatus = performance.status;
+    const currentStatus = performance.status;
+
+    if (availableSeats === 0) {
+      newStatus = "sold_out";
+    } else if (currentStatus === "sold_out" && availableSeats > 0) {
+      newStatus = "on_sale";
+    } else if (occupancyPercentage >= 0.9 && currentStatus !== "sold_out") {
+      newStatus = "on_sale";
+    }
+
+    if (newStatus !== currentStatus) {
+      await performance.update({
+        status: newStatus,
+        availableSeats,
+        bookedSeats: totalBookedSeats,
+      });
+
+      logger.info(`Performance status auto-updated`, {
+        performanceId: performance.id,
+        oldStatus: currentStatus,
+        newStatus,
+        totalSeats,
+        bookedSeats: totalBookedSeats,
+        blockedSeats: totalBlockedSeats,
+        availableSeats,
+        occupancyPercentage: Math.round(occupancyPercentage * 100),
+      });
+    } else {
+      await performance.update({
+        availableSeats,
+        bookedSeats: totalBookedSeats,
+      });
+    }
+
+    return performance;
+  } catch (error) {
+    logger.error(`Error updating performance status by availability`, {
+      performanceId,
+      error: error.message,
+    });
+    throw error;
+  }
+};
+
 export const getAllPerformances = async (filters = {}) => {
   const where = buildWhereClause(filters, {
     statusField: "status",
@@ -67,12 +174,19 @@ export const getAllPerformances = async (filters = {}) => {
         perfData.showtimes = perfData.showtimes.map((showtime) => {
           const bookedSeats = showtimeBookings[showtime.id]?.size || 0;
           const totalSeats = perfData.totalSeats || 0;
-          const availableSeats = Math.max(0, totalSeats - bookedSeats);
+          
+          let blockedSeats = 0;
+          if (perfData.seatMap?.blockedSeats?.[showtime.id]) {
+            blockedSeats = perfData.seatMap.blockedSeats[showtime.id].length;
+          }
+          
+          const availableSeats = Math.max(0, totalSeats - bookedSeats - blockedSeats);
 
           return {
             ...showtime,
             totalSeats,
             bookedSeats,
+            blockedSeats,
             availableSeats,
           };
         });
@@ -361,14 +475,30 @@ export const getPerformanceAvailability = async (id, showtimeId = null) => {
     }
   }
 
+  let blockedSeatsCount = 0;
+  if (performance.seatMap?.blockedSeats) {
+    if (showtimeId && performance.seatMap.blockedSeats[showtimeId]) {
+      blockedSeatsCount = performance.seatMap.blockedSeats[showtimeId].length;
+    } else if (!showtimeId) {
+      const blockedSeatsSet = new Set();
+      Object.values(performance.seatMap.blockedSeats).forEach(blockedList => {
+        if (Array.isArray(blockedList)) {
+          blockedList.forEach(seatId => blockedSeatsSet.add(seatId));
+        }
+      });
+      blockedSeatsCount = blockedSeatsSet.size;
+    }
+  }
+
   const bookedSeatsCount = bookedSeatIds.size;
-  const availableSeats = Math.max(0, performance.totalSeats - bookedSeatsCount);
+  const availableSeats = Math.max(0, performance.totalSeats - bookedSeatsCount - blockedSeatsCount);
   const availabilityPercent =
     performance.totalSeats > 0 ? (availableSeats / performance.totalSeats) * 100 : 0;
 
   const result = {
     totalSeats: performance.totalSeats,
     bookedSeats: bookedSeatsCount,
+    blockedSeats: blockedSeatsCount,
     availableSeats,
     availabilityPercent: Math.round(availabilityPercent * 100) / 100,
   };
@@ -646,4 +776,105 @@ export const deletePerformanceImage = async (imageUrl) => {
     console.error(`Failed to delete image ${imageUrl}:`, error.message);
     return false;
   }
+};
+
+export const batchUpdateSeatStatus = async (performanceId, showtimeId, seatIds, status) => {
+  const performance = await Performance.findByPk(performanceId);
+
+  if (!performance) {
+    throw new Error("Performance not found");
+  }
+
+  const seatMap = performance.seatMap || {};
+  const indexMap = seatMap.indexMap || {};
+
+  const normalizedSeatIds = seatIds.map(id => id.toLowerCase().trim());
+  const invalidSeats = [];
+  const bookedSeats = [];
+  const validSeats = [];
+
+  const bookings = await Booking.findAll({
+    where: {
+      performanceId,
+      showtimeId,
+      status: { [Op.in]: ["confirmed", "pending"] },
+    },
+    attributes: ["seatTickets"],
+  });
+
+  const bookedSeatIds = new Set();
+  for (const booking of bookings) {
+    const seats = booking.seatTickets || [];
+    for (const seat of seats) {
+      const bookedSeatId = (typeof seat === "string" ? seat : seat.seatId)?.toLowerCase();
+      if (bookedSeatId) {
+        bookedSeatIds.add(bookedSeatId);
+      }
+    }
+  }
+
+  for (const seatId of normalizedSeatIds) {
+    if (!indexMap[seatId]) {
+      invalidSeats.push(seatId);
+      continue;
+    }
+
+    if (bookedSeatIds.has(seatId)) {
+      bookedSeats.push(seatId);
+    } else {
+      validSeats.push(seatId);
+    }
+  }
+
+  if (invalidSeats.length > 0) {
+    throw new Error(`Invalid seat IDs: ${invalidSeats.join(", ")}`);
+  }
+
+  if (bookedSeats.length > 0) {
+    throw new Error(`Cannot modify booked seats: ${bookedSeats.join(", ")}`);
+  }
+
+  const updatedSeatMap = JSON.parse(JSON.stringify(seatMap));
+
+  if (!updatedSeatMap.blockedSeats) {
+    updatedSeatMap.blockedSeats = {};
+  }
+
+  if (!updatedSeatMap.blockedSeats[showtimeId]) {
+    updatedSeatMap.blockedSeats[showtimeId] = [];
+  }
+
+  const blockedSeatsForShowtime = new Set(updatedSeatMap.blockedSeats[showtimeId]);
+
+  if (status === "blocked") {
+    for (const seatId of validSeats) {
+      blockedSeatsForShowtime.add(seatId);
+    }
+  } else if (status === "available") {
+    for (const seatId of validSeats) {
+      blockedSeatsForShowtime.delete(seatId);
+    }
+  }
+
+  updatedSeatMap.blockedSeats[showtimeId] = Array.from(blockedSeatsForShowtime);
+
+  await performance.update({
+    seatMap: updatedSeatMap,
+    seatMapVersion: (performance.seatMapVersion || 0) + 1,
+  });
+
+  await updatePerformanceStatusByAvailability(performanceId);
+
+  const updatedSeats = validSeats.map(seatId => ({
+    seatId,
+    status,
+    updatedAt: new Date().toISOString(),
+  }));
+
+  return {
+    success: true,
+    updated: validSeats.length,
+    failed: 0,
+    seats: updatedSeats,
+  };
 };
