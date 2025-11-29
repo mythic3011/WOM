@@ -265,7 +265,7 @@ export default {
       <tr class="hover:bg-gray-50 transition-colors">
           <td class="px-6 py-4">${imageHtml}</td>
           <td class="px-6 py-4">
-            <div class="text-sm font-medium text-gray-900">${perf.title}</div>
+            <a href="/admin/performances/${perf.id}" data-link class="text-sm font-medium text-gray-900 hover:text-indigo-600 transition-colors cursor-pointer">${perf.title}</a>
             <div class="text-xs text-gray-500">${perf.orchestra || "N/A"}</div>
           </td>
         <td class="px-6 py-4">
@@ -475,8 +475,6 @@ export default {
       $(".action-dropdown-menu").addClass("hidden"); // Close dropdown
       this.editPerformance(perfId);
     });
-
-
 
     $(document).on("click", ".action-duplicate-btn", (e) => {
       e.stopPropagation();
