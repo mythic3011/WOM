@@ -4,8 +4,8 @@ import pdfMake from "pdfmake/build/pdfmake";
 import QRCode from "qrcode";
 
 import { COMPANY_INFO } from "@config/config.js";
-import { statsService } from "@services/statsService.js";
 import { parseFullId, getDisplayLabel } from "@utils/seatIdHelper.js";
+import { formatCurrency } from "@utils/utils.js";
 import "./pdfUtils.js";
 
 export const TicketGenerator = {
@@ -100,13 +100,13 @@ export const TicketGenerator = {
           { text: section, style: "ticketCell" },
           { text: tier, style: "ticketCell" },
           {
-            text: statsService.formatCurrency(ticket.price),
+            text: formatCurrency(ticket.price),
             style: "priceCell",
             alignment: "right",
           },
         ];
       })
-      : booking.seats.map((seatId) => {
+      : (booking.seats && Array.isArray(booking.seats) ? booking.seats : []).map((seatId) => {
         const seatIdStr =
           typeof seatId === "string"
             ? seatId
@@ -127,7 +127,7 @@ export const TicketGenerator = {
           { text: section, style: "ticketCell" },
           { text: tier, style: "ticketCell" },
           {
-            text: statsService.formatCurrency(
+            text: formatCurrency(
               booking.amount / booking.seats.length
             ),
             style: "priceCell",
@@ -300,7 +300,7 @@ export const TicketGenerator = {
                   border: [false, false, false, false],
                 },
                 {
-                  text: statsService.formatCurrency(booking.amount),
+                  text: formatCurrency(booking.amount),
                   style: "totalValue",
                   alignment: "right",
                   border: [false, false, false, false],

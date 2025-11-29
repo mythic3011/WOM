@@ -10,6 +10,10 @@ import { generateBookings } from "./data/bookings.js";
 import { generateBrokenSeats, markSeatsAsUnavailable, updateVenueWithConditions } from "./data/venueConditions.js";
 import { validateMockData, handleEdgeCases } from "./data/mockDataValidator.js";
 import { faker } from "@faker-js/faker";
+import { exec } from "child_process";
+import { promisify } from "util";
+
+const execAsync = promisify(exec);
 
 const seedDatabase = async () => {
   try {
@@ -20,6 +24,15 @@ const seedDatabase = async () => {
 
     console.log("Dropping and recreating tables...");
     await syncDatabase(true);
+
+    console.log("Running migrations to create views...");
+    try {
+      await execAsync("npx sequelize-cli db:migrate");
+      console.log("Migrations completed successfully");
+    } catch (error) {
+      console.warn("Migration warning:", error.message);
+      console.log("Continuing with seed...");
+    }
 
     console.log("Seeding ticket types...");
     await TicketType.bulkCreate(ticketTypesData);
@@ -90,8 +103,8 @@ const seedDatabase = async () => {
     const sanitizedUsers = users.map(user => handleEdgeCases(user, "user"));
     const sanitizedPerformances = performancesData.map(perf => handleEdgeCases(perf, "performance"));
 
-    await User.bulkCreate(sanitizedUsers);
-    console.log(`Created ${sanitizedUsers.length} users`);
+    const createdUsers = await User.bulkCreate(sanitizedUsers, { returning: true });
+    console.log(`Created ${createdUsers.length} users`);
 
     console.log("Seeding performances...");
     await Performance.bulkCreate(sanitizedPerformances);
@@ -141,8 +154,8 @@ const seedDatabase = async () => {
       });
 
       // Generate bookings
-      const generatedBookings = await generateBookings({
-        users,
+      const { bookings: generatedBookings, performanceUpdates } = await generateBookings({
+        users: createdUsers,
         performances,
         ticketTypes,
         count: mockConfig.volumes.bookings,
@@ -152,33 +165,19 @@ const seedDatabase = async () => {
       });
 
       if (generatedBookings.length > 0) {
-        // Insert bookings into database
         await Booking.bulkCreate(generatedBookings);
         console.log(`Created ${generatedBookings.length} bookings`);
 
-        // Update performance seat availability
         console.log("Updating performance seat availability...");
-        const bookingsByPerformance = new Map();
-
-        generatedBookings.forEach(booking => {
-          if (!bookingsByPerformance.has(booking.performanceId)) {
-            bookingsByPerformance.set(booking.performanceId, []);
-          }
-          bookingsByPerformance.get(booking.performanceId).push(booking);
-        });
-
-        for (const [performanceId, perfBookings] of bookingsByPerformance) {
-          const performance = performances.find(p => p.id === performanceId);
+        for (const update of performanceUpdates) {
+          const performance = performances.find(p => p.id === update.id);
           if (performance) {
-            const bookedSeats = perfBookings.reduce((sum, b) => sum + b.seatCount, 0);
-            const availableSeats = Math.max(0, performance.totalSeats - bookedSeats);
-
             await performance.update({
-              bookedSeats,
-              availableSeats,
+              bookedSeats: update.bookedSeats,
+              availableSeats: update.availableSeats,
             });
 
-            console.log(`Performance ${performanceId}: ${bookedSeats} booked, ${availableSeats} available`);
+            console.log(`Performance ${update.id}: ${update.bookedSeats} booked, ${update.availableSeats} available`);
           }
         }
 
@@ -194,7 +193,7 @@ const seedDatabase = async () => {
     console.log("Database seeding completed successfully");
     console.log("\nSummary:");
     console.log(`- Mock Data Mode: ${mockConfig.mode}`);
-    console.log(`- Users: ${users.length}`);
+    console.log(`- Users: ${createdUsers.length}`);
     console.log(`- Venues: ${venuesData.length}`);
     console.log(`- Performances: ${performancesData.length}`);
     console.log(`- Ticket Types: ${ticketTypesData.length}`);

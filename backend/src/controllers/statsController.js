@@ -1,42 +1,36 @@
-import * as statsService from "#services/statsService.js";
+import { asyncHandler } from "#middleware/asyncHandler.js";
+import { statsService } from "#services/statsService.js";
+import { successResponse } from "#utils/response.js";
 
-export const getDashboardStats = async (req, res, next) => {
-  try {
-    const stats = await statsService.getDashboardStats();
+export const getAdminStats = asyncHandler(async (req, res) => {
+  const stats = await statsService.getAdminStats();
+  return successResponse(res, stats, "Admin statistics retrieved successfully");
+});
 
-    res.json({
-      success: true,
-      data: { stats },
-    });
-  } catch (error) {
-    next(error);
-  }
-};
+export const getUserStats = asyncHandler(async (req, res) => {
+  const userId = req.user.id;
+  const stats = await statsService.getUserStats(userId);
+  return successResponse(res, stats, "User statistics retrieved successfully");
+});
 
-export const getUserStats = async (req, res, next) => {
-  try {
-    const userId = req.params.userId || req.session.userId;
-    const stats = await statsService.getUserStats(userId);
+export const getPerformanceStats = asyncHandler(async (req, res) => {
+  const { performanceId } = req.params;
+  const stats = await statsService.getPerformanceStats(performanceId);
+  return successResponse(res, stats, "Performance statistics retrieved successfully");
+});
 
-    res.json({
-      success: true,
-      data: { stats },
-    });
-  } catch (error) {
-    next(error);
-  }
-};
+export const getAllPerformanceStats = asyncHandler(async (req, res) => {
+  const stats = await statsService.getAllPerformanceStats();
+  return successResponse(res, stats, "All performance statistics retrieved successfully");
+});
 
-export const getPerformanceStats = async (req, res, next) => {
-  try {
-    const { performanceId } = req.params;
-    const stats = await statsService.getPerformanceStats(performanceId);
+export const getVenueStats = asyncHandler(async (req, res) => {
+  const { venueId } = req.params;
+  const stats = await statsService.getVenueStats(venueId);
+  return successResponse(res, stats, "Venue statistics retrieved successfully");
+});
 
-    res.json({
-      success: true,
-      data: { stats },
-    });
-  } catch (error) {
-    next(error);
-  }
-};
+export const getAllVenueStats = asyncHandler(async (req, res) => {
+  const stats = await statsService.getAllVenueStats();
+  return successResponse(res, stats, "All venue statistics retrieved successfully");
+});

@@ -419,36 +419,37 @@ export default {
     $(document).on("click", ".action-dropdown-btn", (e) => {
       e.stopPropagation();
       const $btn = $(e.currentTarget);
-      const $dropdown = $btn.next();
+      const $dropdown = $btn.next(".action-dropdown-menu");
       const rect = $btn[0].getBoundingClientRect();
 
-      $(".action-dropdown-btn").not($btn).next().addClass("hidden");
+      $(".action-dropdown-menu").not($dropdown).addClass("hidden");
 
       $dropdown.css({
         position: "fixed",
-        top: (rect.bottom + 4) + "px",
-        right: (window.innerWidth - rect.right) + "px"
+        top: `${rect.bottom + 4}px`,
+        right: `${window.innerWidth - rect.right}px`
       }).toggleClass("hidden");
 
       if (!$dropdown.hasClass("hidden")) {
         const closeDropdown = (e) => {
           const $target = $(e.target);
-          // Check if clicking inside the dropdown or on an action button
           const isInsideDropdown = $target.closest(".action-dropdown-menu").length > 0;
           const isActionButton = $target.closest("[class*=\"action-\"]").length > 0;
+          const isInsideGroup = $target.closest(".group").length > 0;
 
-          // Only close if clicking outside both the dropdown and action buttons
-          if (!isInsideDropdown && !isActionButton && !$target.closest(".group").length) {
+          if (!isInsideDropdown && !isActionButton && !isInsideGroup) {
             $dropdown.addClass("hidden");
             $(document).off("click", closeDropdown);
             $(document).off("scroll", closeOnScroll);
           }
         };
+
         const closeOnScroll = () => {
           $dropdown.addClass("hidden");
           $(document).off("click", closeDropdown);
           $(document).off("scroll", closeOnScroll);
         };
+
         setTimeout(() => {
           $(document).on("click", closeDropdown);
           $(document).on("scroll", closeOnScroll);
@@ -456,32 +457,31 @@ export default {
       }
     });
 
-    // Action dropdown button handlers
     $(document).on("click", ".action-view-btn", (e) => {
       e.stopPropagation();
       const perfId = $(e.currentTarget).data("perf-id");
-      $(".action-dropdown-menu").addClass("hidden"); // Close dropdown
+      $(".action-dropdown-menu").addClass("hidden");
       this.viewPerformance(perfId);
     });
 
     $(document).on("click", ".action-edit-btn", (e) => {
       e.stopPropagation();
       const perfId = $(e.currentTarget).data("perf-id");
-      $(".action-dropdown-menu").addClass("hidden"); // Close dropdown
+      $(".action-dropdown-menu").addClass("hidden");
       this.editPerformance(perfId);
     });
 
     $(document).on("click", ".action-duplicate-btn", (e) => {
       e.stopPropagation();
       const perfId = $(e.currentTarget).data("perf-id");
-      $(".action-dropdown-menu").addClass("hidden"); // Close dropdown
+      $(".action-dropdown-menu").addClass("hidden");
       this.duplicatePerformance(perfId);
     });
 
     $(document).on("click", ".action-delete-btn", (e) => {
       e.stopPropagation();
       const perfId = $(e.currentTarget).data("perf-id");
-      $(".action-dropdown-menu").addClass("hidden"); // Close dropdown
+      $(".action-dropdown-menu").addClass("hidden");
       this.deletePerformance(perfId);
     });
 
@@ -1832,8 +1832,7 @@ export default {
       return;
     }
 
-    // Navigate to the dedicated performance details page
-    page.redirect(`/admin/performances/${id}`);
+    page(`/admin/performances/${id}`);
   },
 
   generatePerformanceDetailsHTML(performance, venue, showtimes, ticketTypes) {

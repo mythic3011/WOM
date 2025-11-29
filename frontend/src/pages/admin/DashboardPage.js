@@ -34,7 +34,7 @@ export default {
         statsData = {
           totalPerformances: adminStats.performances_with_bookings || 0,
           totalBookings: adminStats.total_bookings || 0,
-          totalUsers: adminStats.total_customers || 0,
+          totalUsers: adminStats.total_users || 0,
           totalRevenue: adminStats.total_revenue || 0,
           recentBookings: [],
           upcomingPerformances: [],

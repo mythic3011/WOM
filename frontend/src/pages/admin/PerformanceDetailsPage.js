@@ -1014,13 +1014,13 @@ const PerformanceDetailsPage = {
 
     if (backButton) {
       backButton.addEventListener("click", () => {
-        page.redirect(ROUTES.ADMIN.PERFORMANCES);
+        page(ROUTES.ADMIN.PERFORMANCES);
       });
     }
 
     if (backButtonMobile) {
       backButtonMobile.addEventListener("click", () => {
-        page.redirect(ROUTES.ADMIN.PERFORMANCES);
+        page(ROUTES.ADMIN.PERFORMANCES);
       });
     }
 
@@ -2363,7 +2363,7 @@ const PerformanceDetailsPage = {
           }
         });
 
-        page.redirect(ROUTES.ADMIN.PERFORMANCES);
+        page(ROUTES.ADMIN.PERFORMANCES);
       } catch (error) {
         console.error("Failed to delete performance:", error);
 
@@ -2387,7 +2387,7 @@ const PerformanceDetailsPage = {
     const errorBackButton = document.getElementById("back-to-performances-error");
     if (errorBackButton) {
       errorBackButton.addEventListener("click", () => {
-        page.redirect(ROUTES.ADMIN.PERFORMANCES);
+        page(ROUTES.ADMIN.PERFORMANCES);
       });
     }
 
@@ -2456,7 +2456,7 @@ const PerformanceDetailsPage = {
       url += `&showtimeId=${showtimeId}`;
     }
 
-    page.redirect(url);
+    page(url);
   },
 
   attachShowtimeHandlers() {

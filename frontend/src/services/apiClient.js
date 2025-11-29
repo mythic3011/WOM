@@ -300,17 +300,29 @@ export const ticketTypeAPI = {
 };
 
 export const statsAPI = {
-  async getDashboardStats() {
-    return apiClient.get("/stats/dashboard");
-  },
-
   async getUserStats(userId = null) {
     const endpoint = userId ? `/stats/user/${userId}` : "/stats/user";
     return apiClient.get(endpoint);
   },
 
   async getPerformanceStats(performanceId) {
-    return apiClient.get(`/stats/performance/${performanceId}`);
+    return apiClient.get(`/stats/performances/${performanceId}`);
+  },
+
+  async getAdminStats() {
+    return apiClient.get("/stats/admin");
+  },
+
+  async getAllPerformanceStats() {
+    return apiClient.get("/stats/performances");
+  },
+
+  async getVenueStats(venueId) {
+    return apiClient.get(`/stats/venues/${venueId}`);
+  },
+
+  async getAllVenueStats() {
+    return apiClient.get("/stats/venues");
   },
 };
 

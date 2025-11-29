@@ -1820,9 +1820,9 @@ export default {
           confirmButtonColor: SwalColors.success,
         }).then(() => {
           if (user) {
-            page.redirect(ROUTES.USER.BOOKINGS);
+            page(ROUTES.USER.BOOKINGS);
           } else {
-            page.redirect(ROUTES.HOME);
+            page(ROUTES.HOME);
           }
         });
       } catch (error) {
@@ -1846,7 +1846,7 @@ export default {
       countdown--;
 
       if (countdown < 0) {
-        page.redirect(ROUTES.PUBLIC.PERFORMANCES);
+        page(ROUTES.PUBLIC.PERFORMANCES);
       }
     };
 

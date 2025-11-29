@@ -68,7 +68,10 @@ export const bookingService = {
   },
 
   calculateTotalSpent(bookings) {
-    return bookings.reduce((sum, b) => sum + (b.amount || 0), 0);
+    return bookings.reduce((sum, b) => {
+      const amount = parseFloat(b.amount || b.totalAmount || 0);
+      return sum + (isNaN(amount) ? 0 : amount);
+    }, 0);
   },
 
   calculateAverageSpent(bookings) {

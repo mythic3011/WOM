@@ -61,13 +61,20 @@ export const calculationService = {
     },
 
     formatCurrency(amount) {
-        if (amount === null || amount === undefined) {return "$0.00";}
+        if (amount === null || amount === undefined || isNaN(amount)) {
+            return "$0.00";
+        }
 
-        const formatted = Number(amount).toFixed(2);
+        const numAmount = Number(amount);
+        if (isNaN(numAmount)) {
+            return "$0.00";
+        }
+
+        const formatted = numAmount.toFixed(2);
         const parts = formatted.split(".");
         const integerPart = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",");
 
-        return `${integerPart}.${parts[1]}`;
+        return `$${integerPart}.${parts[1]}`;
     },
 
     calculateDateRange(startDate, endDate) {

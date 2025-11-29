@@ -4,16 +4,31 @@ import { SeatSelectionStrategy } from "./seatSelectionStrategy.js";
 /**
  * Generates a unique booking reference code
  * Format: BK-YYYYMMDD-XXXXX (e.g., BK-20250120-A1B2C)
+ * @param {Set<string>} [existingReferences] - Set of existing booking references to ensure uniqueness
  * @returns {string} Unique booking reference
  */
-export function generateBookingReference() {
+export function generateBookingReference(existingReferences = new Set()) {
     const date = new Date();
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const day = String(date.getDate()).padStart(2, '0');
-    const randomCode = faker.string.alphanumeric(5).toUpperCase();
 
-    return `BK-${year}${month}${day}-${randomCode}`;
+    let reference;
+    let attempts = 0;
+    const maxAttempts = 100;
+
+    do {
+        const randomCode = faker.string.alphanumeric(5).toUpperCase();
+        reference = `BK-${year}${month}${day}-${randomCode}`;
+        attempts++;
+
+        if (attempts >= maxAttempts) {
+            throw new Error('Unable to generate unique booking reference after maximum attempts');
+        }
+    } while (existingReferences.has(reference));
+
+    existingReferences.add(reference);
+    return reference;
 }
 
 /**
@@ -249,16 +264,19 @@ export function selectSeatsForBooking(
         return null;
     }
 
-    // Get pricing sections from performance
-    const pricingSections = performance.pricingSections ||
-        performance.showtimes?.[0]?.pricing?.sections ||
-        [];
+    let pricingSections = null;
 
-    if (pricingSections.length === 0) {
-        throw new Error('Performance has no pricing information');
+    if (performance.pricingSections && performance.pricingSections.length > 0) {
+        pricingSections = performance.pricingSections;
+    } else if (performance.showtimes?.[0]?.pricing?.sections && 
+               performance.showtimes[0].pricing.sections.length > 0) {
+        pricingSections = performance.showtimes[0].pricing.sections;
     }
 
-    // Create a map of tier to base price for quick lookup
+    if (!pricingSections || pricingSections.length === 0) {
+        throw new Error(`Performance ${performance.id} (${performance.title}) has no pricing sections`);
+    }
+
     const tierPriceMap = {};
     pricingSections.forEach(section => {
         if (section.tier && section.basePrice) {
@@ -308,18 +326,19 @@ export function selectSeatsForBooking(
         selectedTicketType = ticketTypes[0];
     }
 
-    // Build seatTickets array
     const seatTickets = selectedSeats.map(seat => {
-        // Get base price for this seat's tier
-        const basePrice = tierPriceMap[seat.tier] || tierPriceMap['standard'] || 500;
+        let basePrice = tierPriceMap[seat.tier];
 
-        // Apply ticket type discount
+        if (!basePrice) {
+            basePrice = tierPriceMap['standard'];
+        }
+
+        if (!basePrice) {
+            basePrice = 500;
+        }
+
         const discount = selectedTicketType.discount || 1.0;
         const finalPrice = Math.round(basePrice * discount);
-
-        // Find the pricing section for this seat's tier
-        const pricingSection = pricingSections.find(ps => ps.tier === seat.tier) ||
-            pricingSections[0];
 
         return {
             seatId: seat.fullId,
@@ -332,6 +351,13 @@ export function selectSeatsForBooking(
             row: seat.rowLabel
         };
     });
+
+    // Validate seatId uniqueness
+    const seatIds = seatTickets.map(ticket => ticket.seatId);
+    const uniqueSeatIds = new Set(seatIds);
+    if (seatIds.length !== uniqueSeatIds.size) {
+        throw new Error('Duplicate seatIds found in seatTickets array');
+    }
 
     return seatTickets;
 }
@@ -383,6 +409,7 @@ export function calculateStatusBasedOccupancy(status, patterns = {}) {
  * @param {Set<string>} occupiedSeats - Set to track occupied seats (will be modified)
  * @param {Set<string>} brokenSeats - Set of broken/unavailable seat IDs
  * @param {Object} patterns - Booking patterns configuration
+ * @param {Set<string>} existingReferences - Set to track booking references for uniqueness
  * @returns {Array} Array of booking data objects
  */
 export function generateSoldOutPerformance(
@@ -391,7 +418,8 @@ export function generateSoldOutPerformance(
     ticketTypes,
     occupiedSeats,
     brokenSeats = new Set(),
-    patterns = {}
+    patterns = {},
+    existingReferences = new Set()
 ) {
     const bookings = [];
 
@@ -532,9 +560,8 @@ export function generateSoldOutPerformance(
             paymentStatus = 'pending';
         }
 
-        // Create booking object
         const booking = {
-            bookingReference: generateBookingReference(),
+            bookingReference: generateBookingReference(existingReferences),
             userId: selectedUser.id,
             userName: selectedUser.name,
             userEmail: selectedUser.email,
@@ -544,6 +571,7 @@ export function generateSoldOutPerformance(
             venueName: performance.venueName || 'Unknown Venue',
             showtimeId: performance.showtimes?.[0]?.id || `showtime-${performance.id}`,
             showtime: new Date(performance.date),
+            seats: null,
             seatTickets,
             seatCount: seatTickets.length,
             amount,
@@ -580,6 +608,7 @@ export function generateSoldOutPerformance(
  * @param {Set<string>} occupiedSeats - Set to track occupied seats (will be modified)
  * @param {Set<string>} brokenSeats - Set of broken/unavailable seat IDs
  * @param {Object} patterns - Booking patterns configuration
+ * @param {Set<string>} existingReferences - Set to track booking references for uniqueness
  * @returns {Array} Array of booking data objects
  */
 export function handlePreOrderPerformance(
@@ -588,7 +617,8 @@ export function handlePreOrderPerformance(
     ticketTypes,
     occupiedSeats,
     brokenSeats = new Set(),
-    patterns = {}
+    patterns = {},
+    existingReferences = new Set()
 ) {
     const bookings = [];
 
@@ -696,9 +726,8 @@ export function handlePreOrderPerformance(
             paymentStatus = 'pending';
         }
 
-        // Create booking object
         const booking = {
-            bookingReference: generateBookingReference(),
+            bookingReference: generateBookingReference(existingReferences),
             userId: selectedUser.id,
             userName: selectedUser.name,
             userEmail: selectedUser.email,
@@ -708,6 +737,7 @@ export function handlePreOrderPerformance(
             venueName: performance.venueName || 'Unknown Venue',
             showtimeId: performance.showtimes?.[0]?.id || `showtime-${performance.id}`,
             showtime: new Date(performance.date),
+            seats: null,
             seatTickets,
             seatCount: seatTickets.length,
             amount,
@@ -775,22 +805,28 @@ export async function generateBookings(options = {}) {
     // Initialize faker with seed for deterministic generation
     faker.seed(seed);
 
-    // Filter out performances with invalid seat maps
     const validPerformances = performances.filter(perf => {
-        const hasValidSeatMap = perf.seatMap &&
-            perf.seatMap.total > 0 &&
-            perf.totalSeats > 0;
-
-        if (!hasValidSeatMap) {
-            console.log(`Skipping performance ${perf.id} - invalid seat map (totalSeats: ${perf.totalSeats}, seatMap.total: ${perf.seatMap?.total || 0})`);
+        if (!perf.seatMap || perf.seatMap === null) {
+            console.warn(`Skipping performance ${perf.id} (${perf.title}) - seatMap is null or undefined`);
+            return false;
         }
 
-        return hasValidSeatMap;
+        if (!perf.seatMap.total || perf.seatMap.total <= 0) {
+            console.warn(`Skipping performance ${perf.id} (${perf.title}) - seatMap.total is ${perf.seatMap.total}`);
+            return false;
+        }
+
+        if (!perf.totalSeats || perf.totalSeats <= 0) {
+            console.warn(`Skipping performance ${perf.id} (${perf.title}) - totalSeats is ${perf.totalSeats}`);
+            return false;
+        }
+
+        return true;
     });
 
     if (validPerformances.length === 0) {
         console.warn('No valid performances with seat maps found for booking generation');
-        return [];
+        return { bookings: [], performanceUpdates: [] };
     }
 
     console.log(`Booking generation: ${validPerformances.length} valid performances out of ${performances.length} total`);
@@ -800,6 +836,9 @@ export async function generateBookings(options = {}) {
     validPerformances.forEach(perf => {
         occupiedSeatsMap.set(perf.id, new Set());
     });
+
+    // Track booking references to ensure uniqueness
+    const existingReferences = new Set();
 
     // Array to collect all generated bookings
     const allBookings = [];
@@ -822,7 +861,8 @@ export async function generateBookings(options = {}) {
             ticketTypes,
             occupiedSeats,
             perfBrokenSeats,
-            patterns
+            patterns,
+            existingReferences
         );
 
         allBookings.push(...soldOutBookings);
@@ -839,7 +879,8 @@ export async function generateBookings(options = {}) {
             ticketTypes,
             occupiedSeats,
             perfBrokenSeats,
-            patterns
+            patterns,
+            existingReferences
         );
 
         allBookings.push(...preOrderBookings);
@@ -976,9 +1017,8 @@ export async function generateBookings(options = {}) {
                 paymentStatus = 'pending';
             }
 
-            // Create booking object
             const booking = {
-                bookingReference: generateBookingReference(),
+                bookingReference: generateBookingReference(existingReferences),
                 userId: selectedUser.id,
                 userName: selectedUser.name,
                 userEmail: selectedUser.email,
@@ -988,6 +1028,7 @@ export async function generateBookings(options = {}) {
                 venueName: performance.venueName || 'Unknown Venue',
                 showtimeId: performance.showtimes?.[0]?.id || `showtime-${performance.id}`,
                 showtime: new Date(performance.date),
+                seats: null,
                 seatTickets,
                 seatCount: seatTickets.length,
                 amount,
@@ -1012,5 +1053,46 @@ export async function generateBookings(options = {}) {
         }
     }
 
-    return allBookings;
+    const performanceUpdates = calculatePerformanceAvailability(allBookings, validPerformances);
+
+    return { bookings: allBookings, performanceUpdates };
+}
+
+/**
+ * Groups bookings by performance and calculates availability updates
+ * 
+ * @param {Array} bookings - Array of booking objects
+ * @param {Array} performances - Array of performance objects
+ * @returns {Array} Array of performance update objects with id, bookedSeats, and availableSeats
+ */
+export function calculatePerformanceAvailability(bookings, performances) {
+    const bookingsByPerformance = new Map();
+
+    bookings.forEach(booking => {
+        if (!bookingsByPerformance.has(booking.performanceId)) {
+            bookingsByPerformance.set(booking.performanceId, []);
+        }
+        bookingsByPerformance.get(booking.performanceId).push(booking);
+    });
+
+    const updates = [];
+
+    performances.forEach(performance => {
+        const performanceBookings = bookingsByPerformance.get(performance.id) || [];
+
+        const bookedSeats = performanceBookings.reduce((sum, booking) => {
+            return sum + (booking.seatCount || 0);
+        }, 0);
+
+        const totalSeats = performance.totalSeats || 0;
+        const availableSeats = Math.max(0, totalSeats - bookedSeats);
+
+        updates.push({
+            id: performance.id,
+            bookedSeats,
+            availableSeats
+        });
+    });
+
+    return updates;
 }

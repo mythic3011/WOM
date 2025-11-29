@@ -3,8 +3,8 @@ import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
 
 import { createBadge } from "@components/common/Badge.js";
-import { statsService } from "@services/statsService.js";
 import { getDisplayLabel } from "@utils/seatIdHelper.js";
+import { formatCurrency } from "@utils/utils.js";
 
 dayjs.extend(relativeTime);
 
@@ -37,14 +37,13 @@ export const BookingCard = {
               </p>
               <p>
                 <i class="fas fa-chair text-indigo-600 w-5"></i>
-                ${seatLabels.join(", ")}
-                ${isNewFormat ? "<span class=\"ml-1 text-xs text-green-600\" title=\"Using optimized format\"><i class=\"fas fa-check-circle\"></i></span>" : ""}
+                ${seatCount} seat${seatCount !== 1 ? "s" : ""}
               </p>
             </div>
           </div>
           <div class="text-right ml-4">
             ${statusBadge}
-            <p class="text-2xl font-bold text-indigo-600 mt-2">${statsService.formatCurrency(
+            <p class="text-2xl font-bold text-indigo-600 mt-2">${formatCurrency(
         booking.amount
       )}</p>
             <p class="text-xs text-gray-500">${ticketInfo || "Standard"
@@ -181,7 +180,6 @@ export const BookingCard = {
           })
           .join("")}
                 ${seatCount > 6 ? `<span class="px-2.5 py-1 bg-gray-100 text-gray-600 border border-gray-200 rounded-lg text-xs font-semibold">+${seatCount - 6} more</span>` : ""}
-                ${isNewFormat ? "<span class=\"px-2.5 py-1 bg-green-50 text-green-700 border border-green-200 rounded-lg text-xs font-semibold\" title=\"Using optimized format\"><i class=\"fas fa-check-circle\"></i> Optimized</span>" : ""}
               </div>
             </div>
           `
@@ -194,7 +192,7 @@ export const BookingCard = {
           <div class="flex items-center justify-between">
             <div>
               <p class="text-xs font-bold ${status.textColor} uppercase tracking-wider mb-1">Total Amount</p>
-              <p class="text-2xl font-black ${status.textColor}">${statsService.formatCurrency(booking.amount)}</p>
+              <p class="text-2xl font-black ${status.textColor}">${formatCurrency(booking.amount)}</p>
             </div>
             <div class="text-right">
               <p class="text-xs text-gray-500 font-medium">Booked on</p>
@@ -264,7 +262,7 @@ export const BookingCard = {
               </div>
               <div class="flex items-center gap-2">
                 <i class="fas fa-ticket-alt text-indigo-600 w-5"></i>
-                <span>Booking ID: ${booking.id}</span>
+                <span>Booking Reference: ${booking.bookingReference || booking.id}</span>
               </div>
             </div>
           </div>

@@ -4,7 +4,7 @@ import dayjs from "dayjs";
 import { FormComponents } from "@components/FormComponents.js";
 import { createLoadingState } from "@components/LoadingState.js";
 import { PerformanceCard } from "@components/PerformanceCard.js";
-import { statsService } from "@services/statsService.js";
+import { performanceService } from "@services/performanceService.js";
 
 export default {
   title: "Home | Western Orchestral Music Performance",
@@ -72,7 +72,7 @@ export default {
     `);
 
     try {
-      const performances = await statsService.getPerformances();
+      const performances = await performanceService.getAll();
       const featured = performances
         .filter((p) => p.ticketingInfo?.status !== "sold_out")
         .slice(0, 6);

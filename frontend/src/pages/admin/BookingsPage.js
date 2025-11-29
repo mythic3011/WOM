@@ -147,7 +147,7 @@ export default {
         <input
           type="text"
           id="searchBookings"
-          placeholder="Booking ID, user, performance..."
+          placeholder="Booking Reference, user, performance..."
           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
         />
       </div>
@@ -449,7 +449,7 @@ export default {
   calculateFilteredRevenue() {
     return this.filteredBookings
       .filter((b) => b.status === "confirmed")
-      .reduce((sum, b) => sum + b.amount, 0);
+      .reduce((sum, b) => sum + (b.amount || b.totalAmount || 0), 0);
   },
 
   getTableSubtitle(filteredCount, totalCount) {
@@ -463,7 +463,7 @@ export default {
   getTableColumns() {
     return [
       {
-        label: "Booking ID",
+        label: "Booking Reference",
         key: "id",
         nowrap: true,
         render: (booking) =>
@@ -526,13 +526,18 @@ export default {
 
   renderSeatsCell(booking) {
     const { seatLabels, isNewFormat } = this.extractBookingSeats(booking);
+    const seatPreview = seatLabels.length > 3 
+      ? `${seatLabels.slice(0, 3).join(", ")}...` 
+      : seatLabels.join(", ");
+    
     return `
-      <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
-        <i class="fas fa-chair mr-1"></i>
-        ${seatLabels.length} seat${seatLabels.length > 1 ? "s" : ""}
-      </span>
-      <div class="text-xs text-gray-500 mt-1 font-mono">${seatLabels.join(", ")}</div>
-      ${isNewFormat ? "<div class=\"text-xs text-green-600 mt-1\"><i class=\"fas fa-check-circle\"></i> Optimized</div>" : ""}
+      <div class="flex flex-col gap-1">
+        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800 w-fit">
+          <i class="fas fa-chair mr-1"></i>
+          ${seatLabels.length} seat${seatLabels.length > 1 ? "s" : ""}
+        </span>
+        ${seatLabels.length > 0 ? `<div class="text-xs text-gray-500 font-mono" title="${seatLabels.join(", ")}">${seatPreview}</div>` : ""}
+      </div>
     `;
   },
 
@@ -760,6 +765,11 @@ export default {
   },
 
   viewBooking(bookingId) {
+    if (!this.bookings || !Array.isArray(this.bookings)) {
+      console.error('Bookings array is not initialized');
+      return;
+    }
+    
     const booking = this.bookings.find((b) => b.id === bookingId);
     if (!booking) {return;}
 
@@ -809,7 +819,7 @@ export default {
           <i class="fas fa-info-circle text-gray-600 mr-2"></i>Booking Information
         </h3>
         <div class="space-y-2 text-sm">
-          <p><span class="font-medium">Booking ID:</span> <span class="font-mono font-semibold text-indigo-700">${booking.bookingReference || booking.id
+          <p><span class="font-medium">Booking Reference:</span> <span class="font-mono font-semibold text-indigo-700">${booking.bookingReference || booking.id
       }</span></p>
           <p><span class="font-medium">Booking Date:</span> ${dayjs(
         booking.bookingDate || booking.date
@@ -870,7 +880,7 @@ export default {
     // Use seatTickets if available (new format)
     const seatsToRender = booking?.seatTickets && Array.isArray(booking.seatTickets) && booking.seatTickets.length > 0
       ? booking.seatTickets
-      : seats;
+      : (Array.isArray(seats) ? seats : []);
 
     const seatRows = seatsToRender
       .map((seat, index) => {
@@ -1063,15 +1073,15 @@ export default {
 
     return `
       <div class="text-left space-y-5 p-1">
-        <!-- Booking ID (Read-only) -->
+        <!-- Booking Reference (Read-only) -->
         <div class="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-xl p-4 border-2 border-indigo-200">
           <label class="block text-xs font-bold text-indigo-900 uppercase tracking-wider mb-2">
-            <i class="fas fa-hashtag mr-1"></i>Booking ID
+            <i class="fas fa-hashtag mr-1"></i>Booking Reference
           </label>
           <input
             id="edit-booking-id"
             type="text"
-            value="${booking.id}"
+            value="${booking.bookingReference || booking.id}"
             disabled
             class="w-full px-4 py-3 bg-white border-2 border-indigo-100 rounded-xl font-mono font-bold text-indigo-700 text-lg cursor-not-allowed"
           >
@@ -1371,7 +1381,7 @@ export default {
     return `
       <div class="text-left space-y-4">
         <div class="bg-gray-50 rounded-lg p-4 mb-4">
-          <p class="text-sm"><span class="font-medium">Booking ID:</span> ${booking.id
+          <p class="text-sm"><span class="font-medium">Booking Reference:</span> ${booking.bookingReference || booking.id
       }</p>
           <p class="text-sm"><span class="font-medium">Original Amount:</span> ${formatCurrency(
         booking.amount
@@ -1916,7 +1926,7 @@ export default {
         <div class="bg-gray-50 rounded-lg p-4 mb-4">
           <p class="text-sm"><span class="font-medium">To:</span> ${customer.email}</p>
           <p class="text-sm"><span class="font-medium">Customer:</span> ${customer.name}</p>
-          <p class="text-sm"><span class="font-medium">Booking:</span> ${booking.id}</p>
+          <p class="text-sm"><span class="font-medium">Booking:</span> ${booking.bookingReference || booking.id}</p>
         </div>
 
         <div>
@@ -1996,7 +2006,7 @@ export default {
         }</p>
             <p class="text-sm"><span class="font-medium">Template:</span> ${templateTitles[emailData.template]
         }</p>
-            <p class="text-sm"><span class="font-medium">Booking ID:</span> ${booking.id
+            <p class="text-sm"><span class="font-medium">Booking Reference:</span> ${booking.bookingReference || booking.id
         }</p>
           </div>
         </div>
@@ -2022,7 +2032,7 @@ export default {
 
   bookingsToCSV() {
     const headers = [
-      "Booking ID",
+      "Booking Reference",
       "Performance",
       "Customer",
       "Email",
@@ -2037,7 +2047,7 @@ export default {
       const { seatLabels } = this.extractBookingSeats(booking);
 
       return [
-        booking.id,
+        booking.bookingReference || booking.id,
         performance?.title || "Unknown",
         customer.name,
         customer.email,

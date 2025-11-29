@@ -3,8 +3,8 @@ import dayjs from "dayjs";
 import pdfMake from "pdfmake/build/pdfmake";
 
 import { COMPANY_INFO } from "@config/config.js";
-import { statsService } from "@services/statsService.js";
 import { getDisplayLabel } from "@utils/seatIdHelper.js";
+import { formatCurrency } from "@utils/utils.js";
 import "./pdfUtils.js";
 
 export const InvoiceGenerator = {
@@ -34,18 +34,18 @@ export const InvoiceGenerator = {
         { text: ticket.name, style: "tableCell" },
         { text: "1", style: "tableCell", alignment: "center" },
         {
-          text: statsService.formatCurrency(ticket.price),
+          text: formatCurrency(ticket.price),
           style: "tableCell",
           alignment: "right",
         },
         {
-          text: statsService.formatCurrency(ticket.price),
+          text: formatCurrency(ticket.price),
           style: "tableCell",
           alignment: "right",
           bold: true,
         },
       ])
-      : booking.seats.map((seat) => {
+      : (booking.seats && Array.isArray(booking.seats) ? booking.seats : []).map((seat) => {
         const seatId =
           typeof seat === "string" ? seat : seat.fullId || seat.seatId || "";
         return [
@@ -60,14 +60,14 @@ export const InvoiceGenerator = {
           },
           { text: "1", style: "tableCell", alignment: "center" },
           {
-            text: statsService.formatCurrency(
+            text: formatCurrency(
               booking.amount / booking.seats.length
             ),
             style: "tableCell",
             alignment: "right",
           },
           {
-            text: statsService.formatCurrency(
+            text: formatCurrency(
               booking.amount / booking.seats.length
             ),
             style: "tableCell",
@@ -257,7 +257,7 @@ export const InvoiceGenerator = {
                   [
                     { text: "Subtotal", style: "summaryLabel" },
                     {
-                      text: statsService.formatCurrency(subtotal),
+                      text: formatCurrency(subtotal),
                       style: "summaryValue",
                       alignment: "right",
                     },
@@ -265,7 +265,7 @@ export const InvoiceGenerator = {
                   [
                     { text: "Tax (0%)", style: "summaryLabel" },
                     {
-                      text: statsService.formatCurrency(tax),
+                      text: formatCurrency(tax),
                       style: "summaryValue",
                       alignment: "right",
                     },
@@ -276,7 +276,7 @@ export const InvoiceGenerator = {
                       style: "totalLabel",
                     },
                     {
-                      text: statsService.formatCurrency(total),
+                      text: formatCurrency(total),
                       style: "totalValue",
                       alignment: "right",
                     },

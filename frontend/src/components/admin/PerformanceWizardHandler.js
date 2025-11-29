@@ -1130,7 +1130,11 @@ export class PerformanceWizardHandler {
                     showtimes: (this.formData.showtimes || []).map(st => ({
                         date: st.date,
                         time: st.time
-                    }))
+                    })),
+                    basePrice: this.formData.basePrice,
+                    vipPrice: this.formData.vipPrice,
+                    premiumPrice: this.formData.premiumPrice,
+                    economyPrice: this.formData.economyPrice
                 };
 
                 if (imageUrl) {
