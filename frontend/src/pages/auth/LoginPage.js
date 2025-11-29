@@ -145,7 +145,7 @@ export default {
       if (currentUser.role === "admin") {
         navigate(ROUTES.ADMIN.DASHBOARD);
       } else {
-        navigate(ROUTES.USER.DASHBOARD);
+        navigate(ROUTES.PERFORMANCES);
       }
       return;
     }
@@ -260,7 +260,7 @@ export default {
         } else if (user.role === "admin") {
           navigate(ROUTES.ADMIN.DASHBOARD);
         } else {
-          navigate(ROUTES.USER.DASHBOARD);
+          navigate(ROUTES.PERFORMANCES);
         }
       }, 500);
 
