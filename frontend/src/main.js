@@ -18,61 +18,107 @@ import { notify } from "@utils/ui/notification.js";
 
 window.$ = window.jQuery = $;
 
-let sessionCheckInterval = null;
+const SESSION_CHECK_INTERVAL = 5 * 60 * 1000;
+const AUTH_PAGES = ["/login", "/register"];
 
-async function validateSession() {
-  const currentUser = getCurrentUser();
-  
-  if (currentUser) {
+class SessionManager {
+  constructor() {
+    this.intervalId = null;
+  }
+
+  isAuthPage() {
+    return AUTH_PAGES.includes(window.location.pathname);
+  }
+
+  async validate() {
+    const currentUser = getCurrentUser();
+    
+    if (!currentUser) {
+      return true;
+    }
+
     try {
       const validUser = await checkSession();
       
       if (!validUser) {
-        clearUser();
-        notify.warning("Your session has expired. Please login again.");
-        setTimeout(() => {
-          window.location.href = "/login";
-        }, 1500);
+        this.handleInvalidSession("Your session has expired. Please login again.");
         return false;
       }
+
+      return true;
     } catch (error) {
       console.error("Session validation error:", error);
-      clearUser();
-      notify.error("Session validation failed. Please login again.");
-      setTimeout(() => {
-        window.location.href = "/login";
-      }, 1500);
+      this.handleInvalidSession("Session validation failed. Please login again.");
       return false;
     }
   }
-  
-  return true;
+
+  handleInvalidSession(message) {
+    clearUser();
+    
+    if (!this.isAuthPage()) {
+      notify.warning(message);
+      setTimeout(() => {
+        window.location.href = "/login";
+      }, 1500);
+    }
+  }
+
+  startMonitoring() {
+    if (this.intervalId) {
+      clearInterval(this.intervalId);
+    }
+    
+    this.intervalId = setInterval(() => {
+      this.validate();
+    }, SESSION_CHECK_INTERVAL);
+  }
+
+  stopMonitoring() {
+    if (this.intervalId) {
+      clearInterval(this.intervalId);
+      this.intervalId = null;
+    }
+  }
 }
 
-function startSessionMonitoring() {
-  if (sessionCheckInterval) {
-    clearInterval(sessionCheckInterval);
+class App {
+  constructor() {
+    this.sessionManager = new SessionManager();
   }
-  
-  sessionCheckInterval = setInterval(async () => {
-    await validateSession();
-  }, 5 * 60 * 1000);
+
+  async initializeAuth() {
+    return await this.sessionManager.validate();
+  }
+
+  initializeUI() {
+    updateNavigation();
+    initSPALinks();
+    initModalCloseHandlers();
+    initializeScrollbars();
+  }
+
+  initializeDevelopmentTools() {
+    if (import.meta.env.MODE === "development") {
+      healthCheck.startMonitoring();
+    }
+  }
+
+  initializeRouter() {
+    setupRouter();
+    page.start();
+  }
+
+  async start() {
+    await this.initializeAuth();
+    this.initializeUI();
+    this.initializeDevelopmentTools();
+    this.sessionManager.startMonitoring();
+    this.initializeRouter();
+  }
 }
 
 $(async function () {
-  await validateSession();
-  
-  updateNavigation();
-  initSPALinks();
-  initModalCloseHandlers();
-  initializeScrollbars();
-
-  if (import.meta.env.MODE === "development") {
-    healthCheck.startMonitoring();
-  }
-
-  startSessionMonitoring();
-
-  setupRouter();
-  page.start();
+  const app = new App();
+  await app.start();
 });
