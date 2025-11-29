@@ -254,16 +254,25 @@ export class PerformanceWizardHandler {
         $("#wizardTitle").on("blur input", function () {
             const value = $(this).val().trim();
             const validationEl = $("#titleValidation");
+            const $input = $(this);
+
+            try {
+                JSON.parse(value);
+                validationEl.html("<span class=\"text-red-600\"><i class=\"fas fa-exclamation-circle mr-1\"></i>Invalid data detected</span>");
+                $input.addClass("border-red-500 bg-red-50").removeClass("border-green-500 bg-green-50");
+                return;
+            } catch {
+            }
 
             if (!value) {
                 validationEl.html("<span class=\"text-red-600\"><i class=\"fas fa-exclamation-circle mr-1\"></i>Required</span>");
-                $(this).addClass("border-red-500");
+                $input.addClass("border-red-500 bg-red-50").removeClass("border-green-500 bg-green-50");
             } else if (value.length < 3) {
-                validationEl.html("<span class=\"text-red-600\"><i class=\"fas fa-exclamation-circle mr-1\"></i>Too short</span>");
-                $(this).addClass("border-red-500");
+                validationEl.html("<span class=\"text-orange-600\"><i class=\"fas fa-exclamation-triangle mr-1\"></i>Minimum 3 characters</span>");
+                $input.addClass("border-orange-500 bg-orange-50").removeClass("border-green-500 bg-green-50 border-red-500 bg-red-50");
             } else {
                 validationEl.html("<span class=\"text-green-600\"><i class=\"fas fa-check-circle mr-1\"></i>Valid</span>");
-                $(this).removeClass("border-red-500").addClass("border-green-500");
+                $input.removeClass("border-red-500 bg-red-50 border-orange-500 bg-orange-50").addClass("border-green-500 bg-green-50");
                 self.wizard.markDirty();
             }
         });
@@ -271,13 +280,22 @@ export class PerformanceWizardHandler {
         $("#wizardComposer").on("blur input", function () {
             const value = $(this).val().trim();
             const validationEl = $("#composerValidation");
+            const $input = $(this);
+
+            try {
+                JSON.parse(value);
+                validationEl.html("<span class=\"text-red-600\"><i class=\"fas fa-exclamation-circle mr-1\"></i>Invalid data detected</span>");
+                $input.addClass("border-red-500 bg-red-50").removeClass("border-green-500 bg-green-50");
+                return;
+            } catch {
+            }
 
             if (!value) {
                 validationEl.html("<span class=\"text-red-600\"><i class=\"fas fa-exclamation-circle mr-1\"></i>Required</span>");
-                $(this).addClass("border-red-500");
+                $input.addClass("border-red-500 bg-red-50").removeClass("border-green-500 bg-green-50");
             } else {
                 validationEl.html("<span class=\"text-green-600\"><i class=\"fas fa-check-circle mr-1\"></i>Valid</span>");
-                $(this).removeClass("border-red-500").addClass("border-green-500");
+                $input.removeClass("border-red-500 bg-red-50").addClass("border-green-500 bg-green-50");
                 self.wizard.markDirty();
             }
         });
@@ -613,16 +631,23 @@ export class PerformanceWizardHandler {
         this.saveCurrentStep();
 
         const venueId = this.formData.venueId || $("#wizardVenue").val();
+        const $venueSelect = $("#wizardVenue");
 
         if (!venueId) {
             notify.error("Please select a venue");
-            $("#wizardVenue").focus();
+            $venueSelect.addClass("border-red-500 bg-red-50").focus();
             return false;
+        } else {
+            $venueSelect.removeClass("border-red-500 bg-red-50").addClass("border-green-500");
         }
 
         if (!this.formData.showtimes || this.formData.showtimes.length === 0) {
             notify.error("Please add at least one showtime");
             $("#showtimesValidation").html("<span class=\"text-red-600\"><i class=\"fas fa-exclamation-circle mr-1\"></i>At least one showtime required</span>");
+            $("#addShowtimeBtn").addClass("ring-2 ring-red-500 ring-offset-2 animate-pulse");
+            setTimeout(() => {
+                $("#addShowtimeBtn").removeClass("ring-2 ring-red-500 ring-offset-2 animate-pulse");
+            }, 2000);
             return false;
         }
 
@@ -630,9 +655,18 @@ export class PerformanceWizardHandler {
         const invalidShowtimes = this.formData.showtimes.filter(st => !st.date || !st.time);
         if (invalidShowtimes.length > 0) {
             notify.error("Please complete all showtime dates and times");
+            $(".showtime-date, .showtime-time").each(function() {
+                if (!$(this).val()) {
+                    $(this).addClass("border-red-500 bg-red-50");
+                } else {
+                    $(this).removeClass("border-red-500 bg-red-50");
+                }
+            });
             return false;
         }
 
+        $(".showtime-date, .showtime-time").removeClass("border-red-500 bg-red-50");
+        $("#showtimesValidation").html("<span class=\"text-green-600\"><i class=\"fas fa-check-circle mr-1\"></i>Valid</span>");
         return true;
     }
 
@@ -641,11 +675,16 @@ export class PerformanceWizardHandler {
         this.saveCurrentStep();
 
         const basePrice = parseFloat(this.formData.basePrice || $("#wizardPrice").val());
+        const $priceInput = $("#wizardPrice");
 
         if (!basePrice || basePrice <= 0 || isNaN(basePrice)) {
             notify.error("Please enter a valid standard price");
-            $("#wizardPrice").focus();
+            $priceInput.addClass("border-red-500 bg-red-50").focus();
+            $("#priceValidation").html("<span class=\"text-red-600\"><i class=\"fas fa-exclamation-circle mr-1\"></i>Valid price required</span>");
             return false;
+        } else {
+            $priceInput.removeClass("border-red-500 bg-red-50").addClass("border-green-500");
+            $("#priceValidation").html("<span class=\"text-green-600\"><i class=\"fas fa-check-circle mr-1\"></i>Valid</span>");
         }
 
         return true;
