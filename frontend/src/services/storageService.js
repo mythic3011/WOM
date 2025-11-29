@@ -16,7 +16,8 @@ const STORAGE_VERSION = "4.0";
 const STORAGE_NAMESPACE = "wom_";
 const MAX_STORAGE_SIZE = 5 * 1024 * 1024;
 const COMPRESSION_THRESHOLD = 1024;
-const SECURE_KEYS = ["USER", "TOKEN"];
+const SECURE_KEYS = ["TOKEN"];
+const IGNORED_KEYS = ["wom_remembered_user"];
 
 class StorageService {
   constructor() {
@@ -80,11 +81,14 @@ class StorageService {
   }
 
   cleanCorrupted() {
-    // Clean up corrupted entries in our namespaced storage
     const keys = this.keys();
     let cleaned = 0;
 
     keys.forEach((fullKey) => {
+      if (this.isIgnoredKey(fullKey)) {
+        return;
+      }
+
       try {
         const item = localStorage.getItem(fullKey);
         if (!item || !item.trim()) {
@@ -93,7 +97,6 @@ class StorageService {
           return;
         }
 
-        // Try to parse to validate
         JSON.parse(item);
       } catch (error) {
         console.warn(`Removing corrupted key: ${fullKey}`);
@@ -107,8 +110,12 @@ class StorageService {
     }
   }
 
-  migrate(fromVersion, toVersion) {
+  migrate(_fromVersion, _toVersion) {
     return;
+  }
+
+  isIgnoredKey(key) {
+    return IGNORED_KEYS.includes(key);
   }
 
   getKey(key) {
@@ -117,31 +124,27 @@ class StorageService {
 
   get(key, defaultValue = null) {
     try {
-      const item = localStorage.getItem(this.getKey(key));
-      if (item === null) {return defaultValue;}
+      const fullKey = this.getKey(key);
+      const item = localStorage.getItem(fullKey);
+      
+      if (item === null) {
+        return defaultValue;
+      }
 
-      // Handle empty or whitespace-only values
-      if (!item.trim()) {
+      if (!item || !item.trim()) {
         console.warn(`Empty value found for key: ${key}, removing invalid entry`);
         this.remove(key);
         return defaultValue;
       }
 
-      const parsed = JSON.parse(item);
-
-      if (parsed.compressed) {
-        const decompressed = LZString.decompress(parsed.value);
-        parsed.value = JSON.parse(decompressed);
-      }
-
-      if (parsed.encrypted) {
-        // Validate encrypted value before attempting decryption
-        if (!parsed.value || (typeof parsed.value === "string" && !parsed.value.trim())) {
-          console.warn(`Empty encrypted value for key: ${key}, removing invalid entry`);
-          this.remove(key);
-          return defaultValue;
-        }
-        parsed.value = decrypt(parsed.value);
+      let parsed;
+      try {
+        parsed = JSON.parse(item);
+      } catch (parseError) {
+        console.error(`JSON parse error for key: ${key}`, parseError);
+        console.warn(`Removing corrupted data for key: ${key}`);
+        this.remove(key);
+        return defaultValue;
       }
 
       if (this.isExpired(parsed)) {
@@ -149,10 +152,30 @@ class StorageService {
         return defaultValue;
       }
 
-      return parsed.value !== undefined ? parsed.value : parsed;
+      let value = parsed.value !== undefined ? parsed.value : parsed;
+
+      if (parsed.compressed) {
+        const decompressed = LZString.decompress(value);
+        if (!decompressed) {
+          console.warn(`Failed to decompress value for key: ${key}`);
+          this.remove(key);
+          return defaultValue;
+        }
+        value = JSON.parse(decompressed);
+      }
+
+      if (parsed.encrypted) {
+        if (!value || (typeof value === "string" && !value.trim())) {
+          console.warn(`Empty encrypted value for key: ${key}, removing invalid entry`);
+          this.remove(key);
+          return defaultValue;
+        }
+        value = decrypt(value);
+      }
+
+      return value;
     } catch (error) {
       console.error(`Error reading from localStorage (${key}):`, error);
-      // Clean up corrupted data
       try {
         this.remove(key);
         console.warn(`Removed corrupted data for key: ${key}`);
@@ -165,7 +188,6 @@ class StorageService {
 
   set(key, value, options = {}) {
     try {
-      // Validate input - prevent storing null, undefined, or empty strings
       if (value === null || value === undefined) {
         console.warn(`Attempted to store null/undefined for key: ${key}`);
         return false;
@@ -176,33 +198,40 @@ class StorageService {
         return false;
       }
 
-      let { ttl, compress = false, encrypt: encryptData = false } = options;
+      const { ttl, compress = false, encrypt: encryptData = false } = options;
 
       if (this.getStorageSize() > MAX_STORAGE_SIZE * 0.9) {
         this.cleanOldData();
       }
 
       const isSecureKey = SECURE_KEYS.includes(key.toUpperCase());
-      if (isSecureKey && !encryptData) {
-        encryptData = true;
-      }
+      const shouldEncrypt = encryptData || isSecureKey;
 
       let processedValue = value;
       let isCompressed = false;
       let isEncrypted = false;
 
       const tempSerialized = JSON.stringify({ value });
+      const shouldCompress = compress || tempSerialized.length > COMPRESSION_THRESHOLD;
 
-      if (compress || tempSerialized.length > COMPRESSION_THRESHOLD) {
-        processedValue = LZString.compress(JSON.stringify(value));
+      if (shouldCompress) {
+        const stringified = JSON.stringify(value);
+        processedValue = LZString.compress(stringified);
         isCompressed = true;
+
+        if (!processedValue || (typeof processedValue === "string" && !processedValue.trim())) {
+          console.error(`Compression produced invalid output for key: ${key}`);
+          console.warn(`Falling back to uncompressed storage for key: ${key}`);
+          processedValue = value;
+          isCompressed = false;
+        }
       }
 
-      if (encryptData) {
-        processedValue = encrypt(isCompressed ? processedValue : value);
+      if (shouldEncrypt) {
+        const valueToEncrypt = isCompressed ? processedValue : value;
+        processedValue = encrypt(valueToEncrypt);
         isEncrypted = true;
 
-        // Validate encryption output
         if (!processedValue || (typeof processedValue === "string" && !processedValue.trim())) {
           console.error(`Encryption produced invalid output for key: ${key}`);
           return false;
@@ -219,8 +248,13 @@ class StorageService {
 
       const serialized = JSON.stringify(data);
 
+      if (!serialized || !serialized.trim()) {
+        console.error(`Serialization produced empty string for key: ${key}`);
+        return false;
+      }
+
       if (serialized.length > MAX_STORAGE_SIZE * 0.1) {
-        console.warn(`Large data being stored for key: ${key}`);
+        console.warn(`Large data being stored for key: ${key} (${(serialized.length / 1024).toFixed(2)}KB)`);
       }
 
       localStorage.setItem(this.getKey(key), serialized);
@@ -310,16 +344,24 @@ class StorageService {
     let cleaned = 0;
 
     keys.forEach((fullKey) => {
+      if (this.isIgnoredKey(fullKey)) {
+        return;
+      }
+
       try {
         const item = localStorage.getItem(fullKey);
-        if (!item) {return;}
+        if (!item) {
+          return;
+        }
 
         const parsed = JSON.parse(item);
         if (this.isExpired(parsed)) {
           localStorage.removeItem(fullKey);
           cleaned++;
         }
-      } catch (error) { }
+      } catch (error) {
+        console.warn(`Error checking expiration for ${fullKey}:`, error);
+      }
     });
 
     if (cleaned > 0) {
@@ -396,30 +438,52 @@ class StorageService {
   }
 
   setUser(user) {
-    if (!user || !user.id) {
-      console.error("Invalid user data - missing required fields");
+    if (!user || typeof user !== "object") {
+      console.error("Invalid user data - must be an object");
       return false;
     }
 
-    // Sanitize user data to prevent corruption
+    if (!user.id) {
+      console.error("Invalid user data - missing required id field");
+      return false;
+    }
+
     const sanitized = { ...user };
 
-    // Remove empty string fields that can cause JSON parse errors
     Object.keys(sanitized).forEach(key => {
       const value = sanitized[key];
-      if (typeof value === "string" && !value.trim()) {
+
+      if (key === "profileImage") {
+        return;
+      }
+
+      if (value === null || value === undefined) {
+        delete sanitized[key];
+      } else if (typeof value === "string" && !value.trim()) {
         console.warn(`Removing empty field from user data: ${key}`);
         delete sanitized[key];
       }
     });
 
-    // Validate critical fields
-    if (!sanitized.id || !sanitized.username) {
-      console.error("User data missing critical fields after sanitization");
+    if (!sanitized.id) {
+      console.error("User data missing id after sanitization");
       return false;
     }
 
-    return this.set(STORAGE_KEYS.USER, sanitized);
+    if (!("profileImage" in sanitized)) {
+      sanitized.profileImage = null;
+    }
+
+    const userDataSize = JSON.stringify(sanitized).length;
+    console.info(`[StorageService] Storing user data (${(userDataSize / 1024).toFixed(2)}KB)`);
+
+    const result = this.set(STORAGE_KEYS.USER, sanitized, { compress: false, encrypt: false });
+    
+    if (!result) {
+      console.error("[StorageService] Failed to store user data");
+    }
+
+    return result;
   }
 
   removeUser() {
@@ -629,8 +693,14 @@ class StorageService {
     let encrypted = 0;
     let expired = 0;
     let corrupted = 0;
+    let ignored = 0;
 
     keys.forEach((fullKey) => {
+      if (this.isIgnoredKey(fullKey)) {
+        ignored++;
+        return;
+      }
+
       try {
         const item = localStorage.getItem(fullKey);
         if (!item || !item.trim()) {
@@ -638,14 +708,22 @@ class StorageService {
           return;
         }
         const parsed = JSON.parse(item);
-        if (parsed.compressed) {compressed++;}
-        if (parsed.encrypted) {encrypted++;}
-        if (this.isExpired(parsed)) {expired++;}
+        if (parsed.compressed) {
+          compressed++;
+        }
+        if (parsed.encrypted) {
+          encrypted++;
+        }
+        if (this.isExpired(parsed)) {
+          expired++;
+        }
       } catch (error) {
         corrupted++;
         console.error(`Error analyzing key: ${fullKey}`, error);
       }
     });
+
+    const totalAnalyzed = keys.length - ignored;
 
     return {
       ...info,
@@ -653,13 +731,14 @@ class StorageService {
       encrypted,
       expired,
       corrupted,
+      ignored,
       compressionRate:
-        keys.length > 0
-          ? ((compressed / keys.length) * 100).toFixed(2) + "%"
+        totalAnalyzed > 0
+          ? ((compressed / totalAnalyzed) * 100).toFixed(2) + "%"
           : "0%",
       encryptionRate:
-        keys.length > 0
-          ? ((encrypted / keys.length) * 100).toFixed(2) + "%"
+        totalAnalyzed > 0
+          ? ((encrypted / totalAnalyzed) * 100).toFixed(2) + "%"
           : "0%",
     };
   }
@@ -676,10 +755,10 @@ class StorageService {
       corrupted: 0,
       expired: 0,
       legacy: 0,
+      ignored: 0,
       total: 0
     };
 
-    // Clean legacy keys (without namespace)
     const legacyKeys = ["user", "token", "theme", "language", "preferences"];
     legacyKeys.forEach(key => {
       if (localStorage.getItem(key) !== null) {
@@ -689,13 +768,16 @@ class StorageService {
       }
     });
 
-    // Clean corrupted and expired namespaced keys
     const keys = this.keys();
     keys.forEach((fullKey) => {
+      if (this.isIgnoredKey(fullKey)) {
+        cleaned.ignored++;
+        return;
+      }
+
       try {
         const item = localStorage.getItem(fullKey);
 
-        // Remove empty values
         if (!item || !item.trim()) {
           localStorage.removeItem(fullKey);
           cleaned.corrupted++;
@@ -703,7 +785,6 @@ class StorageService {
           return;
         }
 
-        // Try to parse and check expiration
         const parsed = JSON.parse(item);
         if (this.isExpired(parsed)) {
           localStorage.removeItem(fullKey);
@@ -711,7 +792,6 @@ class StorageService {
           cleaned.total++;
         }
       } catch (error) {
-        // Remove corrupted entries
         localStorage.removeItem(fullKey);
         cleaned.corrupted++;
         cleaned.total++;
