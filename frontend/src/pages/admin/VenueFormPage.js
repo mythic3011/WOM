@@ -597,6 +597,16 @@ export default {
 
     const layout = this.layoutState || { sections: [], globalAisles: [] };
 
+    if (layout.sections) {
+      layout.sections = layout.sections.map(section => {
+        if (section.seatNumbering?.globalDirection) {
+          const direction = section.seatNumbering.globalDirection;
+          section.seatNumbering.globalDirection = direction === "L_TO_R" ? "ltr" : direction === "R_TO_L" ? "rtl" : direction;
+        }
+        return section;
+      });
+    }
+
     const capacity = this.calculateCapacity();
 
     const formData = {
