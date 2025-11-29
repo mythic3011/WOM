@@ -2,6 +2,7 @@ import { User } from "#models/index.js";
 import { hashPassword, comparePassword } from "#utils/hash.js";
 import { buildWhereClause } from "./helpers/filters.js";
 import { findEntityOrThrow, checkUniqueFields } from "./helpers/entityHelpers.js";
+import { deleteProfileImageFile } from "#utils/fileCleanup.js";
 
 export const getAllUsers = async (filters = {}) => {
   const where = buildWhereClause(filters, {
@@ -71,6 +72,13 @@ export const updateUser = async (id, updates) => {
     await checkUniqueFields(User, fieldsToCheck, id);
   }
 
+  if (updates.profileImage && updates.profileImage !== user.profileImage) {
+    const oldImageUrl = user.profileImage;
+    if (oldImageUrl && !oldImageUrl.startsWith("data:image/")) {
+      await deleteProfileImageFile(oldImageUrl);
+    }
+  }
+
   await user.update(updates);
 
   return user.toSafeObject();
@@ -78,6 +86,10 @@ export const updateUser = async (id, updates) => {
 
 export const deleteUser = async (id) => {
   const user = await findEntityOrThrow(User, id, "User not found");
+
+  if (user.profileImage && !user.profileImage.startsWith("data:image/")) {
+    await deleteProfileImageFile(user.profileImage);
+  }
 
   await user.destroy();
 
@@ -90,6 +102,10 @@ export const verifyAndDeleteUser = async (id, password) => {
   const isValid = await comparePassword(password, user.password);
   if (!isValid) {
     throw new Error("Invalid password");
+  }
+
+  if (user.profileImage && !user.profileImage.startsWith("data:image/")) {
+    await deleteProfileImageFile(user.profileImage);
   }
 
   await user.destroy();
@@ -106,6 +122,22 @@ export const getUserBookings = async (userId) => {
   }
 
   return user.bookings;
+};
+
+export const updateProfileImage = async (userId, file) => {
+  const user = await findEntityOrThrow(User, userId, "User not found");
+
+  const oldImageUrl = user.profileImage;
+
+  const newImageUrl = await uploadProfileImage(file);
+
+  await user.update({ profileImage: newImageUrl });
+
+  if (oldImageUrl && !oldImageUrl.startsWith("data:image/")) {
+    await deleteProfileImageFile(oldImageUrl);
+  }
+
+  return user.toSafeObject();
 };
 
 /**

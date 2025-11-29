@@ -17,7 +17,6 @@ const FOOTER_LINKS = {
         { href: ROUTES.PUBLIC.PERFORMANCES, icon: "fa-music", label: "Performances" },
         { href: ROUTES.ADMIN.USERS, icon: "fa-users-cog", label: "User Management" },
         { href: ROUTES.ADMIN.BOOKINGS, icon: "fa-clipboard-list", label: "Bookings" },
-        { href: ROUTES.ADMIN.SEAT_MANAGEMENT, icon: "fa-chair", label: "Seat Management" },
     ],
     user: [
         { href: ROUTES.USER.DASHBOARD, icon: "fa-home", label: "Dashboard" },

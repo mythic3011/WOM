@@ -13,6 +13,10 @@ import { fileURLToPath } from "url";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+import { ensureUploadDirExists } from "./utils/fileCleanup.js";
+
+await ensureUploadDirExists();
+
 import "./config/env.js";
 import { corsConfig } from "./config/cors.js";
 import { sessionConfig } from "./config/session.js";
@@ -88,7 +92,14 @@ app.use(cookieParser());
 
 app.use(session(sessionConfig));
 
-app.use("/uploads", express.static(path.join(__dirname, "../public/uploads")));
+app.use("/uploads", express.static(path.join(__dirname, "../public/uploads"), {
+  maxAge: "1y",
+  immutable: true,
+  setHeaders: (res) => {
+    res.set("X-Content-Type-Options", "nosniff");
+    res.set("Cache-Control", "public, max-age=31536000, immutable");
+  }
+}));
 app.use("/assets", express.static(path.join(__dirname, "../public/assets")));
 
 app.get("/", (req, res) => {
@@ -172,10 +183,6 @@ app.use("/api/ticket-types", ticketTypeRoutes);
 app.use("/api/stats", statsRoutes);
 app.use("/api/constants", constantsRoutes);
 app.use("/api/image", imageRoutes);
-
-if (process.env.NODE_ENV === "development") {
-  app.use("/api/dev-tools", devToolsRoutes);
-}
 
 app.use(notFound);
 app.use(errorHandler);

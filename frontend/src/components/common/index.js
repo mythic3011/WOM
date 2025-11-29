@@ -3,6 +3,7 @@ export { createBadge } from "./Badge.js";
 export { Breadcrumb } from "./Breadcrumb.js";
 export { createButton, createIconButton } from "./Button.js";
 export { createCard, createCardGrid } from "./Card.js";
+export { ImageUploader } from "./ImageUploader.js";
 export { LoadingStates } from "./LoadingStates.js";
 export { Notification } from "./Notification.js";
 export { QuickActionsToolbar } from "./QuickActionsToolbar.js";

@@ -4,6 +4,7 @@ import { ResponseExtractor } from "@services/responseExtractor.js";
 import { notify } from "@utils/ui/notification.js";
 import { VenueLayoutEditor } from "@components/VenueLayoutEditor.js";
 import { initSeatMapPanzoom } from "@utils/panzoomSeatMap.js";
+import { ImageUploader } from "@components/common/ImageUploader.js";
 
 const COMMON_FACILITIES = [
   { id: "wifi", label: "WiFi", icon: "fa-wifi" },
@@ -28,6 +29,7 @@ export default {
   currentSectionIndex: 0,
   activeTab: "aisles",
   zoomLevel: 1,
+  venueImageData: null,
 
   async render() {
     this.venueId = new URLSearchParams(window.location.search).get("id");
@@ -79,6 +81,20 @@ export default {
                 </div>
               </div>
               <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="md:col-span-2">
+                  ${ImageUploader.render({
+                    id: "venue-image",
+                    label: "Venue Image",
+                    previewUrl: this.venue?.imageUrl || null,
+                    previewAlt: this.venue?.name || "Venue",
+                    maxSizeMB: 8,
+                    height: "250px",
+                    helpText: "PNG, JPG, GIF or WebP. Max 8MB - Recommended size 1200x800px",
+                    dragDropText: "Drag and drop the venue image here, or click to select",
+                    showUrlInput: true,
+                  })}
+                </div>
+
                 <div class="md:col-span-2">
                   <label class="block text-sm font-medium text-gray-700 mb-2">
                     <i class="fas fa-building text-indigo-500 mr-2"></i>
@@ -385,10 +401,32 @@ export default {
   async afterRender() {
     window.initSeatMapPanzoom = initSeatMapPanzoom;
     
+    this.initializeImageUploader();
     this.setupEventListeners();
     this.initializeLayoutState();
     this.attachLayoutEditorHandlers();
     this.calculateCapacity();
+  },
+
+  initializeImageUploader() {
+    ImageUploader.initialize("venue-image-uploader", {
+      maxSize: 8 * 1024 * 1024,
+      maxSizeMB: 8,
+      onUpload: async (file, dataUrl) => {
+        this.venueImageData = {
+          file,
+          dataUrl,
+          name: file.name,
+          size: file.size,
+          type: file.type,
+        };
+        console.log("Venue image uploaded:", file.name);
+      },
+      onRemove: async () => {
+        this.venueImageData = null;
+        console.log("Venue image removed");
+      },
+    });
   },
 
   initializeLayoutState() {
@@ -619,7 +657,8 @@ export default {
       capacity: capacity,
       contact: $("#venueContact").val().trim(),
       status: $("#venueStatus").val(),
-      image: $("#venueImage").val().trim() || null,
+      image: this.venueImageData?.dataUrl || this.venue?.imageUrl || null,
+      imageUrl: this.venueImageData?.dataUrl || this.venue?.imageUrl || null,
       facilities: facilities,
       layout: layout,
     };

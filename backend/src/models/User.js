@@ -142,27 +142,26 @@ User.prototype.toSafeObject = function () {
   return safeUser;
 };
 
-/**
- * Get user object without large fields (for localStorage storage)
- * Excludes base64 images and other large data that exceed storage limits
- */
 User.prototype.toStorageObject = function () {
   const safeUser = this.toSafeObject();
+  return safeUser;
+};
 
-  // Remove large fields that shouldn't be stored in localStorage
-  const {
-    profileImage,
-    avatar,
-    photo,
-    ...storageUser
-  } = safeUser;
-
-  // Keep a flag to indicate if user has a profile image
-  if (profileImage || avatar || photo) {
-    storageUser.hasProfileImage = true;
+User.prototype.isBase64ProfileImage = function () {
+  if (!this.profileImage) {
+    return false;
   }
+  return this.profileImage.startsWith("data:image/");
+};
 
-  return storageUser;
+User.prototype.getProfileImageUrl = function () {
+  if (!this.profileImage) {
+    return null;
+  }
+  if (this.isBase64ProfileImage()) {
+    return null;
+  }
+  return this.profileImage;
 };
 
 User.prototype.comparePassword = async function (password) {

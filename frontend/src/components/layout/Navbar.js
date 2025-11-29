@@ -26,7 +26,6 @@ const NAV_LINKS = {
     { href: ROUTES.ADMIN.VENUES, icon: "fa-building", label: "Venues" },
     { href: ROUTES.ADMIN.USERS, icon: "fa-users", label: "User Management" },
     { href: ROUTES.ADMIN.BOOKINGS, icon: "fa-clipboard-list", label: "Bookings" },
-    { href: ROUTES.ADMIN.SEAT_MANAGEMENT, icon: "fa-chair", label: "Seat Management" },
     { href: ROUTES.ADMIN.SETTINGS, icon: "fa-cog", label: "Settings" },
     { href: ROUTES.USER.PROFILE, icon: "fa-user-circle", label: "Profile" },
   ],
@@ -323,16 +322,16 @@ export const Navbar = {
    */
   async updateAvatar() {
     try {
-      console.log("[Navbar] Updating avatar");
       const userData = getCurrentUser();
       const role = userData?.role || "guest";
       const username = userData?.name;
+      const userId = userData?.id;
       const profileImage = userData?.profileImage || null;
+
+      console.log(`[Navbar] Updating avatar for user: ${userId || "guest"}`);
 
       $("#userSection").html(this.renderUserSection(role, username, profileImage));
       $("#mobileSidebarContent").html(this.renderMobileSidebarContent(role, username, profileImage));
-
-      console.log("[Navbar] Avatar updated successfully");
     } catch (error) {
       console.error("[Navbar] Failed to update avatar:", error);
     }
@@ -349,13 +348,11 @@ export const Navbar = {
     const userId = userData?.id;
     const profileImage = userData?.profileImage || null;
 
-    console.log("[Navbar] Refreshing navbar for user:", userId || "guest");
+    console.log(`[Navbar] Refreshing navbar for user: ${userId || "guest"}`);
 
     $("#notificationsContainer").html(this.renderNotifications(role));
     $("#userSection").html(this.renderUserSection(role, username, profileImage));
     $("#mobileSidebarContent").html(this.renderMobileSidebarContent(role, username, profileImage));
-
-    console.log("[Navbar] Refresh complete");
   },
 
   async handleLogout() {
@@ -423,21 +420,17 @@ export const Navbar = {
     const username = userData?.name;
     const userId = userData?.id;
 
-    // Check if user has changed (guest -> logged in, or different user)
     const userChanged = currentUserId !== userId;
 
-    // Prevent duplicate initialization for the same user
-    // Allow re-initialization if user changed or if guest
     if (isInitialized && !userChanged && userId) {
-      console.log("[Navbar] Already initialized for same user, skipping");
       return;
     }
 
     if (userChanged) {
-      console.log("[Navbar] User changed from", currentUserId || "guest", "to", userId || "guest");
+      console.log(`[Navbar] User changed from ${currentUserId || "guest"} to ${userId || "guest"}`);
     }
 
-    console.log("[Navbar] Initializing for user:", userId || "guest");
+    console.log(`[Navbar] Initializing for user: ${userId || "guest"}`);
     isInitialized = true;
     currentUserId = userId;
 

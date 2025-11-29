@@ -1,18 +1,43 @@
 import * as authService from "#services/authService.js";
 
+const serializeUserData = (user) => ({
+  id: user.id,
+  userId: user.userId,
+  username: user.username,
+  email: user.email,
+  name: user.name,
+  role: user.role,
+  profileImage: user.profileImage || null,
+});
+
+const setUserSession = (req, user) => {
+  req.session.userId = user.id;
+  req.session.userRole = user.role;
+  req.session.userName = user.name;
+};
+
+const saveSessionAndRespond = (req, res, next, statusCode, message, user) => {
+  req.session.save((err) => {
+    if (err) {
+      return next(err);
+    }
+    res.status(statusCode).json({
+      success: true,
+      message,
+      data: {
+        user: serializeUserData(user),
+      },
+    });
+  });
+};
+
 export const register = async (req, res, next) => {
   try {
     const user = await authService.register(req.body);
+    setUserSession(req, user);
 
-    req.session.userId = user.id;
-    req.session.userRole = user.role;
-    req.session.userName = user.name;
-
-    res.status(201).json({
-      success: true,
-      message: "User registered successfully",
-      data: { user },
-    });
+    const userWithImage = await authService.getUserWithImage(user.id);
+    saveSessionAndRespond(req, res, next, 201, "User registered successfully", userWithImage);
   } catch (error) {
     next(error);
   }
@@ -31,21 +56,10 @@ export const login = async (req, res, next) => {
     }
 
     const user = await authService.login(identifier, password);
+    setUserSession(req, user);
 
-    req.session.userId = user.id;
-    req.session.userRole = user.role;
-    req.session.userName = user.name;
-
-    req.session.save((err) => {
-      if (err) {
-        return next(err);
-      }
-      res.json({
-        success: true,
-        message: "Login successful",
-        data: { user },
-      });
-    });
+    const userWithImage = await authService.getUserWithImage(user.id);
+    saveSessionAndRespond(req, res, next, 200, "Login successful", userWithImage);
   } catch (error) {
     if (error.message.includes("Invalid") || error.message.includes("not active")) {
       return res.status(401).json({
@@ -96,23 +110,32 @@ export const getCurrentUser = async (req, res, next) => {
   }
 };
 
-export const checkSession = async (req, res) => {
-  if (req.session && req.session.userId) {
-    return res.json({
-      success: true,
-      authenticated: true,
-      user: {
-        id: req.session.userId,
-        role: req.session.userRole,
-        name: req.session.userName,
-      },
-    });
-  }
+export const checkSession = async (req, res, next) => {
+  try {
+    if (req.session && req.session.userId) {
+      const user = await authService.getUserWithImage(req.session.userId);
 
-  res.json({
-    success: true,
-    authenticated: false,
-  });
+      if (!user) {
+        return res.json({
+          success: true,
+          authenticated: false,
+        });
+      }
+
+      return res.json({
+        success: true,
+        authenticated: true,
+        user: serializeUserData(user),
+      });
+    }
+
+    res.json({
+      success: true,
+      authenticated: false,
+    });
+  } catch (error) {
+    next(error);
+  }
 };
 
 export const getProfileImage = async (req, res, next) => {

@@ -21,25 +21,59 @@ const router = express.Router();
  *     tags: [Users]
  *     summary: Upload profile image
  *     description: |
- *       Uploads a profile image for the authenticated user. Returns a public URL for the uploaded image.
+ *       Uploads a profile image for the authenticated user and returns a public URL for the uploaded image.
+ *       The image is stored on the server and served as a static file, replacing the previous base64 approach.
  *       
  *       **Authentication Required:**
- *       - Must be logged in
+ *       - Must be logged in with a valid session
  *       - Users can only upload their own profile image
+ *       - Unauthenticated requests will receive 401 Unauthorized
  *       
  *       **File Requirements:**
- *       - Allowed types: JPEG, PNG, WebP
- *       - Maximum size: 5MB
- *       - Image will be processed and optimized
+ *       - Allowed types: JPEG, JPG, PNG, WebP
+ *       - Maximum size: 5MB (5,242,880 bytes)
+ *       - Files exceeding size limit will receive 413 Payload Too Large
+ *       - Invalid file types will receive 400 Bad Request
  *       
- *       **Processing:**
- *       - Resized to 300x300 (cover fit)
- *       - Compressed to JPEG format
- *       - Stored with unique filename
+ *       **Image Processing:**
+ *       - Automatically resized to 300x300 pixels (cover fit)
+ *       - Compressed and converted to JPEG format for optimal performance
+ *       - Quality set to 90 for balance between size and quality
+ *       - Stored with secure, unique filename to prevent collisions
  *       
- *       **Returns:**
- *       - Public URL for the uploaded image
- *       - Can be used in user profile updates
+ *       **Filename Generation:**
+ *       - Format: {randomId}-{timestamp}.jpg
+ *       - Example: a1b2c3d4-1704067200000.jpg
+ *       - Uses cryptographically secure random IDs
+ *       - Prevents path traversal and security vulnerabilities
+ *       
+ *       **Storage Location:**
+ *       - Files stored in: backend/public/uploads/profiles/
+ *       - Served via: /uploads/profiles/{filename}
+ *       - Cached with 1-year max-age for optimal performance
+ *       
+ *       **Old Image Cleanup:**
+ *       - If user has existing profile image, old file is automatically deleted
+ *       - Prevents disk space accumulation from multiple uploads
+ *       - Base64 images (legacy) are not cleaned up
+ *       
+ *       **Response Format:**
+ *       - Returns URL path relative to server root
+ *       - Format: /uploads/profiles/{filename}
+ *       - Can be used directly in img src attributes
+ *       - Stored in database and localStorage for quick access
+ *       
+ *       **Use Cases:**
+ *       - User updating profile picture
+ *       - Initial profile setup
+ *       - Replacing existing profile image
+ *       - Migration from base64 to URL-based images
+ *       
+ *       **Related Endpoints:**
+ *       - PUT /api/users/{id} - Update user profile (includes profileImage field)
+ *       - GET /api/users/{id} - Get user details (includes profileImage URL)
+ *       - GET /api/auth/me - Get current user (includes profileImage URL)
+ *       - Static files served at: GET /uploads/profiles/{filename}
  *     security:
  *       - sessionAuth: []
  *     requestBody:
@@ -48,11 +82,18 @@ const router = express.Router();
  *         multipart/form-data:
  *           schema:
  *             type: object
+ *             required:
+ *               - image
  *             properties:
  *               image:
  *                 type: string
  *                 format: binary
- *                 description: Profile image file to upload
+ *                 description: Profile image file to upload (JPEG, JPG, PNG, or WebP)
+ *           examples:
+ *             uploadImage:
+ *               summary: Upload profile image
+ *               value:
+ *                 image: (binary file data)
  *     responses:
  *       200:
  *         description: Image uploaded successfully
@@ -64,16 +105,122 @@ const router = express.Router();
  *                 success:
  *                   type: boolean
  *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: Profile image uploaded successfully
  *                 data:
  *                   type: object
  *                   properties:
  *                     imageUrl:
  *                       type: string
- *                       example: /uploads/profiles/abc123.jpg
+ *                       description: URL path to the uploaded image
+ *                       example: /uploads/profiles/a1b2c3d4-1704067200000.jpg
+ *             examples:
+ *               success:
+ *                 summary: Successful upload
+ *                 value:
+ *                   success: true
+ *                   message: Profile image uploaded successfully
+ *                   data:
+ *                     imageUrl: /uploads/profiles/a1b2c3d4-1704067200000.jpg
  *       400:
- *         description: Invalid file or validation error
+ *         description: Invalid file type or validation error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                 code:
+ *                   type: string
+ *             examples:
+ *               invalidFileType:
+ *                 summary: Invalid file type
+ *                 value:
+ *                   success: false
+ *                   message: Invalid file type. Only JPEG, JPG, PNG, and WebP images are allowed.
+ *                   code: INVALID_FILE_TYPE
+ *               noFile:
+ *                 summary: No file provided
+ *                 value:
+ *                   success: false
+ *                   message: No image file provided
+ *                   code: NO_FILE_PROVIDED
  *       401:
- *         $ref: '#/components/responses/Unauthorized'
+ *         description: Authentication required
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: Authentication required. Please log in.
+ *                 code:
+ *                   type: string
+ *                   example: UNAUTHORIZED
+ *             examples:
+ *               notAuthenticated:
+ *                 summary: User not authenticated
+ *                 value:
+ *                   success: false
+ *                   message: Authentication required. Please log in.
+ *                   code: UNAUTHORIZED
+ *       413:
+ *         description: File size exceeds limit
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                 code:
+ *                   type: string
+ *             examples:
+ *               fileTooLarge:
+ *                 summary: File exceeds 5MB limit
+ *                 value:
+ *                   success: false
+ *                   message: File size exceeds 5MB limit
+ *                   code: FILE_TOO_LARGE
+ *       500:
+ *         description: Server error during upload or processing
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                 code:
+ *                   type: string
+ *             examples:
+ *               uploadFailed:
+ *                 summary: Upload failed
+ *                 value:
+ *                   success: false
+ *                   message: Failed to upload profile image
+ *                   code: UPLOAD_FAILED
+ *               processingFailed:
+ *                 summary: Image processing failed
+ *                 value:
+ *                   success: false
+ *                   message: Failed to process image
+ *                   code: PROCESSING_FAILED
  */
 router.post(
   "/upload-profile-image",

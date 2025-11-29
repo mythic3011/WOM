@@ -1,5 +1,6 @@
 
 import { Avatar } from "@components/common/Avatar.js";
+import { ImageUploader } from "@components/common/ImageUploader.js";
 import { authAPI, handleApiError } from "@services/apiClient.js";
 import { setUser } from "@utils/core/auth.js";
 import { navigate } from "@utils/core/navigation.js";
@@ -253,16 +254,15 @@ export default {
                 </div>
 
                 <div class="md:col-span-2">
-                  <label class="block text-sm font-semibold text-gray-700 mb-3">
-                    Profile Image (Optional)
-                  </label>
-                  <div id="profileAvatarContainer" class="flex items-center gap-4">
-                    <div id="profileAvatar"></div>
-                    <div class="text-sm text-gray-600">
-                      <p class="font-medium mb-1">Upload your profile picture</p>
-                      <p class="text-xs text-gray-500">JPG, PNG, GIF or WebP. Max 5MB.</p>
-                    </div>
-                  </div>
+                  ${ImageUploader.render({
+                    id: "profile-image",
+                    label: "Profile Image (Optional)",
+                    maxSizeMB: 5,
+                    height: "180px",
+                    helpText: "JPG, PNG, GIF or WebP. Max 5MB.",
+                    dragDropText: "Drag and drop your profile picture here, or click to select",
+                    showUrlInput: false,
+                  })}
                 </div>
               </div>
 
@@ -308,22 +308,17 @@ export default {
   async afterRender() {
     let uploadedImageData = null;
 
-    $("#profileAvatar").html(
-      Avatar.render({
-        name: "New User",
-        size: "xl",
-        showUpload: true,
-        rounded: "full",
-      })
-    );
-
-    Avatar.initializeUpload("#profileAvatarContainer", {
+    ImageUploader.initialize("profile-image-uploader", {
       maxSize: 5 * 1024 * 1024,
+      maxSizeMB: 5,
       onUpload: async (file, dataUrl) => {
         uploadedImageData = dataUrl;
       },
       onRemove: async () => {
         uploadedImageData = null;
+      },
+      onError: (message) => {
+        console.error("Image upload error:", message);
       },
     });
 
@@ -363,121 +358,127 @@ export default {
     }
   },
 
-  async handleRegister(e) {
-    e.preventDefault();
+  collectFormData() {
+    return {
+      username: $("#username").val().trim(),
+      password: $("#password").val(),
+      confirmPassword: $("#confirmPassword").val(),
+      title: $("#title").val(),
+      name: $("#name").val().trim(),
+      email: $("#email").val().trim(),
+      gender: $("#gender").val(),
+      birthday: $("#birthday").val(),
+      phone: phoneUtils.cleanPhone($("#phone").val()),
+      terms: $("#terms").is(":checked"),
+      profileImage: this.getUploadedImage ? this.getUploadedImage() : null,
+    };
+  },
 
-    const username = $("#username").val().trim();
-    const password = $("#password").val();
-    const confirmPassword = $("#confirmPassword").val();
-    const title = $("#title").val();
-    const name = $("#name").val().trim();
-    const email = $("#email").val().trim();
-    const gender = $("#gender").val();
-    const birthday = $("#birthday").val();
-    const phone = phoneUtils.cleanPhone($("#phone").val());
-    const terms = $("#terms").is(":checked");
+  validateFormData(data) {
+    const { username, password, confirmPassword, name, email, gender, birthday, phone, terms } = data;
 
-    if (
-      !username ||
-      !password ||
-      !confirmPassword ||
-      !name ||
-      !email ||
-      !gender ||
-      !birthday
-    ) {
-      notify.warning("Please fill in all required fields");
-      return;
+    if (!username || !password || !confirmPassword || !name || !email || !gender || !birthday) {
+      return { valid: false, error: "Please fill in all required fields" };
     }
 
     if (username.length < 3 || username.length > 30) {
-      notify.error("Username must be 3-30 characters");
-      return;
+      return { valid: false, error: "Username must be 3-30 characters" };
     }
 
     if (!/^[a-zA-Z0-9_-]+$/.test(username)) {
-      notify.error(
-        "Username can only contain letters, numbers, underscore, or hyphen"
-      );
-      return;
+      return { valid: false, error: "Username can only contain letters, numbers, underscore, or hyphen" };
     }
 
     const passwordValidation = formValidator.validatePassword(password);
     if (!passwordValidation.valid) {
-      notify.error(passwordValidation.error);
-      return;
+      return passwordValidation;
     }
 
     if (password !== confirmPassword) {
-      notify.error("Passwords do not match");
-      return;
+      return { valid: false, error: "Passwords do not match" };
     }
 
     const emailValidation = formValidator.validateEmail(email);
     if (!emailValidation.valid) {
-      notify.error(emailValidation.error);
-      return;
+      return emailValidation;
     }
 
     const birthDate = new Date(birthday);
     const today = new Date();
     const age = today.getFullYear() - birthDate.getFullYear();
     if (age < 13) {
-      notify.error("You must be at least 13 years old to register");
-      return;
+      return { valid: false, error: "You must be at least 13 years old to register" };
     }
 
     if (phone && (phone.length !== 8 || !/^[2-9]/.test(phone))) {
-      notify.error(
-        "Invalid Hong Kong phone number. Must be 8 digits starting with 2-9"
-      );
-      return;
+      return { valid: false, error: "Invalid Hong Kong phone number. Must be 8 digits starting with 2-9" };
     }
 
     if (!terms) {
-      notify.warning("Please accept the terms and conditions");
-      return;
+      return { valid: false, error: "Please accept the terms and conditions" };
     }
 
-    try {
-      const $btn = $("#registerBtn");
-      const originalHTML = $btn.html();
+    return { valid: true };
+  },
+
+  setButtonLoading(loading) {
+    const $btn = $("#registerBtn");
+    if (loading) {
       $btn.prop("disabled", true).html(`
         <i class="fas fa-spinner fa-spin"></i>
         <span>Creating your account...</span>
       `);
+    } else {
+      $btn.prop("disabled", false).html(`
+        <i class="fas fa-user-plus"></i>
+        <span>Create Account</span>
+      `);
+    }
+  },
 
-      const profileImageData = this.getUploadedImage ? this.getUploadedImage() : null;
+  async handleRegister(e) {
+    e.preventDefault();
+
+    const formData = this.collectFormData();
+    const validation = this.validateFormData(formData);
+
+    if (!validation.valid) {
+      notify.error(validation.error);
+      return;
+    }
+
+    try {
+      this.setButtonLoading(true);
 
       const userData = {
-        username,
-        password,
-        title,
-        name,
-        email,
-        gender,
-        birthday,
-        phone,
-        profileImage: profileImageData,
+        username: formData.username,
+        password: formData.password,
+        title: formData.title,
+        name: formData.name,
+        email: formData.email,
+        gender: formData.gender,
+        birthday: formData.birthday,
+        phone: formData.phone,
+        profileImage: formData.profileImage,
         role: "user",
         status: "active",
       };
 
       const response = await authAPI.register(userData);
 
-      setUser(response.user);
-
-      notify.success(`Registration successful! Welcome to WOM, ${name}!`);
-
-      setTimeout(() => {
-        navigate("/user/dashboard");
-      }, 1000);
+      if (response.success && response.data && response.data.user) {
+        setUser(response.data.user);
+        notify.success(`Registration successful! Welcome to WOM, ${formData.name}!`);
+        
+        setTimeout(() => {
+          navigate("/user/dashboard");
+        }, 1000);
+      } else {
+        throw new Error("Invalid response from server");
+      }
     } catch (error) {
       console.error("Registration error:", error);
-      $("#registerBtn").prop("disabled", false).html(`
-        <i class="fas fa-user-plus"></i>
-        <span>Create Account</span>
-      `);
+      this.setButtonLoading(false);
       handleApiError(error, "Registration failed. Please try again.");
     }
   },

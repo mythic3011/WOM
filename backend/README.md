@@ -46,42 +46,112 @@ cp .env.example .env
 
 **Important:** Update all values in `.env`, especially:
 
-- `SESSION_SECRET` - Must be at least 32 characters
-- `DB_PASSWORD` - Use a strong password
+- `SESSION_SECRET` - Must be at least 32 characters (required for session security)
+- `DB_PASSWORD` - Use a strong password for database access
+- `CORS_ORIGIN` - Frontend URL for CORS configuration
 - All database connection details
 
 The application will not start without these required environment variables.
 
-Create `.env` file manually in backend root if needed:
+#### Required Environment Variables
+
+Create `.env` file in backend root with the following configuration:
 
 ```env
+# Application Environment
 NODE_ENV=development
 PORT=3000
 
+# Database Configuration
+DB_NAME=wom_booking
+DB_USER=postgres
+DB_PASSWORD=your-secure-password-here
+DB_HOST=localhost
+DB_PORT=5432
+
+# Session Configuration (REQUIRED - minimum 32 characters)
+SESSION_SECRET=your-session-secret-32-chars-minimum-here
+
+# CORS Configuration
+CORS_ORIGIN=http://localhost:5173
+
+# Rate Limiting
+RATE_LIMIT_WINDOW=15
+RATE_LIMIT_MAX=100
+
+# Mock Data Configuration (optional)
+MOCK_DATA_MODE=standard
+MOCK_DATA_SEED=12345
+MOCK_BOOKINGS_COUNT=50
+MOCK_BOOKING_OCCUPANCY=0.3
+```
+
+#### Docker Environment Variables (if using Docker)
+
+Additional variables for Docker Compose setup:
+
+```env
+# PostgreSQL Container
 POSTGRES_DB=wom_booking
 POSTGRES_USER=postgres
 POSTGRES_PASSWORD=postgres
 POSTGRES_HOST=postgreshost
 
-DB_NAME=wom_booking
-DB_USER=postgres
-DB_PASSWORD=postgres
-DB_HOST=localhost
-DB_PORT=5432
-
-SESSION_SECRET=your-secret-key-change-in-production-use-long-random-string
-
-CORS_ORIGIN=http://localhost:5173
-
-RATE_LIMIT_WINDOW=15
-RATE_LIMIT_MAX=100
-
+# pgAdmin Container
 PGADMIN_DEFAULT_EMAIL=admin@wom.hk
 PGADMIN_DEFAULT_PASSWORD=admin
 PGADMIN_PORT=5050
 ```
 
-### 4. Setup Database
+#### Generating a Secure Session Secret
+
+Use one of these methods to generate a secure session secret:
+
+**Method 1: Using Node.js**
+```bash
+node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+```
+
+**Method 2: Using OpenSSL**
+```bash
+openssl rand -hex 32
+```
+
+**Method 3: Using /dev/urandom (Linux/Mac)**
+```bash
+head -c 32 /dev/urandom | base64
+```
+
+Copy the generated string and use it as your `SESSION_SECRET` value.
+
+### 4. Create Uploads Directory
+
+The application requires an uploads directory for storing user profile images and performance images.
+
+**Create the directory structure:**
+
+```bash
+mkdir -p public/uploads/profiles
+mkdir -p public/uploads/performances
+```
+
+**Directory Structure:**
+```
+backend/
+├── public/
+│   └── uploads/
+│       ├── profiles/       # User profile images
+│       └── performances/   # Performance images
+```
+
+**Permissions:**
+- Ensure the directory is writable by the application
+- Files are served as static content via `/uploads` route
+- Images are cached with 1-year max-age for optimal performance
+
+**Note:** The application will automatically create these directories on startup if they don't exist, but creating them manually ensures proper permissions.
+
+### 5. Setup Database
 
 Choose ONE of the following methods:
 
@@ -580,6 +650,8 @@ Interactive API documentation is available at `/docs` endpoint using **Scalar AP
 - POST /api/users - Create user (admin only)
 - PUT /api/users/:id - Update user
 - DELETE /api/users/:id - Delete user (admin only)
+- POST /api/users/upload-profile-image - Upload profile image (authenticated)
+- POST /api/users/me/delete - Delete own account
 - GET /api/users/:id/bookings - Get user bookings
 
 ### Performances
@@ -722,6 +794,53 @@ Centralized error handler returns consistent JSON:
 - `npm run db:seed:undo:all` - Undo all seeders
 
 ## Key Features
+
+### Profile Image Upload System
+
+The application uses a URL-based profile image system that stores images as static files on the server.
+
+**Features:**
+- Upload profile images via multipart/form-data
+- Automatic image processing and optimization
+- Secure filename generation to prevent collisions
+- Old image cleanup when updating profile
+- Static file serving with browser caching
+
+**Upload Endpoint:**
+- POST /api/users/upload-profile-image
+- Requires authentication
+- Accepts: JPEG, JPG, PNG, WebP
+- Maximum size: 5MB
+- Returns: URL path to uploaded image
+
+**Image Processing:**
+- Automatically resized to 300x300 pixels
+- Converted to JPEG format
+- Compressed to 90% quality
+- Stored with unique filename: {randomId}-{timestamp}.jpg
+
+**Storage:**
+- Location: `backend/public/uploads/profiles/`
+- Served via: `/uploads/profiles/{filename}`
+- Cache headers: 1-year max-age for optimal performance
+- Security headers: X-Content-Type-Options nosniff
+
+**Usage in API Responses:**
+- User objects include `profileImage` field
+- Value is either a URL string or null
+- Example: `/uploads/profiles/a1b2c3d4-1704067200000.jpg`
+- Frontend uses URL directly in img src attributes
+
+**Migration from Base64:**
+- Legacy base64 images still supported during transition
+- Avatar component detects and handles both formats
+- Users encouraged to update to URL-based images
+- Base64 support will be removed in future release
+
+**File Cleanup:**
+- Old profile images automatically deleted on update
+- Profile images deleted when user account is deleted
+- Prevents disk space accumulation
 
 ### Advanced Logging (Winston)
 

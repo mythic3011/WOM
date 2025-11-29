@@ -6,7 +6,7 @@ import { getPerformanceImageUrl } from "@utils/imageUtils.js";
 import { ModifiedFieldTracker } from "@utils/forms/index.js";
 
 import { PerformanceWizard } from "./PerformanceWizard.js";
-import { ImageUploader } from "./ImageUploader.js";
+import { ImageUploader } from "../common/ImageUploader.js";
 
 export class PerformanceWizardHandler {
     constructor(venues, onSubmit) {
@@ -772,71 +772,43 @@ export class PerformanceWizardHandler {
     }
 
     initializeImageUploader() {
-        // Only initialize on step 1 where the image uploader container exists
-        const container = document.getElementById("imageUploaderContainer");
-        if (!container) {
+        if (this.wizard.currentStep !== 1) {
             return;
         }
 
-        // Determine the current image URL to display
-        let currentImageUrl = null;
+        setTimeout(() => {
+            const currentImageUrl = this.formData.imageUrl || this.formData.imageData?.previewUrl || null;
 
-        // Priority: draft imageData > existing performance imageUrl
-        if (this.formData.imageData) {
-            // Restore from draft
-            const imageData = this.formData.imageData;
-
-            if (imageData.type === "url" && imageData.data) {
-                currentImageUrl = getPerformanceImageUrl(imageData.data);
-            } else if (imageData.type === "upload" && imageData.previewUrl) {
-                // For uploads, we can show the preview URL if available
-                // But note that the actual file is lost and needs re-upload
-                currentImageUrl = imageData.previewUrl;
-            }
-        } else if (this.formData.imageUrl) {
-            // Use existing performance image - convert to absolute URL
-            currentImageUrl = getPerformanceImageUrl(this.formData.imageUrl);
-        }
-
-        // Create ImageUploader instance
-        this.imageUploader = new ImageUploader({
-            containerId: "wizardImageUploader",
-            currentImageUrl: currentImageUrl,
-            onImageChange: (imageData) => {
-                // Update formData when image changes
-                this.formData.imageData = imageData;
-                this.wizard.markDirty();
-            },
-            maxFileSize: 5242880 // 5MB
-        });
-
-        // Render the ImageUploader into the container
-        container.innerHTML = this.imageUploader.render();
-
-        // Attach event listeners
-        this.imageUploader.attachEventListeners();
-
-        // Restore draft image state if available
-        if (this.formData.imageData) {
-            const imageData = this.formData.imageData;
-
-            // Restore the state in the ImageUploader
-            if (imageData.type === "url" && imageData.data) {
-                // URL is already set via currentImageUrl in constructor
-                // Just ensure the state is correct
-                this.imageUploader.state.imageSource = "url";
-                this.imageUploader.state.imageData = imageData.data;
-                this.imageUploader.state.previewUrl = imageData.previewUrl || imageData.data;
-            } else if (imageData.type === "upload" && imageData.uploadPending) {
-                // Show a message that the file needs to be re-uploaded
-                this.imageUploader.state.error = `Previous upload (${imageData.fileName}) was not saved. Please re-upload the file.`;
-                this.imageUploader.state.imageSource = null;
-                this.imageUploader.state.imageData = null;
-                this.imageUploader.state.previewUrl = null;
-                // Rerender to show the error message
-                this.imageUploader.rerender();
-            }
-        }
+            this.imageUploader = ImageUploader.initialize("wizard-performance-image-uploader", {
+                maxSize: 10 * 1024 * 1024,
+                maxSizeMB: 10,
+                onUpload: async (file, dataUrl) => {
+                    this.formData.imageData = {
+                        file,
+                        dataUrl,
+                        name: file.name,
+                        size: file.size,
+                        type: file.type,
+                    };
+                    this.formData.imageUrl = dataUrl;
+                    this.wizard.markDirty();
+                    console.log("Performance poster uploaded:", file.name);
+                },
+                onRemove: async () => {
+                    this.formData.imageData = null;
+                    this.formData.imageUrl = null;
+                    this.wizard.markDirty();
+                    console.log("Performance poster removed");
+                },
+                validateFile: (file) => {
+                    if (file.size < 50 * 1024) {
+                        alert("Image is too small. Please upload a higher quality image (at least 50KB).");
+                        return false;
+                    }
+                    return true;
+                },
+            });
+        }, 100);
     }
 
     addShowtime() {

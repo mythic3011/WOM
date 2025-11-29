@@ -1,5 +1,6 @@
 
 import dayjs from "dayjs";
+import { ImageUploader } from "../common/ImageUploader.js";
 
 export const PerformanceWizard = {
   currentStep: 1,
@@ -8,6 +9,7 @@ export const PerformanceWizard = {
   autoSaveInterval: null,
   lastSaved: null,
   isDirty: false,
+  performanceImageData: null,
 
   render(performance = null, resetStep = true) {
     if (resetStep) {
@@ -333,7 +335,16 @@ export const PerformanceWizard = {
 
           <!-- Image Management Section -->
           <div class="border-t pt-6 mt-6">
-            <div id="imageUploaderContainer"></div>
+            ${ImageUploader.render({
+              id: "wizard-performance-image",
+              label: "Performance Poster",
+              previewUrl: this.formData.imageUrl || null,
+              maxSizeMB: 10,
+              height: "280px",
+              helpText: "PNG, JPG, GIF or WebP. Max 10MB - Recommended size 800x600px",
+              dragDropText: "Drag and drop the performance poster here, or click to select",
+              showUrlInput: true,
+            })}
           </div>
         </div>
       </div>

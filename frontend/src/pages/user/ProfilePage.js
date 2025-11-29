@@ -403,16 +403,17 @@ export default {
       onUpload: async (file, dataUrl) => {
         try {
           notify.info("Uploading profile picture...");
-          await this.updateProfileImage(dataUrl);
+          await this.uploadProfileImage(file);
           notify.success("Profile picture updated successfully!");
         } catch (error) {
           console.error("Error uploading profile picture:", error);
-          notify.error("Failed to update profile picture");
+          const errorMessage = error.message || "Failed to update profile picture";
+          notify.error(errorMessage);
         }
       },
       onRemove: async () => {
         try {
-          await this.updateProfileImage(null);
+          await this.removeProfileImage();
           notify.success("Profile picture removed");
         } catch (error) {
           console.error("Error removing profile picture:", error);
@@ -422,19 +423,100 @@ export default {
     });
   },
 
-  async updateProfileImage(imageData) {
+  async uploadProfileImage(file) {
     const user = getCurrentUser();
-    if (!user) {return;}
+    if (!user) {
+      throw new Error("User not authenticated");
+    }
+
+    const maxSize = 5 * 1024 * 1024;
+    if (file.size > maxSize) {
+      throw new Error("File size exceeds 5MB limit. Please choose a smaller image.");
+    }
+
+    const allowedTypes = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
+    if (!allowedTypes.includes(file.type)) {
+      throw new Error("Invalid file type. Only JPEG, PNG, and WebP images are allowed.");
+    }
+
+    const formData = new FormData();
+    formData.append("image", file);
+
+    let response;
+    try {
+      response = await fetch("/api/users/upload-profile-image", {
+        method: "POST",
+        body: formData,
+        credentials: "include",
+      });
+    } catch (error) {
+      if (error.name === "TypeError" && error.message.includes("fetch")) {
+        throw new Error("Network error. Please check your connection and try again.");
+      }
+      throw new Error("Failed to connect to server. Please try again later.");
+    }
+
+    let data;
+    try {
+      data = await response.json();
+    } catch (error) {
+      throw new Error("Invalid response from server. Please try again.");
+    }
+
+    if (!response.ok) {
+      if (response.status === 401) {
+        throw new Error("Session expired. Please log in again.");
+      }
+      if (response.status === 400) {
+        throw new Error(data.message || "Invalid image file. Please try a different image.");
+      }
+      if (response.status === 413) {
+        throw new Error("File size too large. Please choose a smaller image.");
+      }
+      throw new Error(data.message || "Failed to upload image. Please try again.");
+    }
+
+    if (!data.success || !data.data || !data.data.imageUrl) {
+      throw new Error("Invalid response from server. Please try again.");
+    }
+
+    const imageUrl = data.data.imageUrl;
+
+    try {
+      await userAPI.update(user.id, {
+        profileImage: imageUrl,
+      });
+    } catch (error) {
+      throw new Error("Failed to update profile. Please try again.");
+    }
+
+    const updatedUser = { ...user, profileImage: imageUrl };
+    const { setUser } = await import("@services/storageService.js");
+    setUser(updatedUser);
+
+    window.dispatchEvent(new CustomEvent("user-updated", { detail: updatedUser }));
+
+    const { refreshNavbar } = await import("@components/layout/Navbar.js");
+    await refreshNavbar();
+  },
+
+  async removeProfileImage() {
+    const user = getCurrentUser();
+    if (!user) {
+      throw new Error("User not authenticated");
+    }
 
     await userAPI.update(user.id, {
-      profileImage: imageData,
+      profileImage: null,
     });
 
-    // Clear profile image cache and refresh navbar
-    const { clearProfileImageCache } = await import("@services/profileImageService.js");
-    const { refreshNavbar } = await import("@components/layout/Navbar.js");
+    const updatedUser = { ...user, profileImage: null };
+    const { setUser } = await import("@services/storageService.js");
+    setUser(updatedUser);
 
-    clearProfileImageCache(user.id);
+    window.dispatchEvent(new CustomEvent("user-updated", { detail: updatedUser }));
+
+    const { refreshNavbar } = await import("@components/layout/Navbar.js");
     await refreshNavbar();
   },
 

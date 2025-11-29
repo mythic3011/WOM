@@ -1,4 +1,4 @@
-import { createImageUpload } from "./ImageUpload.js";
+import { ImageUploader } from "./common/ImageUploader.js";
 
 export const PerformanceFormSections = {
   basicInformation() {
@@ -9,12 +9,14 @@ export const PerformanceFormSections = {
         </h3>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div class="md:col-span-2">
-            ${createImageUpload({
-              id: "performanceImage",
-              label: "Performance Image",
-              shape: "rounded-lg",
-              previewSize: "32",
-              helpText: "PNG, JPG, GIF up to 5MB - Recommended size 800x600px",
+            ${ImageUploader.render({
+              id: "performance-image",
+              label: "Performance Poster",
+              maxSizeMB: 10,
+              height: "280px",
+              helpText: "PNG, JPG, GIF or WebP. Max 10MB - Recommended size 800x600px",
+              dragDropText: "Drag and drop the performance poster here, or click to select",
+              showUrlInput: true,
             })}
           </div>
 

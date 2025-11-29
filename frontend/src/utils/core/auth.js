@@ -27,10 +27,15 @@ export function getCurrentUser() {
     return currentUser;
   }
 
-  const user = storage.getUser();
-  if (user) {
-    currentUser = user;
-    return currentUser;
+  try {
+    const user = storage.getUser();
+    if (user && typeof user === "object" && user.id) {
+      currentUser = user;
+      return currentUser;
+    }
+  } catch (error) {
+    console.error("Error getting current user:", error);
+    storage.clearUser();
   }
   return null;
 }
@@ -45,15 +50,17 @@ function sanitizeUserData(user) {
   }
 
   const sanitized = { ...user };
+  const preservedFields = ["profileImage"];
 
   Object.keys(sanitized).forEach(key => {
     const value = sanitized[key];
+    const shouldPreserve = preservedFields.includes(key);
 
-    if (typeof value === "string" && !value.trim()) {
+    if (typeof value === "string" && !value.trim() && !shouldPreserve) {
       delete sanitized[key];
     }
 
-    if (value === null || value === undefined) {
+    if ((value === null || value === undefined) && !shouldPreserve) {
       delete sanitized[key];
     }
 
@@ -70,6 +77,10 @@ function sanitizeUserData(user) {
   if (!sanitized.id) {
     console.error("User data missing required id field");
     return null;
+  }
+
+  if (!("profileImage" in sanitized)) {
+    sanitized.profileImage = null;
   }
 
   return sanitized;

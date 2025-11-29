@@ -1,6 +1,21 @@
 import $ from "jquery";
 
 export const Avatar = {
+    isBase64(value) {
+        if (!value || typeof value !== "string") {
+            return false;
+        }
+        return value.startsWith("data:image/");
+    },
+
+    isUrl(value) {
+        if (!value || typeof value !== "string") {
+            return false;
+        }
+        const trimmed = value.trim();
+        return trimmed !== "" && !this.isBase64(value);
+    },
+
     render(options = {}) {
         const {
             src = null,
@@ -37,19 +52,24 @@ export const Avatar = {
         const avatarId = userId ? `avatar-${userId}` : "avatar";
         const uploadId = `${avatarId}-upload`;
 
-        // Treat empty string as null
-        const hasValidSrc = src && src.trim() !== "";
+        const isBase64Src = this.isBase64(src);
+        const isUrlSrc = this.isUrl(src);
+        const hasValidSrc = isBase64Src || isUrlSrc;
+
+        if (isBase64Src) {
+            console.warn("[Avatar] Base64 profile images are deprecated. Please update your profile to use URL-based images.");
+        }
 
         return `
       <div class="avatar-container relative inline-block ${className}">
-        <div class="${sizeClass} ${roundedClass} overflow-hidden bg-gradient-to-br ${bgColor} flex items-center justify-center shadow-md border-2 border-white relative group">
+        <div class="${sizeClass} ${roundedClass} overflow-hidden ${bgColor} flex items-center justify-center shadow-md border-2 border-white relative group">
           ${hasValidSrc
                 ? `<img 
                   id="${avatarId}-img"
                   src="${src}" 
                   alt="${name}" 
                   class="w-full h-full object-cover"
-                  onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
+                  onerror="this.style.display='none'; const initialsDiv = this.parentElement.querySelector('#${avatarId}-initials'); if (initialsDiv) { initialsDiv.style.display='flex'; initialsDiv.classList.remove('hidden'); }"
                 />`
                 : ""
             }
@@ -115,16 +135,16 @@ export const Avatar = {
 
     getColorFromName(name) {
         const colors = [
-            "from-blue-400 to-blue-600",
-            "from-green-400 to-green-600",
-            "from-purple-400 to-purple-600",
-            "from-pink-400 to-pink-600",
-            "from-indigo-400 to-indigo-600",
-            "from-red-400 to-red-600",
-            "from-yellow-400 to-yellow-600",
-            "from-teal-400 to-teal-600",
-            "from-orange-400 to-orange-600",
-            "from-cyan-400 to-cyan-600",
+            "bg-blue-500",
+            "bg-green-500",
+            "bg-purple-500",
+            "bg-pink-500",
+            "bg-indigo-500",
+            "bg-red-500",
+            "bg-yellow-500",
+            "bg-teal-500",
+            "bg-orange-500",
+            "bg-cyan-500",
         ];
 
         if (!name) {return colors[0];}
