@@ -6,7 +6,6 @@ import { ROUTES, getRouteMetadata } from "@config/routes.js";
 import { SwalColors } from "@utils/colors.js";
 import { getCurrentUser, logout } from "@utils/core/auth.js";
 import { Avatar } from "@components/common/Avatar.js";
-import { getProfileImage } from "@services/profileImageService.js";
 import { notificationService } from "@services/notificationService.js";
 
 const NAVBAR_CONFIG = {
@@ -322,15 +321,14 @@ export const Navbar = {
    * Update avatar image dynamically
    * Call this after user updates their profile image
    */
-  async updateAvatar(userId, forceRefresh = true) {
+  async updateAvatar() {
     try {
-      console.log("[Navbar] Updating avatar for user:", userId);
-      const profileImage = await getProfileImage(userId, forceRefresh);
+      console.log("[Navbar] Updating avatar");
       const userData = getCurrentUser();
       const role = userData?.role || "guest";
       const username = userData?.name;
+      const profileImage = userData?.profileImage || null;
 
-      // Re-render user section with new image
       $("#userSection").html(this.renderUserSection(role, username, profileImage));
       $("#mobileSidebarContent").html(this.renderMobileSidebarContent(role, username, profileImage));
 
@@ -349,18 +347,9 @@ export const Navbar = {
     const role = userData?.role || "guest";
     const username = userData?.name;
     const userId = userData?.id;
+    const profileImage = userData?.profileImage || null;
 
     console.log("[Navbar] Refreshing navbar for user:", userId || "guest");
-
-    let profileImage = null;
-    if (userId) {
-      try {
-        profileImage = await getProfileImage(userId, true); // Force refresh
-        console.log("[Navbar] Profile image refreshed");
-      } catch (error) {
-        console.warn("[Navbar] Failed to refresh profile image:", error);
-      }
-    }
 
     $("#notificationsContainer").html(this.renderNotifications(role));
     $("#userSection").html(this.renderUserSection(role, username, profileImage));
