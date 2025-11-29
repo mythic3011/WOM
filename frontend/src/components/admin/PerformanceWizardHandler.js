@@ -415,7 +415,7 @@ export class PerformanceWizardHandler {
 
                 // If still not selected, try finding and setting manually
                 if (!select.val() || select.val() === "") {
-                    console.warn("⚠️ Venue selection failed! Trying alternative methods...");
+                    console.warn("Venue selection failed! Trying alternative methods...");
                     const option = select.find(`option[value="${venueIdStr}"]`);
                     console.log("Found option:", option.length, option.text());
                     option.prop("selected", true);
@@ -528,10 +528,6 @@ export class PerformanceWizardHandler {
             notify.warning("Consider adding more details to the description");
         }
 
-        if (this.imageUploader && this.imageUploader.state && this.imageUploader.state.error) {
-            notify.warning("Please resolve the image error or remove the image");
-        }
-
         return true;
     }
 
@@ -579,22 +575,18 @@ export class PerformanceWizardHandler {
     }
 
     async saveImageData() {
-        if (!this.imageUploader) {
+        if (!this.formData.imageData && !this.formData.imageUrl) {
             return null;
         }
 
-        const imageData = this.imageUploader.getImageData();
-
-        if (!imageData || !imageData.type) {
-            return null;
+        if (this.formData.imageUrl && !this.formData.imageData) {
+            return this.formData.imageUrl;
         }
 
-        if (imageData.type === "url") {
-            return imageData.data;
-        } else if (imageData.type === "upload" && imageData.data) {
+        if (this.formData.imageData && this.formData.imageData.file) {
             try {
                 const formData = new FormData();
-                formData.append("image", imageData.data);
+                formData.append("image", this.formData.imageData.file);
 
                 const response = await fetch("/api/performances/upload-image", {
                     method: "POST",
@@ -777,8 +769,6 @@ export class PerformanceWizardHandler {
         }
 
         setTimeout(() => {
-            const currentImageUrl = this.formData.imageUrl || this.formData.imageData?.previewUrl || null;
-
             this.imageUploader = ImageUploader.initialize("wizard-performance-image-uploader", {
                 maxSize: 10 * 1024 * 1024,
                 maxSizeMB: 10,
