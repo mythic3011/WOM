@@ -50,7 +50,7 @@ export class PerformanceWizardHandler {
             });
 
             if (result.isConfirmed) {
-                this.formData = draft.formData;
+                this.formData = this.sanitizeDraftData(draft.formData);
                 this.wizard.currentStep = draft.currentStep;
             } else {
                 this.wizard.clearDraft();
@@ -110,6 +110,67 @@ export class PerformanceWizardHandler {
         $(document).off(event, selector);
         this.eventHandlers.push({ selector, event, handler });
         $(document).on(event, selector, handler);
+    }
+
+    sanitizeDraftData(draftData) {
+        if (!draftData || typeof draftData !== "object") {
+            return {};
+        }
+
+        const sanitized = {};
+
+        const stringFields = ["title", "composer", "conductor", "description", "genre"];
+        stringFields.forEach(field => {
+            if (draftData[field]) {
+                const value = draftData[field];
+                if (typeof value === "string") {
+                    try {
+                        const parsed = JSON.parse(value);
+                        if (typeof parsed === "object") {
+                            console.warn(`Field ${field} contains JSON object, skipping`);
+                            sanitized[field] = "";
+                        } else {
+                            sanitized[field] = value;
+                        }
+                    } catch {
+                        sanitized[field] = value;
+                    }
+                } else {
+                    sanitized[field] = String(value);
+                }
+            }
+        });
+
+        if (draftData.duration) {
+            sanitized.duration = String(draftData.duration);
+        }
+
+        if (draftData.venueId) {
+            sanitized.venueId = parseInt(draftData.venueId) || null;
+        }
+
+        if (Array.isArray(draftData.showtimes)) {
+            sanitized.showtimes = draftData.showtimes.filter(st => {
+                return st && typeof st === "object" && st.date && st.time;
+            });
+        }
+
+        const priceFields = ["basePrice", "vipPrice", "premiumPrice", "economyPrice"];
+        priceFields.forEach(field => {
+            if (draftData[field]) {
+                sanitized[field] = String(draftData[field]);
+            }
+        });
+
+        if (draftData.imageData && typeof draftData.imageData === "object") {
+            sanitized.imageData = draftData.imageData;
+        }
+
+        if (draftData.imageUrl && typeof draftData.imageUrl === "string") {
+            sanitized.imageUrl = draftData.imageUrl;
+        }
+
+        return sanitized;
     }
 
     parseExistingPerformance(perf) {
@@ -524,6 +585,22 @@ export class PerformanceWizardHandler {
             return false;
         }
 
+        try {
+            JSON.parse(title);
+            notify.error("Title contains invalid data. Please re-enter the title.");
+            $("#wizardTitle").val("").focus();
+            return false;
+        } catch {
+        }
+
+        try {
+            JSON.parse(composer);
+            notify.error("Composer contains invalid data. Please re-enter the composer.");
+            $("#wizardComposer").val("").focus();
+            return false;
+        } catch {
+        }
+
         if (description.length < 20) {
             notify.warning("Consider adding more details to the description");
         }
@@ -648,10 +725,8 @@ export class PerformanceWizardHandler {
                         this.trackFieldChange("genre", genre.val());
                     }
 
-                    if (this.imageUploader) {
-                        const imageData = this.imageUploader.getImageData();
-                        this.formData.imageData = imageData;
-                        this.trackFieldChange("imageData", imageData);
+                    if (this.formData.imageData) {
+                        this.trackFieldChange("imageData", this.formData.imageData);
                     }
                     break;
 

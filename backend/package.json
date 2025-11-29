@@ -37,7 +37,6 @@
     "db:seed-only": "node src/db/cli.js seed",
     "db:setup-full": "node src/db/cli.js setup",
     "db:reset-full": "node src/db/cli.js reset",
-    "db:fix-venue-sequence": "node src/db/fix-venue-sequence.js",
     "download:mock-images": "node src/db/data/downloadMockImages.js"
   },
   "keywords": [
