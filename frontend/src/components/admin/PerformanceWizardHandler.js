@@ -901,7 +901,8 @@ export class PerformanceWizardHandler {
                     genre: this.formData.genre,
                     venueId: this.formData.venueId,
                     showtimes: (this.formData.showtimes || []).map(st => ({
-                        dateTime: `${st.date}T${st.time}:00`
+                        date: st.date,
+                        time: st.time
                     })),
                     basePrice: this.formData.basePrice,
                     vipPrice: this.formData.vipPrice,
@@ -932,7 +933,8 @@ export class PerformanceWizardHandler {
                     genre: this.formData.genre,
                     venueId: this.formData.venueId,
                     showtimes: (this.formData.showtimes || []).map(st => ({
-                        dateTime: `${st.date}T${st.time}:00`
+                        date: st.date,
+                        time: st.time
                     }))
                 };
 
