@@ -599,11 +599,17 @@ export default {
 
     if (layout.sections) {
       layout.sections = layout.sections.map(section => {
-        if (section.seatNumbering?.globalDirection) {
-          const direction = section.seatNumbering.globalDirection;
-          section.seatNumbering.globalDirection = direction === "L_TO_R" ? "ltr" : direction === "R_TO_L" ? "rtl" : direction;
+        const cleanSection = { ...section };
+        
+        if (!this.venueId) {
+          delete cleanSection.id;
         }
-        return section;
+        
+        if (cleanSection.seatNumbering?.globalDirection) {
+          const direction = cleanSection.seatNumbering.globalDirection;
+          cleanSection.seatNumbering.globalDirection = direction === "L_TO_R" ? "ltr" : direction === "R_TO_L" ? "rtl" : direction;
+        }
+        return cleanSection;
       });
     }
 
