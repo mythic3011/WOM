@@ -313,7 +313,7 @@ export const PerformanceWizard = {
                 class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-black transition-all"
                 placeholder="120"
                 value="${this.formData.duration || ""}" />
-              <p class="text-xs text-gray-500 mt-1">Typical concert duration</p>
+              <p class="text-xs text-gray-500 mt-1">Typical concert duration (30-300 minutes)</p>
             </div>
 
             <div>

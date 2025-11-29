@@ -60,9 +60,14 @@ export default {
   async loadDashboard() {
     try {
       const user = getCurrentUser();
+      
+      if (!user || !user.id) {
+        window.location.href = "/login";
+        return;
+      }
 
       const [bookingStats, upcomingPerformances] = await Promise.all([
-        bookingService.getUserStats(user?.id),
+        bookingService.getUserStats(user.id),
         performanceService.getUpcoming(),
       ]);
 

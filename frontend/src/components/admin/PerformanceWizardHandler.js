@@ -170,6 +170,8 @@ export class PerformanceWizardHandler {
             sanitized.imageUrl = draftData.imageUrl;
         }
 
+        delete sanitized.id;
+
         return sanitized;
     }
 
@@ -359,6 +361,65 @@ export class PerformanceWizardHandler {
             }
         });
 
+        $("#wizardDuration").on("blur input", function () {
+            const value = parseInt($(this).val());
+            const $input = $(this);
+            const helpText = $input.siblings(".text-xs");
+
+            if (!value) {
+                helpText.html("<span class=\"text-orange-600\"><i class=\"fas fa-info-circle mr-1\"></i>Optional field</span>");
+                $input.removeClass("border-red-500 bg-red-50 border-green-500 bg-green-50");
+            } else if (value < 30) {
+                helpText.html("<span class=\"text-red-600\"><i class=\"fas fa-exclamation-circle mr-1\"></i>Minimum 30 minutes</span>");
+                $input.addClass("border-red-500 bg-red-50").removeClass("border-green-500 bg-green-50");
+            } else if (value > 300) {
+                helpText.html("<span class=\"text-red-600\"><i class=\"fas fa-exclamation-circle mr-1\"></i>Maximum 300 minutes</span>");
+                $input.addClass("border-red-500 bg-red-50").removeClass("border-green-500 bg-green-50");
+            } else {
+                helpText.html("<span class=\"text-green-600\"><i class=\"fas fa-check-circle mr-1\"></i>Valid duration</span>");
+                $input.removeClass("border-red-500 bg-red-50").addClass("border-green-500 bg-green-50");
+                self.wizard.markDirty();
+            }
+        });
+
+        $(document).on("change", ".showtime-date, .showtime-time", function () {
+            self.validateShowtimes();
+            self.wizard.markDirty();
+        });
+
+    }
+
+    validateShowtimes() {
+        const showtimes = this.formData.showtimes || [];
+        const validationEl = $("#showtimesValidation");
+
+        if (showtimes.length === 0) {
+            validationEl.html("<span class=\"text-orange-600\"><i class=\"fas fa-info-circle mr-1\"></i>Add at least one showtime</span>");
+            return false;
+        }
+
+        let hasInvalidShowtime = false;
+        const now = new Date();
+
+        showtimes.forEach((showtime, index) => {
+            if (!showtime.date || !showtime.time) {
+                hasInvalidShowtime = true;
+                return;
+            }
+
+            const showtimeDate = new Date(`${showtime.date}T${showtime.time}`);
+            if (showtimeDate < now) {
+                hasInvalidShowtime = true;
+            }
+        });
+
+        if (hasInvalidShowtime) {
+            validationEl.html("<span class=\"text-red-600\"><i class=\"fas fa-exclamation-circle mr-1\"></i>All showtimes must be complete and in the future</span>");
+            return false;
+        }
+
+        validationEl.html("<span class=\"text-green-600\"><i class=\"fas fa-check-circle mr-1\"></i>Valid showtimes</span>");
+        return true;
     }
 
     attachEventListeners() {
@@ -591,6 +652,7 @@ export class PerformanceWizardHandler {
         const composer = $("#wizardComposer").val()?.trim();
         const conductor = $("#wizardConductor").val()?.trim();
         const description = $("#wizardDescription").val()?.trim();
+        const duration = parseInt($("#wizardDuration").val());
 
         if (!title || !composer || !conductor || !description) {
             notify.error("Please fill in all required fields");
@@ -623,6 +685,12 @@ export class PerformanceWizardHandler {
             notify.warning("Consider adding more details to the description");
         }
 
+        if (duration && (duration < 30 || duration > 300)) {
+            notify.error("Duration must be between 30 and 300 minutes");
+            $("#wizardDuration").addClass("border-red-500 bg-red-50").focus();
+            return false;
+        }
+
         return true;
     }
 
@@ -644,9 +712,9 @@ export class PerformanceWizardHandler {
         if (!this.formData.showtimes || this.formData.showtimes.length === 0) {
             notify.error("Please add at least one showtime");
             $("#showtimesValidation").html("<span class=\"text-red-600\"><i class=\"fas fa-exclamation-circle mr-1\"></i>At least one showtime required</span>");
-            $("#addShowtimeBtn").addClass("ring-2 ring-red-500 ring-offset-2 animate-pulse");
+            $("#wizardAddShowtime").addClass("ring-2 ring-red-500 ring-offset-2 animate-pulse");
             setTimeout(() => {
-                $("#addShowtimeBtn").removeClass("ring-2 ring-red-500 ring-offset-2 animate-pulse");
+                $("#wizardAddShowtime").removeClass("ring-2 ring-red-500 ring-offset-2 animate-pulse");
             }, 2000);
             return false;
         }
@@ -662,6 +730,19 @@ export class PerformanceWizardHandler {
                     $(this).removeClass("border-red-500 bg-red-50");
                 }
             });
+            return false;
+        }
+
+        // Validate showtimes are in the future
+        const now = new Date();
+        const pastShowtimes = this.formData.showtimes.filter(st => {
+            const showtimeDate = new Date(`${st.date}T${st.time}`);
+            return showtimeDate < now;
+        });
+
+        if (pastShowtimes.length > 0) {
+            notify.error("All showtimes must be in the future");
+            $("#showtimesValidation").html("<span class=\"text-red-600\"><i class=\"fas fa-exclamation-circle mr-1\"></i>Showtimes must be in the future</span>");
             return false;
         }
 
@@ -1055,6 +1136,8 @@ export class PerformanceWizardHandler {
                 if (imageUrl) {
                     submitData.image = imageUrl;
                 }
+
+                delete submitData.id;
 
                 console.log("Create mode - Submitting full data:", submitData);
             }

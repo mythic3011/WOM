@@ -12,6 +12,202 @@ import { generateBookings } from "./data/bookings.js";
 import { generateBrokenSeats, markSeatsAsUnavailable, updateVenueWithConditions } from "./data/venueConditions.js";
 import { faker } from "@faker-js/faker";
 
+const fixVenueSequence = async () => {
+  try {
+    await sequelize.query(`
+      SELECT setval(
+        pg_get_serial_sequence('venues', 'id'),
+        COALESCE((SELECT MAX(id) FROM venues), 0) + 1,
+        false
+      );
+    `);
+  } catch (error) {
+    logger.error("Error fixing venue sequence:", error);
+    throw error;
+  }
+};
+
+const fixPerformanceSequence = async () => {
+  try {
+    await sequelize.query(`
+      SELECT setval(
+        pg_get_serial_sequence('performances', 'id'),
+        COALESCE((SELECT MAX(id) FROM performances), 0) + 1,
+        false
+      );
+    `);
+  } catch (error) {
+    logger.error("Error fixing performance sequence:", error);
+    throw error;
+  }
+};
+
+const createDatabaseViews = async () => {
+  try {
+    logger.info("Creating database views...");
+
+    await sequelize.query(`
+      CREATE OR REPLACE VIEW bookings_view AS
+      SELECT 
+        b.id,
+        b."bookingReference",
+        b."userId",
+        b."userName",
+        b."userEmail",
+        b."performanceId",
+        b."performanceTitle",
+        b."venueId",
+        b."venueName",
+        b."showtimeId",
+        b.showtime,
+        b.seats,
+        b."seatTickets",
+        b."seatCount",
+        b.amount,
+        b."totalAmount",
+        b."bookingDate",
+        b.status,
+        b."paymentMethod",
+        b."paymentStatus",
+        b.notes,
+        b."customerInfo",
+        b."createdAt",
+        b."updatedAt",
+        u.name as user_name,
+        u.email as user_email,
+        u.phone as user_phone,
+        p.title as performance_title,
+        p.date as performance_date,
+        p.status as performance_status,
+        p.image as performance_image,
+        v.name as venue_name,
+        v.address as venue_address,
+        v.capacity as venue_capacity
+      FROM bookings b
+      LEFT JOIN users u ON b."userId" = u.id
+      LEFT JOIN performances p ON b."performanceId" = p.id
+      LEFT JOIN venues v ON b."venueId" = v.id;
+    `);
+
+    await sequelize.query(`
+      CREATE OR REPLACE VIEW user_stats_view AS
+      SELECT 
+        u.id as user_id,
+        u.name as user_name,
+        u.email as user_email,
+        COUNT(DISTINCT b.id) as total_bookings,
+        COUNT(DISTINCT CASE WHEN b.status = 'confirmed' THEN b.id END) as confirmed_bookings,
+        COUNT(DISTINCT CASE WHEN b.status = 'pending' THEN b.id END) as pending_bookings,
+        COUNT(DISTINCT CASE WHEN b.status = 'cancelled' THEN b.id END) as cancelled_bookings,
+        COUNT(DISTINCT CASE WHEN b.status = 'completed' THEN b.id END) as completed_bookings,
+        COALESCE(SUM(CASE WHEN b.status = 'confirmed' THEN b.amount ELSE 0 END), 0) as total_spent,
+        COALESCE(AVG(CASE WHEN b.status = 'confirmed' THEN b.amount END), 0) as average_spent,
+        COUNT(DISTINCT CASE 
+          WHEN b.status IN ('confirmed', 'pending') 
+          AND p.date > NOW() 
+          THEN b.id 
+        END) as upcoming_bookings,
+        MIN(b."bookingDate") as first_booking_date,
+        MAX(b."bookingDate") as last_booking_date,
+        COALESCE(SUM(b."seatCount"), 0) as total_seats_booked
+      FROM users u
+      LEFT JOIN bookings b ON u.id = b."userId"
+      LEFT JOIN performances p ON b."performanceId" = p.id
+      GROUP BY u.id, u.name, u.email;
+    `);
+
+    await sequelize.query(`
+      CREATE OR REPLACE VIEW admin_stats_view AS
+      SELECT 
+        COUNT(DISTINCT b.id) as total_bookings,
+        COUNT(DISTINCT CASE WHEN b.status = 'confirmed' THEN b.id END) as confirmed_bookings,
+        COUNT(DISTINCT CASE WHEN b.status = 'pending' THEN b.id END) as pending_bookings,
+        COUNT(DISTINCT CASE WHEN b.status = 'cancelled' THEN b.id END) as cancelled_bookings,
+        COUNT(DISTINCT CASE WHEN b.status = 'completed' THEN b.id END) as completed_bookings,
+        COALESCE(SUM(CASE WHEN b.status = 'confirmed' THEN b.amount ELSE 0 END), 0) as total_revenue,
+        COALESCE(AVG(CASE WHEN b.status = 'confirmed' THEN b.amount END), 0) as average_booking_value,
+        COUNT(DISTINCT b."userId") as total_customers,
+        COUNT(DISTINCT b."performanceId") as performances_with_bookings,
+        COALESCE(SUM(b."seatCount"), 0) as total_seats_sold,
+        COUNT(DISTINCT CASE 
+          WHEN b.status IN ('confirmed', 'pending') 
+          AND p.date > NOW() 
+          THEN b.id 
+        END) as upcoming_bookings,
+        COUNT(DISTINCT CASE 
+          WHEN b."bookingDate" >= CURRENT_DATE - INTERVAL '7 days' 
+          THEN b.id 
+        END) as bookings_last_7_days,
+        COUNT(DISTINCT CASE 
+          WHEN b."bookingDate" >= CURRENT_DATE - INTERVAL '30 days' 
+          THEN b.id 
+        END) as bookings_last_30_days,
+        COALESCE(SUM(CASE 
+          WHEN b.status = 'confirmed' 
+          AND b."bookingDate" >= CURRENT_DATE - INTERVAL '30 days' 
+          THEN b.amount 
+          ELSE 0 
+        END), 0) as revenue_last_30_days
+      FROM bookings b
+      LEFT JOIN performances p ON b."performanceId" = p.id;
+    `);
+
+    await sequelize.query(`
+      CREATE OR REPLACE VIEW performance_stats_view AS
+      SELECT 
+        p.id as performance_id,
+        p.title as performance_title,
+        p.date as performance_date,
+        p.status as performance_status,
+        v.name as venue_name,
+        p."totalSeats" as total_seats,
+        p."availableSeats" as available_seats,
+        p."bookedSeats" as booked_seats,
+        COUNT(DISTINCT b.id) as total_bookings,
+        COUNT(DISTINCT CASE WHEN b.status = 'confirmed' THEN b.id END) as confirmed_bookings,
+        COUNT(DISTINCT CASE WHEN b.status = 'pending' THEN b.id END) as pending_bookings,
+        COALESCE(SUM(CASE WHEN b.status = 'confirmed' THEN b.amount ELSE 0 END), 0) as total_revenue,
+        COALESCE(AVG(CASE WHEN b.status = 'confirmed' THEN b.amount END), 0) as average_ticket_price,
+        COUNT(DISTINCT b."userId") as unique_customers,
+        CASE 
+          WHEN p."totalSeats" > 0 
+          THEN ROUND((p."bookedSeats"::numeric / p."totalSeats"::numeric * 100), 2)
+          ELSE 0 
+        END as occupancy_rate
+      FROM performances p
+      LEFT JOIN venues v ON p."venueId" = v.id
+      LEFT JOIN bookings b ON p.id = b."performanceId"
+      GROUP BY p.id, p.title, p.date, p.status, v.name, p."totalSeats", p."availableSeats", p."bookedSeats";
+    `);
+
+    await sequelize.query(`
+      CREATE OR REPLACE VIEW venue_stats_view AS
+      SELECT 
+        v.id as venue_id,
+        v.name as venue_name,
+        v.address as venue_address,
+        v.capacity as venue_capacity,
+        COUNT(DISTINCT p.id) as total_performances,
+        COUNT(DISTINCT CASE WHEN p.date > NOW() THEN p.id END) as upcoming_performances,
+        COUNT(DISTINCT b.id) as total_bookings,
+        COALESCE(SUM(CASE WHEN b.status = 'confirmed' THEN b.amount ELSE 0 END), 0) as total_revenue,
+        COALESCE(SUM(b."seatCount"), 0) as total_seats_sold,
+        COUNT(DISTINCT b."userId") as unique_customers
+      FROM venues v
+      LEFT JOIN performances p ON v.id = p."venueId"
+      LEFT JOIN bookings b ON p.id = b."performanceId"
+      GROUP BY v.id, v.name, v.address, v.capacity;
+    `);
+
+    logger.info("Database views created successfully");
+    return true;
+  } catch (error) {
+    logger.error("Error creating database views:", error);
+    logger.warn("Continuing without views - some features may not work");
+    return false;
+  }
+};
+
 const isDatabaseEmpty = async () => {
   try {
     const [userCount, ticketTypeCount, venueCount, performanceCount] = await Promise.all([
@@ -34,6 +230,9 @@ export const syncDatabaseSchema = async () => {
     await sequelize.sync({ alter: false });
     
     logger.info("Database schema synchronized successfully");
+    
+    await createDatabaseViews();
+    
     return true;
   } catch (error) {
     logger.error("Error synchronizing database schema:", error);
@@ -249,7 +448,7 @@ export const seedMockData = async (options = {}) => {
         });
 
         // Generate bookings
-        const generatedBookings = await generateBookings({
+        const { bookings: generatedBookings, performanceUpdates } = await generateBookings({
           users,
           performances,
           ticketTypes,
@@ -260,33 +459,19 @@ export const seedMockData = async (options = {}) => {
         });
 
         if (generatedBookings.length > 0) {
-          // Insert bookings into database
           await Booking.bulkCreate(generatedBookings);
           logProgress(`Created ${generatedBookings.length} bookings`);
 
-          // Update performance seat availability
           logProgress("Updating performance seat availability...");
-          const bookingsByPerformance = new Map();
-
-          generatedBookings.forEach(booking => {
-            if (!bookingsByPerformance.has(booking.performanceId)) {
-              bookingsByPerformance.set(booking.performanceId, []);
-            }
-            bookingsByPerformance.get(booking.performanceId).push(booking);
-          });
-
-          for (const [performanceId, perfBookings] of bookingsByPerformance) {
-            const performance = performances.find(p => p.id === performanceId);
+          for (const update of performanceUpdates) {
+            const performance = performances.find(p => p.id === update.id);
             if (performance) {
-              const bookedSeats = perfBookings.reduce((sum, b) => sum + b.seatCount, 0);
-              const availableSeats = Math.max(0, performance.totalSeats - bookedSeats);
-
               await performance.update({
-                bookedSeats,
-                availableSeats,
+                bookedSeats: update.bookedSeats,
+                availableSeats: update.availableSeats,
               });
 
-              logProgress(`Performance ${performanceId}: ${bookedSeats} booked, ${availableSeats} available`);
+              logProgress(`Performance ${update.id}: ${update.bookedSeats} booked, ${update.availableSeats} available`);
             }
           }
         } else {
@@ -339,6 +524,18 @@ export const seedMockData = async (options = {}) => {
         logger.info("✓ All performances have consistent seat inventory");
       } else {
         logger.warn(`✗ Found ${inconsistencies.length} performances with seat inventory inconsistencies`);
+      }
+    });
+
+    logProgress("Fixing database sequences...");
+    await measureTime("Sequence fixes", async () => {
+      try {
+        await fixVenueSequence();
+        await fixPerformanceSequence();
+        logger.info("Database sequences fixed successfully");
+      } catch (error) {
+        logger.error("Failed to fix sequences:", error);
+        logger.warn("Sequences may need manual fixing if creation fails");
       }
     });
 

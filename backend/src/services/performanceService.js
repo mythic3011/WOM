@@ -300,8 +300,10 @@ export const createPerformance = async (performanceData) => {
   const seatMap = buildSeatMapFromVenueLayout(venue.layout || {});
   const total = seatMap.total || 0;
 
+  const { id, ...dataWithoutId } = performanceData;
+
   const performance = await Performance.create({
-    ...performanceData,
+    ...dataWithoutId,
     venueName: venue.name,
     seatMap,
     totalSeats: total,

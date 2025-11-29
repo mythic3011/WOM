@@ -3,7 +3,7 @@ import dayjs from "dayjs";
 
 import { createCard } from "@components/common/Card.js";
 import { renderStatsGrid } from "@components/StatsCard.js";
-import { statsAPI, handleApiError, ResponseExtractor, statsService } from "@services/index.js";
+import { bookingAPI, performanceAPI, handleApiError, ResponseExtractor } from "@services/index.js";
 import { getCurrentUser } from "@utils/core/auth.js";
 import { formatCurrency, formatNumber } from "@utils/utils.js";
 
@@ -27,12 +27,27 @@ export default {
     let recentActivity = [];
 
     try {
-      const response = await statsAPI.getDashboardStats();
-      const apiData = ResponseExtractor.extractSingle(response, "stats");
-
-      if (apiData) {
-        statsData = apiData;
+      const { statsService: newStatsService } = await import("@services/statsService.js");
+      const adminStats = await newStatsService.getAdminStats();
+      
+      if (adminStats) {
+        statsData = {
+          totalPerformances: adminStats.performances_with_bookings || 0,
+          totalBookings: adminStats.total_bookings || 0,
+          totalUsers: adminStats.total_customers || 0,
+          totalRevenue: adminStats.total_revenue || 0,
+          recentBookings: [],
+          upcomingPerformances: [],
+        };
       }
+      
+      const [bookingsResponse, performancesResponse] = await Promise.all([
+        bookingAPI.getAll({ limit: 5, sort: "bookingDate:desc" }),
+        performanceAPI.getAll({ limit: 5, upcoming: true })
+      ]);
+
+      statsData.recentBookings = ResponseExtractor.extract(bookingsResponse, "bookings") || [];
+      statsData.upcomingPerformances = ResponseExtractor.extract(performancesResponse, "performances") || [];
 
       recentActivity = statsData.recentBookings
         ? statsData.recentBookings.slice(0, 5).map((booking) => ({
@@ -50,7 +65,7 @@ export default {
         {
           title: "Total Performances",
           value: formatNumber(statsData.totalPerformances),
-          subtitle: `${statsData.upcomingPerformances || 0} upcoming`,
+          subtitle: `${statsData.upcomingPerformances?.length || 0} upcoming`,
           icon: "fa-music",
           iconColor: "text-blue-500",
           bgColor: "bg-blue-50",
@@ -200,7 +215,7 @@ export default {
                 </div>
               </div>
               <div class="text-right">
-                <p class="text-sm font-bold text-gray-900">${statsService.formatCurrency(
+                <p class="text-sm font-bold text-gray-900">${formatCurrency(
                   activity.amount
                 )}</p>
               </div>

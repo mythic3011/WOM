@@ -140,16 +140,11 @@ export default {
           </div>
           <div class="flex gap-2">
             <button
-              id="quickCreateBtn"
-              class="px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 shadow-md transition-colors"
-            >
-              <i class="fas fa-magic mr-2"></i>Quick Create
-            </button>
-            <button
               id="addPerformanceBtn"
-              class="px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 shadow-md transition-colors"
+              class="px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 shadow-md transition-colors flex items-center gap-2"
             >
-              <i class="fas fa-plus mr-2"></i>Add Performance
+              <i class="fas fa-plus"></i>
+              <span>Create Performance</span>
             </button>
           </div>
         </div>
@@ -490,7 +485,6 @@ export default {
       this.deletePerformance(perfId);
     });
 
-    $("#quickCreateBtn").on("click", () => this.openQuickCreate());
     $("#addPerformanceBtn").on("click", () => this.openQuickCreate());
   },
 
@@ -1719,14 +1713,19 @@ export default {
         throw new Error("At least one showtime is required");
       }
 
-      // Format showtimes with proper ISO 8601 format
-      // Add .000Z to indicate UTC timezone (required by express-validator)
+      const venue = this.venues.find(v => v.id === venueId);
+      if (!venue) {
+        throw new Error("Selected venue not found");
+      }
+
+      const venueCapacity = venue.capacity || 200;
+
       const showtimes = formData.showtimes.map((st) => {
         const dateTimeStr = `${st.date}T${st.time}:00.000Z`;
         return {
           dateTime: dateTimeStr,
-          totalSeats: 200,
-          availableSeats: 200,
+          totalSeats: venueCapacity,
+          availableSeats: venueCapacity,
         };
       });
 
@@ -1775,6 +1774,10 @@ export default {
           tier: "economy",
         });
       }
+
+      delete performanceData.id;
+
+      console.log("Final performanceData being sent to API:", performanceData);
 
       await performanceAPI.create(performanceData);
 
