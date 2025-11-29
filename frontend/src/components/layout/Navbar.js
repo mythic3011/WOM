@@ -452,7 +452,6 @@ export const Navbar = {
     isInitialized = true;
     currentUserId = userId;
 
-    const userData = getCurrentUser();
     const profileImage = userData?.profileImage || null;
 
     this.updateBreadcrumb();
@@ -469,9 +468,9 @@ export const Navbar = {
       $(".mobile-sidebar-overlay").removeClass("hidden");
     });
 
-    $(document).off("click", ".mobile-sidebar-overlay").on("click", ".mobile-sidebar-overlay", function () {
+    $(document).off("click", ".mobile-sidebar-overlay").on("click", ".mobile-sidebar-overlay", () => {
       $(".mobile-sidebar").removeClass("translate-x-0").addClass("-translate-x-full");
-      $(this).addClass("hidden");
+      $(".mobile-sidebar-overlay").addClass("hidden");
     });
 
     $(document).off("click", "#closeSidebar").on("click", "#closeSidebar", (e) => {
@@ -510,7 +509,7 @@ export const Navbar = {
     });
 
     // Notification event listeners
-    $(document).off("click", ".notification-item").on("click", ".notification-item", function (e) {
+    $(document).off("click", ".notification-item").on("click", ".notification-item", function () {
       const notificationId = $(this).data("notification-id");
       if (notificationId && notificationId !== "guest-1" && notificationId !== "guest-2" && notificationId !== "guest-3") {
         notificationService.markAsRead(notificationId);
@@ -530,8 +529,6 @@ export const Navbar = {
 };
 
 export function renderNavbar() {
-  // Reset initialization flag when navbar HTML is re-rendered
-  // This ensures init() will run after new DOM is created
   isInitialized = false;
   currentUserId = null;
   return Navbar.render();
