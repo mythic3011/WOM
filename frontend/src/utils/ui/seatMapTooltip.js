@@ -55,32 +55,34 @@ export class SeatMapTooltip {
   handleMouseEnter(event, seatElement, seatStatusMap, seatDetails) {
     const fullId = seatElement.getAttribute("data-full-id");
     const seatId = seatElement.getAttribute("data-seat-id");
-    const status = seatElement.getAttribute("data-status") || "available";
     const zone = seatElement.getAttribute("data-zone");
 
     this.hoverDebounceTimer = setTimeout(() => {
       let tooltipContent = "";
 
       const seatStatus = seatStatusMap?.get(fullId || seatId);
+      const actualStatus = seatStatus?.status || seatElement.getAttribute("data-status") || "available";
 
-      if (status === "booked") {
+      if (actualStatus === "booked") {
         if (seatStatus && seatStatus.booking) {
           tooltipContent = formatBookingTooltip(seatStatus.booking, seatStatus.seatTicket, "booked");
         } else {
-          tooltipContent = this.formatUnavailableTooltip(fullId || seatId, status);
+          tooltipContent = this.formatUnavailableTooltip(fullId || seatId, actualStatus);
         }
-      } else if (status === "reserved") {
+      } else if (actualStatus === "reserved") {
         if (seatStatus && seatStatus.booking) {
           tooltipContent = formatBookingTooltip(seatStatus.booking, seatStatus.seatTicket, "reserved");
         } else {
-          tooltipContent = this.formatUnavailableTooltip(fullId || seatId, status);
+          tooltipContent = this.formatUnavailableTooltip(fullId || seatId, actualStatus);
         }
-      } else if (status === "blocked") {
+      } else if (actualStatus === "blocked") {
         const seatDetail = seatDetails[fullId] || seatDetails[seatId];
         const metadata = {
           blockedAt: seatDetail?.blockedAt || seatDetail?.updatedAt,
         };
-        tooltipContent = this.formatUnavailableTooltip(fullId || seatId, status, metadata);
+        tooltipContent = this.formatUnavailableTooltip(fullId || seatId, actualStatus, metadata);
+      } else if (actualStatus === "broken") {
+        tooltipContent = this.formatUnavailableTooltip(fullId || seatId, actualStatus);
       } else {
         const seatDetail = seatDetails[fullId] || seatDetails[seatId];
         tooltipContent = this.formatAvailableTooltip(
@@ -148,8 +150,35 @@ export class SeatMapTooltip {
 
   formatUnavailableTooltip(seatId, status, metadata = {}) {
     const seatLabel = seatId ? seatId.toUpperCase() : "Unknown";
-    const statusText = status === "blocked" ? "Blocked by Admin" : "Unavailable";
-    const statusColor = status === "blocked" ? "red" : "gray";
+    
+    let statusText, statusColor, statusIcon;
+    
+    switch (status) {
+      case "blocked":
+        statusText = "Blocked by Admin";
+        statusColor = "red";
+        statusIcon = "fa-ban";
+        break;
+      case "broken":
+        statusText = "Broken Seat";
+        statusColor = "orange";
+        statusIcon = "fa-tools";
+        break;
+      case "booked":
+        statusText = "Booked";
+        statusColor = "blue";
+        statusIcon = "fa-check-circle";
+        break;
+      case "reserved":
+        statusText = "Reserved";
+        statusColor = "yellow";
+        statusIcon = "fa-clock";
+        break;
+      default:
+        statusText = "Unavailable";
+        statusColor = "gray";
+        statusIcon = "fa-times-circle";
+    }
 
     let timestampHtml = "";
     if (status === "blocked" && metadata.blockedAt) {
