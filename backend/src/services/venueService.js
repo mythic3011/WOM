@@ -50,7 +50,10 @@ export const createVenue = async (venueData) => {
       );
     }
   }
-  const venue = await Venue.create(venueData);
+  
+  const { id, ...dataWithoutId } = venueData;
+  
+  const venue = await Venue.create(dataWithoutId);
   return venue;
 };
 
