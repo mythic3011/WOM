@@ -595,21 +595,19 @@ export default {
       if (value) {facilities.push(value);}
     });
 
-    const layout = this.layoutState || { sections: [], globalAisles: [] };
+    const layout = JSON.parse(JSON.stringify(this.layoutState || { sections: [], globalAisles: [] }));
 
     if (layout.sections) {
       layout.sections = layout.sections.map(section => {
-        const cleanSection = { ...section };
-        
-        if (!this.venueId) {
-          delete cleanSection.id;
+        if (!this.venueId && section.id) {
+          delete section.id;
         }
         
-        if (cleanSection.seatNumbering?.globalDirection) {
-          const direction = cleanSection.seatNumbering.globalDirection;
-          cleanSection.seatNumbering.globalDirection = direction === "L_TO_R" ? "ltr" : direction === "R_TO_L" ? "rtl" : direction;
+        if (section.seatNumbering?.globalDirection) {
+          const direction = section.seatNumbering.globalDirection;
+          section.seatNumbering.globalDirection = direction === "L_TO_R" ? "ltr" : direction === "R_TO_L" ? "rtl" : direction;
         }
-        return cleanSection;
+        return section;
       });
     }
 
