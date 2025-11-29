@@ -452,20 +452,8 @@ export const Navbar = {
     isInitialized = true;
     currentUserId = userId;
 
-    let profileImage = null;
-    if (userId) {
-      try {
-        console.log("[Navbar] Fetching profile image for user:", userId);
-        profileImage = await getProfileImage(userId);
-        if (profileImage) {
-          console.log("[Navbar] Profile image loaded successfully");
-        } else {
-          console.log("[Navbar] No profile image available for user");
-        }
-      } catch (error) {
-        console.warn("[Navbar] Failed to load profile image:", error);
-      }
-    }
+    const userData = getCurrentUser();
+    const profileImage = userData?.profileImage || null;
 
     this.updateBreadcrumb();
     $("#notificationsContainer").html(this.renderNotifications(role));
