@@ -15,11 +15,12 @@ import { healthCheck } from "@utils/healthCheck.js";
 import { initializeScrollbars } from "@utils/ui/scrollbar.js";
 import { checkSession, getCurrentUser, clearUser } from "@utils/core/auth.js";
 import { notify } from "@utils/ui/notification.js";
+import { ROUTES } from "@config/routes.js";
 
 window.$ = window.jQuery = $;
 
 const SESSION_CHECK_INTERVAL = 5 * 60 * 1000;
-const AUTH_PAGES = ["/login", "/register"];
+const AUTH_PAGES = [ROUTES.AUTH.LOGIN, ROUTES.AUTH.REGISTER];
 
 class SessionManager {
   constructor() {
@@ -59,7 +60,7 @@ class SessionManager {
     if (!this.isAuthPage()) {
       notify.warning(message);
       setTimeout(() => {
-        window.location.href = "/login";
+        window.location.href = ROUTES.AUTH.LOGIN;
       }, 1500);
     }
   }
