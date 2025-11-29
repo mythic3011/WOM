@@ -528,7 +528,7 @@ export class PerformanceWizardHandler {
             notify.warning("Consider adding more details to the description");
         }
 
-        if (this.imageUploader && this.imageUploader.state.error) {
+        if (this.imageUploader && this.imageUploader.state && this.imageUploader.state.error) {
             notify.warning("Please resolve the image error or remove the image");
         }
 
