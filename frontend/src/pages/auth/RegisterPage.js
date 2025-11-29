@@ -1,9 +1,5 @@
 
-import {
-  createImageUpload,
-  initImageUpload,
-  getImageDataURL,
-} from "@components/ImageUpload.js";
+import { Avatar } from "@components/common/Avatar.js";
 import { authAPI, handleApiError } from "@services/apiClient.js";
 import { setUser } from "@utils/core/auth.js";
 import { navigate } from "@utils/core/navigation.js";
@@ -256,7 +252,18 @@ export default {
                   <p class="mt-1.5 text-xs text-gray-500">8 digits, starts with 2-9 (optional)</p>
                 </div>
 
-                <div class="md:col-span-2" id="profileImageUpload"></div>
+                <div class="md:col-span-2">
+                  <label class="block text-sm font-semibold text-gray-700 mb-3">
+                    Profile Image (Optional)
+                  </label>
+                  <div id="profileAvatarContainer" class="flex items-center gap-4">
+                    <div id="profileAvatar"></div>
+                    <div class="text-sm text-gray-600">
+                      <p class="font-medium mb-1">Upload your profile picture</p>
+                      <p class="text-xs text-gray-500">JPG, PNG, GIF or WebP. Max 5MB.</p>
+                    </div>
+                  </div>
+                </div>
               </div>
 
               <div class="bg-gray-50 rounded-lg p-4 mb-6">
@@ -299,21 +306,28 @@ export default {
   },
 
   async afterRender() {
-    $("#profileImageUpload").html(
-      createImageUpload({
-        id: "profileImage",
-        label: "Profile Image (Optional)",
-        preview: true,
-        previewSize: "24",
-        required: false,
+    let uploadedImageData = null;
+
+    $("#profileAvatar").html(
+      Avatar.render({
+        name: "New User",
+        size: "xl",
+        showUpload: true,
+        rounded: "full",
       })
     );
 
-    initImageUpload("profileImageInput", "profileImagePreview", {
-      maxSize: 5,
-      shape: "rounded-full",
-      previewSize: "24",
+    Avatar.initializeUpload("#profileAvatarContainer", {
+      maxSize: 5 * 1024 * 1024,
+      onUpload: async (file, dataUrl) => {
+        uploadedImageData = dataUrl;
+      },
+      onRemove: async () => {
+        uploadedImageData = null;
+      },
     });
+
+    this.getUploadedImage = () => uploadedImageData;
 
     $("#phone").on("input", function () {
       const value = $(this).val();
@@ -433,7 +447,7 @@ export default {
         <span>Creating your account...</span>
       `);
 
-      const profileImageData = await getImageDataURL("profileImageInput");
+      const profileImageData = this.getUploadedImage ? this.getUploadedImage() : null;
 
       const userData = {
         username,
