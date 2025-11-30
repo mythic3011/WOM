@@ -2318,20 +2318,41 @@ const PerformanceDetailsPage = {
     }
 
     const Swal = (await import("sweetalert2")).default;
+    const { bookingService } = await import("@services/bookingService.js");
+
+    const allBookings = await bookingService.getAll();
+    const performanceBookings = allBookings.filter(b => b.performanceId === performance.id);
+    const bookingCount = performanceBookings.length;
 
     const result = await Swal.fire({
       title: "Delete Performance?",
       html: `
         <div class="text-left space-y-3">
           <p class="text-gray-700">Are you sure you want to delete this performance?</p>
-          <div class="bg-red-50 border border-red-200 rounded-lg p-4">
+          <div class="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-3">
             <p class="font-semibold text-gray-900 mb-1">${performance.title}</p>
             <p class="text-sm text-gray-600">${performance.composer}</p>
           </div>
-          <p class="text-sm text-red-600 font-semibold">
-            <i class="fas fa-exclamation-triangle mr-1"></i>
-            This action cannot be undone.
-          </p>
+          ${bookingCount > 0 ? `
+            <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+              <p class="text-yellow-800 font-semibold mb-2">
+                <i class="fas fa-ticket-alt mr-2"></i>Performance has ${bookingCount} booking${bookingCount > 1 ? 's' : ''}
+              </p>
+              <p class="text-sm text-yellow-700">
+                All bookings for this performance will be permanently deleted.
+              </p>
+            </div>
+          ` : ''}
+          <div class="bg-red-50 border border-red-200 rounded-lg p-4">
+            <p class="text-red-800 font-semibold mb-2">
+              <i class="fas fa-exclamation-triangle mr-2"></i>Warning
+            </p>
+            <ul class="text-sm text-red-700 space-y-1">
+              <li>• This action cannot be undone</li>
+              <li>• Performance will be permanently deleted</li>
+              ${bookingCount > 0 ? `<li>• ${bookingCount} booking${bookingCount > 1 ? 's' : ''} will be permanently deleted</li>` : ''}
+            </ul>
+          </div>
         </div>
       `,
       icon: "warning",
@@ -2437,26 +2458,6 @@ const PerformanceDetailsPage = {
         }
       });
     }
-  },
-
-  navigateToSeatManagement() {
-    const performanceId = this._currentPerformance?.id;
-    const showtimeId = this._selectedShowtimeId;
-
-    if (!performanceId) {
-      console.error("No performance ID available for seat management navigation");
-      return;
-    }
-
-    // Build URL with query parameters
-    let url = `${ROUTES.ADMIN.SEAT_MANAGEMENT}?performanceId=${performanceId}`;
-
-    // Add showtime ID if one is selected
-    if (showtimeId) {
-      url += `&showtimeId=${showtimeId}`;
-    }
-
-    page(url);
   },
 
   attachShowtimeHandlers() {

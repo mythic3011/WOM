@@ -23,6 +23,7 @@ import {
 import { PerformanceFilter } from "@components/PerformanceFilter.js";
 import { getTierBadge } from "@config/tierConfig.js";
 import { ResponseExtractor, ticketTypeService, templateService, venueService, performanceAPI, venueAPI, handleApiError, storage } from "@services/index.js";
+import { bookingService } from "@services/bookingService.js";
 import { attachSeatTooltipListeners } from "@utils/booking/seatTooltip.js";
 import { getPerformanceImageUrl, getImageFallbackSvg } from "@utils/imageUtils.js";
 import { initializeSeatDetails } from "@utils/booking/seatUtils.js";
@@ -416,6 +417,13 @@ export default {
   },
 
   setupEventListeners() {
+    $(document).off("click", ".action-dropdown-btn");
+    $(document).off("click", ".action-view-btn");
+    $(document).off("click", ".action-edit-btn");
+    $(document).off("click", ".action-duplicate-btn");
+    $(document).off("click", ".action-delete-btn");
+    $("#addPerformanceBtn").off("click");
+
     $(document).on("click", ".action-dropdown-btn", (e) => {
       e.stopPropagation();
       const $btn = $(e.currentTarget);
@@ -2221,9 +2229,37 @@ export default {
     const performance = this.performances.find((p) => p.id === id);
     if (!performance) {return;}
 
+    const allBookings = await bookingService.getAll();
+    const performanceBookings = allBookings.filter(b => b.performanceId === id);
+    const bookingCount = performanceBookings.length;
+
     const result = await Swal.fire({
       title: "Delete Performance?",
-      html: `Are you sure you want to delete <strong>"${performance.title}"</strong>?<br><span class="text-sm text-gray-600">This action cannot be undone.</span>`,
+      html: `
+        <div class="text-left space-y-4">
+          <p class="text-gray-700">Are you sure you want to delete <strong>"${performance.title}"</strong>?</p>
+          ${bookingCount > 0 ? `
+            <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+              <p class="text-yellow-800 font-semibold mb-2">
+                <i class="fas fa-ticket-alt mr-2"></i>Performance has ${bookingCount} booking${bookingCount > 1 ? 's' : ''}
+              </p>
+              <p class="text-sm text-yellow-700">
+                All bookings for this performance will be permanently deleted.
+              </p>
+            </div>
+          ` : ''}
+          <div class="bg-red-50 border border-red-200 rounded-lg p-4">
+            <p class="text-red-800 font-semibold mb-2">
+              <i class="fas fa-exclamation-triangle mr-2"></i>Warning
+            </p>
+            <ul class="text-sm text-red-700 space-y-1">
+              <li>• This action cannot be undone</li>
+              <li>• Performance will be permanently deleted</li>
+              ${bookingCount > 0 ? `<li>• ${bookingCount} booking${bookingCount > 1 ? 's' : ''} will be permanently deleted</li>` : ''}
+            </ul>
+          </div>
+        </div>
+      `,
       icon: "warning",
       showCancelButton: true,
       confirmButtonColor: SwalColors.dangerDark,

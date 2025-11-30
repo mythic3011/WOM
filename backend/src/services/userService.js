@@ -87,6 +87,9 @@ export const updateUser = async (id, updates) => {
 export const deleteUser = async (id) => {
   const user = await findEntityOrThrow(User, id, "User not found");
 
+  const { Booking } = await import("#models/index.js");
+  await Booking.destroy({ where: { userId: id } });
+
   if (user.profileImage && !user.profileImage.startsWith("data:image/")) {
     await deleteProfileImageFile(user.profileImage);
   }
@@ -103,6 +106,9 @@ export const verifyAndDeleteUser = async (id, password) => {
   if (!isValid) {
     throw new Error("Invalid password");
   }
+
+  const { Booking } = await import("#models/index.js");
+  await Booking.destroy({ where: { userId: id } });
 
   if (user.profileImage && !user.profileImage.startsWith("data:image/")) {
     await deleteProfileImageFile(user.profileImage);

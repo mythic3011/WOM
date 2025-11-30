@@ -478,13 +478,8 @@ const preserveTimeFields = (updates, existingRecord) => {
 export const deletePerformance = async (id) => {
   const performance = await findEntityOrThrow(Performance, id, "Performance not found");
 
-  await checkRelatedEntitiesCount(
-    Booking,
-    { performanceId: id, status: { [Op.in]: ["confirmed", "pending"] } },
-    "Cannot delete performance with active bookings"
-  );
+  await Booking.destroy({ where: { performanceId: id } });
 
-  // Delete associated image if it's an uploaded file
   if (performance.image && performance.image.startsWith("/uploads/")) {
     await deletePerformanceImage(performance.image);
   }

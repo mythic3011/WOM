@@ -972,11 +972,25 @@ export default {
       return;
     }
 
+    const allBookings = await bookingService.getAll();
+    const userBookings = allBookings.filter(b => b.userId === user.id);
+    const bookingCount = userBookings.length;
+
     const result = await Swal.fire({
       title: "Delete User?",
       html: `
         <div class="text-left">
           <p class="text-gray-700 mb-4">Are you sure you want to delete <strong>${user.name}</strong> (@${user.username})?</p>
+          ${bookingCount > 0 ? `
+            <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
+              <p class="text-yellow-800 font-semibold mb-2">
+                <i class="fas fa-ticket-alt mr-2"></i>User has ${bookingCount} booking${bookingCount > 1 ? 's' : ''}
+              </p>
+              <p class="text-sm text-yellow-700">
+                All bookings associated with this user will also be permanently deleted.
+              </p>
+            </div>
+          ` : ''}
           <div class="bg-red-50 border border-red-200 rounded-lg p-4">
             <p class="text-red-800 font-semibold mb-2">
               <i class="fas fa-exclamation-triangle mr-2"></i>Warning
@@ -984,7 +998,7 @@ export default {
             <ul class="text-sm text-red-700 space-y-1">
               <li>• This action cannot be undone</li>
               <li>• User account will be permanently deleted</li>
-              <li>• Related bookings will remain but be marked as deleted user</li>
+              ${bookingCount > 0 ? `<li>• ${bookingCount} booking${bookingCount > 1 ? 's' : ''} will be permanently deleted</li>` : ''}
             </ul>
           </div>
         </div>

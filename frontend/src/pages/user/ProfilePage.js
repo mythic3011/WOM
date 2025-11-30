@@ -5,6 +5,7 @@ import Swal from "sweetalert2";
 import { Avatar } from "@components/common/Avatar.js";
 import { FormComponents } from "@components/FormComponents.js";
 import { ResponseExtractor, userAPI, handleApiError, userService } from "@services/index.js";
+import { bookingService } from "@services/bookingService.js";
 import { SwalColors } from "@utils/colors.js";
 import { getCurrentUser, logout } from "@utils/core/auth.js";
 import { phoneUtils } from "@utils/forms/phoneFormat.js";
@@ -567,11 +568,25 @@ export default {
   async handleDeleteAccount() {
     const user = getCurrentUser();
 
+    const allBookings = await bookingService.getAll();
+    const userBookings = allBookings.filter(b => b.userId === user.id);
+    const bookingCount = userBookings.length;
+
     const result = await Swal.fire({
       title: "Delete Account",
       html: `
         <div class="text-left space-y-4">
           <p class="text-gray-700">Are you sure you want to delete your account?</p>
+          ${bookingCount > 0 ? `
+            <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+              <p class="text-yellow-800 font-semibold mb-2">
+                <i class="fas fa-ticket-alt mr-2"></i>You have ${bookingCount} booking${bookingCount > 1 ? 's' : ''}
+              </p>
+              <p class="text-sm text-yellow-700">
+                All your bookings will be permanently deleted.
+              </p>
+            </div>
+          ` : ''}
           <div class="bg-red-50 border border-red-200 rounded-lg p-4">
             <p class="text-sm text-red-800 font-semibold mb-2">
               <i class="fas fa-exclamation-triangle text-red-600 mr-2"></i>
@@ -580,7 +595,7 @@ export default {
             <ul class="text-sm text-red-700 space-y-1 ml-6 list-disc">
               <li>Permanently delete your account</li>
               <li>Remove all your personal data</li>
-              <li>Cancel all your bookings</li>
+              ${bookingCount > 0 ? `<li>Delete ${bookingCount} booking${bookingCount > 1 ? 's' : ''}</li>` : ''}
               <li>Remove access to the platform</li>
             </ul>
           </div>
