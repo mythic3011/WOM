@@ -593,8 +593,8 @@ export default {
       <div class="flex items-center gap-3 mb-4 pb-4 border-b border-gray-200 relative">
         <button 
           type="button" 
-          class="swal2-close absolute -top-2 -right-2 bg-gray-200 hover:bg-gray-300 rounded-full w-8 h-8 flex items-center justify-center transition-colors"
-          onclick="Swal.close()"
+          id="closeEditUserModal"
+          class="absolute -top-2 -right-2 bg-gray-200 hover:bg-gray-300 rounded-full w-8 h-8 flex items-center justify-center transition-colors"
         >
           <i class="fas fa-times text-xl"></i>
         </button>
@@ -863,11 +863,10 @@ export default {
         updateData.profileImage = originalUser.profileImage;
       }
 
-      const updateResp = await adminUserService.update(
+      const updatedUser = await adminUserService.update(
         originalUser.id,
         updateData
       );
-      const updatedUser = ResponseExtractor.extractSingle(updateResp, "user");
       if (!updatedUser) {
         throw new Error("Invalid update user response");
       }
