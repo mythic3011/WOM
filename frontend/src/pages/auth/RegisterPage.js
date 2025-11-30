@@ -1,3 +1,15 @@
+/**
+ * @file RegisterPage.js
+ * @description User registration page component with form validation and profile image upload
+ * @author LI Ning 25127563d
+ * @author SHEK chinhei 25017482d
+ * @dependency jQuery
+ * @dependency dayjs
+ * @dependency sweetalert2
+ * @see @components/common/ImageUploader.js
+ * @see @services/apiClient.js
+ * @see @utils/forms/formValidator.js
+ */
 
 import { Avatar } from "@components/common/Avatar.js";
 import { ImageUploader } from "@components/common/ImageUploader.js";
@@ -11,6 +23,10 @@ import { notify } from "@utils/ui/notification.js";
 export default {
   title: "Register | WOM",
 
+  /**
+   * @async
+   * @returns {Promise<string>} HTML string for the registration page
+   */
   async render() {
     return `
       <main class="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 py-12 px-4 sm:px-6 lg:px-8">
@@ -304,6 +320,10 @@ export default {
     `;
   },
 
+  /**
+   * @async
+   * @returns {Promise<void>}
+   */
   async afterRender() {
     let uploadedImageData = null;
 
