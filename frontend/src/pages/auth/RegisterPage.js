@@ -459,7 +459,6 @@ export default {
         gender: formData.gender,
         birthday: formData.birthday,
         phone: formData.phone,
-        profileImage: formData.profileImage,
         role: "user",
         status: "active",
       };
@@ -468,8 +467,40 @@ export default {
 
       if (response.success && response.data && response.data.user) {
         setUser(response.data.user);
+
+        if (formData.profileImage) {
+          try {
+            const blob = await fetch(formData.profileImage).then((r) => r.blob());
+            const file = new File([blob], "profile.jpg", { type: "image/jpeg" });
+
+            const uploadFormData = new FormData();
+            uploadFormData.append("image", file);
+
+            const uploadResponse = await fetch("/api/users/upload-profile-image", {
+              method: "POST",
+              body: uploadFormData,
+              credentials: "include",
+            });
+
+            if (uploadResponse.ok) {
+              const uploadData = await uploadResponse.json();
+              if (uploadData.success && uploadData.data && uploadData.data.imageUrl) {
+                const { userAPI } = await import("@services/apiClient.js");
+                await userAPI.update(response.data.user.id, {
+                  profileImage: uploadData.data.imageUrl,
+                });
+
+                const updatedUser = { ...response.data.user, profileImage: uploadData.data.imageUrl };
+                setUser(updatedUser);
+              }
+            }
+          } catch (imageError) {
+            console.error("Profile image upload failed:", imageError);
+          }
+        }
+
         notify.success(`Registration successful! Welcome to WOM, ${formData.name}!`);
-        
+
         setTimeout(() => {
           navigate("/user/dashboard");
         }, 1000);

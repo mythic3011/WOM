@@ -523,8 +523,8 @@ export default {
     }
 
     const updatedUser = { ...user, profileImage: imageUrl };
-    const { setUser } = await import("@services/storageService.js");
-    setUser(updatedUser);
+    const { storage } = await import("@services/storageService.js");
+    storage.setUser(updatedUser);
 
     window.dispatchEvent(new CustomEvent("user-updated", { detail: updatedUser }));
 
@@ -543,8 +543,8 @@ export default {
     });
 
     const updatedUser = { ...user, profileImage: null };
-    const { setUser } = await import("@services/storageService.js");
-    setUser(updatedUser);
+    const { storage } = await import("@services/storageService.js");
+    storage.setUser(updatedUser);
 
     window.dispatchEvent(new CustomEvent("user-updated", { detail: updatedUser }));
 
