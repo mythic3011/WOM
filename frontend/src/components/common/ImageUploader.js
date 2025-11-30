@@ -108,9 +108,10 @@ export const ImageUploader = {
       onRemove,
       onError,
       maxSize = 5 * 1024 * 1024,
-      maxSizeMB = 5,
       validateFile,
     } = callbacks;
+
+    const maxSizeMB = Math.round(maxSize / (1024 * 1024));
 
     const $uploader = $(`#${uploaderId}`);
     if (!$uploader.length) {
@@ -178,7 +179,11 @@ export const ImageUploader = {
         </div>
       `);
 
-      $preview.find(".image-uploader-remove").on("click", handleRemove);
+      $preview.find(".image-uploader-remove").off("click").on("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        handleRemove();
+      });
     };
 
     const handleFileUpload = async (file) => {
@@ -265,8 +270,13 @@ export const ImageUploader = {
     };
 
     $dropzone.on("click", (e) => {
-      if (!$(e.target).hasClass("image-uploader-remove")) {
-        $input.click();
+      if (
+        !$(e.target).hasClass("image-uploader-remove") &&
+        !$(e.target).closest(".image-uploader-remove").length
+      ) {
+        e.preventDefault();
+        e.stopPropagation();
+        $input[0].click();
       }
     });
 
@@ -300,19 +310,32 @@ export const ImageUploader = {
       }
     });
 
-    $uploader.find(".image-uploader-load-url").on("click", handleUrlLoad);
+    $uploader.find(".image-uploader-load-url").off("click").on("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      handleUrlLoad();
+    });
 
-    $urlInput.on("keypress", (e) => {
-      if (e.which === 13) {
+    $urlInput.off("keypress").on("keypress", (e) => {
+      if (e.which === 13 || e.key === "Enter") {
         e.preventDefault();
         handleUrlLoad();
       }
     });
 
+    const cleanup = () => {
+      $dropzone.off("click dragover dragleave drop");
+      $input.off("change");
+      $uploader.find(".image-uploader-load-url").off("click");
+      $urlInput.off("keypress");
+      $preview.find(".image-uploader-remove").off("click");
+    };
+
     return {
       reset: handleRemove,
       showError,
       hideError,
+      cleanup,
     };
   },
 };

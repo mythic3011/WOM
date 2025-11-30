@@ -3,6 +3,7 @@ import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
 import Papa from "papaparse";
 import Swal from "sweetalert2";
+import { UserModals } from "./UsersPage.modals.js";
 
 import { Avatar } from "@components/common/Avatar.js";
 import { createDataTable } from "@components/DataTable.js";
@@ -696,7 +697,6 @@ export default {
       options: [
         { value: "male", label: "Male" },
         { value: "female", label: "Female" },
-        { value: "other", label: "Other" },
         { value: "prefer_not_to_say", label: "Prefer not to say" },
       ],
     })}
@@ -1203,7 +1203,6 @@ export default {
       options: [
         { value: "male", label: "Male" },
         { value: "female", label: "Female" },
-        { value: "other", label: "Other" },
         { value: "prefer_not_to_say", label: "Prefer not to say" },
       ],
       required: true,
