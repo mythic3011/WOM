@@ -14,6 +14,40 @@ export default {
   title: "Profile | User",
   fullUserData: null,
 
+  parseBirthdayValue(birthday) {
+    if (!birthday) {
+      return "";
+    }
+
+    try {
+      const date = dayjs(birthday);
+      if (!date.isValid()) {
+        console.warn("Invalid birthday format received:", birthday);
+        return "";
+      }
+      return date.format("YYYY-MM-DD");
+    } catch (error) {
+      console.error("Error parsing birthday:", error, birthday);
+      return "";
+    }
+  },
+
+  parseGenderValue(gender) {
+    if (!gender) {
+      return "";
+    }
+
+    const validGenders = ["male", "female", "other", "prefer_not_to_say"];
+    const normalizedGender = String(gender).toLowerCase().trim();
+
+    if (!validGenders.includes(normalizedGender)) {
+      console.warn("Invalid gender value received:", gender);
+      return "";
+    }
+
+    return normalizedGender;
+  },
+
   async render() {
     const user = getCurrentUser();
 
@@ -83,7 +117,7 @@ export default {
                     `
         : ""
       }
-                    ${fullUserData?.birthday
+                    ${fullUserData?.birthday && dayjs(fullUserData.birthday).isValid()
         ? `
                       <div class="flex items-center justify-between">
                         <span class="text-gray-500">Birthday:</span>
@@ -229,7 +263,7 @@ export default {
                         ${FormComponents.select({
         id: "gender",
         label: "Gender",
-        value: fullUserData?.gender || "",
+        value: this.parseGenderValue(fullUserData?.gender),
         options: [
           { value: "", label: "Select gender" },
           { value: "male", label: "Male" },
@@ -248,9 +282,7 @@ export default {
         id: "birthday",
         type: "date",
         label: "Birthday",
-        value: fullUserData?.birthday
-          ? dayjs(fullUserData.birthday).format("YYYY-MM-DD")
-          : "",
+        value: this.parseBirthdayValue(fullUserData?.birthday),
         required: true,
       })}
                       </div>

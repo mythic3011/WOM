@@ -3,7 +3,7 @@ import { hashPassword } from "#utils/hash.js";
 import { ConflictError, UnauthorizedError } from "#utils/errors.js";
 
 export const register = async (userData) => {
-  const { email, username, password, name, phone, role = "user" } = userData;
+  const { email, username, password, name, phone, role = "user", title, gender, birthday, profileImage } = userData;
 
   const existingUser = await User.findOne({
     where: {
@@ -39,6 +39,10 @@ export const register = async (userData) => {
     phone,
     role,
     status: "active",
+    title,
+    gender,
+    birthday,
+    profileImage,
   });
 
   return user.toSafeObject();
