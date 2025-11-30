@@ -1,5 +1,20 @@
+/**
+ * @file ImageUploader.js
+ * @description Image uploader component for admin interface with file upload and URL input support
+ * @author LI Ning 25127563d
+ * @author SHEK chinhei 25017482d
+ * @see @components/common/ImageUploader.js
+ */
+
 export class ImageUploader {
 
+  /**
+   * @param {Object} [options={}] - Configuration options
+   * @param {string} options.containerId - Container element ID
+   * @param {string} [options.currentImageUrl=null] - Current image URL if editing
+   * @param {Function} [options.onImageChange] - Callback when image changes
+   * @param {number} [options.maxFileSize=5242880] - Maximum file size in bytes
+   */
   constructor(options = {}) {
     this.containerId = options.containerId;
     this.currentImageUrl = options.currentImageUrl || null;
@@ -24,6 +39,9 @@ export class ImageUploader {
     this.allowedTypes = ["image/jpeg", "image/png", "image/gif", "image/webp"];
   }
 
+  /**
+   * @returns {string} HTML string for the image uploader component
+   */
   render() {
     const hasImage = this.state.previewUrl !== null;
     const isUploadDisabled = this.state.imageSource === "url";
@@ -134,8 +152,7 @@ export class ImageUploader {
   }
 
   /**
-   * Attaches event listeners to the rendered component
-   * Must be called after render() and DOM insertion
+   * @returns {void}
    */
   attachEventListeners() {
     const fileInput = document.getElementById("imageFileInput");
@@ -177,8 +194,8 @@ export class ImageUploader {
   }
 
   /**
-   * Handles file upload from file input
    * @param {Event} event - File input change event
+   * @returns {Promise<void>}
    */
   async handleFileUpload(event) {
     const file = event.target.files[0];
@@ -231,7 +248,6 @@ export class ImageUploader {
   }
 
   /**
-   * Validates a file for type and size
    * @param {File} file - File to validate
    * @returns {Object} Validation result with valid flag and optional error message
    */
@@ -257,8 +273,8 @@ export class ImageUploader {
   }
 
   /**
-   * Handles URL input
    * @param {string} url - Image URL to validate and load
+   * @returns {Promise<void>}
    */
   async handleUrlInput(url) {
     // Trim whitespace
@@ -325,7 +341,6 @@ export class ImageUploader {
   }
 
   /**
-   * Validates a URL format
    * @param {string} url - URL to validate
    * @returns {Object} Validation result with valid flag and optional error message
    */
@@ -352,8 +367,6 @@ export class ImageUploader {
   }
 
   /**
-   * Displays image preview from file or URL
-   * Handles loading states and error conditions
    * @param {File|string} source - File object or URL string
    * @returns {Promise<void>}
    */
@@ -432,7 +445,7 @@ export class ImageUploader {
   }
 
   /**
-   * Handles image deletion
+   * @returns {void}
    */
   handleDelete() {
     // Clear all state
@@ -472,16 +485,9 @@ export class ImageUploader {
   }
 
   /**
-   * Gets current image data for form submission
-   * Returns only the active image source (upload or URL, never both)
    * @returns {Object} Image data with type and data
-   *   - type: 'upload' | 'url' | null
-   *   - data: File | string | null (File for upload, URL string for url)
-   *   - previewUrl: string | null
    */
   getImageData() {
-    // Due to mutual exclusivity, only one source can be active at a time
-    // imageSource will be either 'upload', 'url', or null
     return {
       type: this.state.imageSource,
       data: this.state.imageData,
@@ -490,15 +496,15 @@ export class ImageUploader {
   }
 
   /**
-   * Updates component state
    * @param {Object} updates - State updates to apply
+   * @returns {void}
    */
   setState(updates) {
     this.state = { ...this.state, ...updates };
   }
 
   /**
-   * Rerenders the component in place
+   * @returns {void}
    */
   rerender() {
     const container = document.getElementById(this.containerId);

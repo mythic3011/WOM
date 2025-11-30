@@ -1,14 +1,14 @@
 /**
- * Toast Component - Reusable toast notification system
- * Provides visual feedback for user actions
+ * @file Toast.js
+ * @description Reusable toast notification system for user feedback
+ * @author LI Ning 25127563d
+ * @author SHEK chinhei 25017482d
+ * @see @components/common/Notification.js
  */
-// p.s Toast use for error msg
-
-
 
 export const Toast = {
     /**
-     * Initialize toast container in the DOM
+     * @returns {void}
      */
     init() {
         if (!document.getElementById("toast-container")) {
@@ -22,12 +22,12 @@ export const Toast = {
     },
 
     /**
-     * Show a toast notification
      * @param {Object} options - Toast configuration
      * @param {string} options.message - Message to display
-     * @param {string} options.type - Type: 'success', 'error', 'warning', 'info'
-     * @param {number} options.duration - Duration in ms (0 for persistent)
-     * @param {string} options.title - Optional title
+     * @param {string} [options.type="info"] - Type: success, error, warning, info
+     * @param {number} [options.duration=4000] - Duration in ms (0 for persistent)
+     * @param {string} [options.title=null] - Optional title
+     * @returns {HTMLElement} Toast element
      */
     show({ message, type = "info", duration = 4000, title = null }) {
         this.init();
@@ -53,7 +53,11 @@ export const Toast = {
     },
 
     /**
-     * Create toast element
+     * @param {Object} options - Toast configuration
+     * @param {string} options.message - Message to display
+     * @param {string} options.type - Toast type
+     * @param {string} options.title - Toast title
+     * @returns {HTMLElement} Toast element
      */
     create({ message, type, title }) {
         const config = this.getConfig(type);
@@ -94,7 +98,8 @@ export const Toast = {
     },
 
     /**
-     * Get configuration for toast type
+     * @param {string} type - Toast type
+     * @returns {Object} Configuration object for toast type
      */
     getConfig(type) {
         const configs = {
@@ -128,7 +133,8 @@ export const Toast = {
     },
 
     /**
-     * Dismiss a toast
+     * @param {HTMLElement} toast - Toast element to dismiss
+     * @returns {void}
      */
     dismiss(toast) {
         if (!toast || !toast.parentElement) {return;}
@@ -144,7 +150,7 @@ export const Toast = {
     },
 
     /**
-     * Dismiss all toasts
+     * @returns {void}
      */
     dismissAll() {
         const container = document.getElementById("toast-container");
@@ -155,7 +161,8 @@ export const Toast = {
     },
 
     /**
-     * Escape HTML to prevent XSS
+     * @param {string} text - Text to escape
+     * @returns {string} Escaped HTML string
      */
     escapeHtml(text) {
         const div = document.createElement("div");
@@ -163,19 +170,42 @@ export const Toast = {
         return div.innerHTML;
     },
 
-    // Convenience methods
+    /**
+     * @param {string} message - Success message
+     * @param {string} [title=null] - Optional title
+     * @param {number} [duration=4000] - Duration in ms
+     * @returns {HTMLElement} Toast element
+     */
     success(message, title = null, duration = 4000) {
         return this.show({ message, type: "success", title, duration });
     },
 
+    /**
+     * @param {string} message - Error message
+     * @param {string} [title=null] - Optional title
+     * @param {number} [duration=5000] - Duration in ms
+     * @returns {HTMLElement} Toast element
+     */
     error(message, title = null, duration = 5000) {
         return this.show({ message, type: "error", title, duration });
     },
 
+    /**
+     * @param {string} message - Warning message
+     * @param {string} [title=null] - Optional title
+     * @param {number} [duration=4500] - Duration in ms
+     * @returns {HTMLElement} Toast element
+     */
     warning(message, title = null, duration = 4500) {
         return this.show({ message, type: "warning", title, duration });
     },
 
+    /**
+     * @param {string} message - Info message
+     * @param {string} [title=null] - Optional title
+     * @param {number} [duration=4000] - Duration in ms
+     * @returns {HTMLElement} Toast element
+     */
     info(message, title = null, duration = 4000) {
         return this.show({ message, type: "info", title, duration });
     },

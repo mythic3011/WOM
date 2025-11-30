@@ -1,6 +1,11 @@
 /**
- * Notification Service
- * Manages user notifications dynamically
+ * @file notificationService.js
+ * @description Service for managing user notifications dynamically
+ * @author LI Ning 25127563d
+ * @author SHEK chinhei 25017482d
+ * @dependency @config/routes.js
+ * @dependency ./storageService.js
+ * @see storageService.js
  */
 
 import { ROUTES } from "@config/routes.js";
@@ -9,13 +14,20 @@ import { storage } from "./storageService.js";
 const STORAGE_KEY = "notifications";
 const MAX_NOTIFICATIONS = 10;
 
+/**
+ * @class NotificationService
+ * @description Manages user notifications with storage and listeners
+ */
 class NotificationService {
+    /**
+     * @description Creates an instance of NotificationService
+     */
     constructor() {
         this.listeners = [];
     }
 
     /**
-     * Get notifications for current user
+     * @description Gets notifications for current user
      * @returns {Array} Array of notification objects
      */
     getNotifications() {

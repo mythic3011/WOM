@@ -1,7 +1,20 @@
+/**
+ * @file emailService.js
+ * @description Email service handling transactional emails for bookings and user notifications
+ * @author LI Ning 25127563d
+ * @author SHEK chinhei 25017482d
+ * @dependency nodemailer - Email sending library
+ * @see #controllers/authController.js
+ * @see #controllers/bookingController.js
+ */
+
 import nodemailer from "nodemailer";
 import logger from "#config/logger.js";
 import { formatDateTime } from "#utils/dateUtils.js";
 
+/**
+ * @returns {Object}
+ */
 const createTransporter = () => {
   if (process.env.NODE_ENV === "production") {
     return nodemailer.createTransport({
@@ -25,6 +38,12 @@ const createTransporter = () => {
   }
 };
 
+/**
+ * @param {Object} booking
+ * @param {Object} user
+ * @param {Object} performance
+ * @returns {Promise<Object>}
+ */
 export const sendBookingConfirmation = async (booking, user, performance) => {
   try {
     const transporter = createTransporter();
@@ -81,6 +100,12 @@ export const sendBookingConfirmation = async (booking, user, performance) => {
   }
 };
 
+/**
+ * @param {Object} booking
+ * @param {Object} user
+ * @param {Object} performance
+ * @returns {Promise<Object>}
+ */
 export const sendBookingCancellation = async (booking, user, performance) => {
   try {
     const transporter = createTransporter();
@@ -124,6 +149,10 @@ export const sendBookingCancellation = async (booking, user, performance) => {
   }
 };
 
+/**
+ * @param {Object} user
+ * @returns {Promise<Object>}
+ */
 export const sendWelcomeEmail = async (user) => {
   try {
     const transporter = createTransporter();
@@ -168,6 +197,11 @@ export const sendWelcomeEmail = async (user) => {
   }
 };
 
+/**
+ * @param {Object} user
+ * @param {string} resetToken
+ * @returns {Promise<Object>}
+ */
 export const sendPasswordResetEmail = async (user, resetToken) => {
   try {
     const transporter = createTransporter();

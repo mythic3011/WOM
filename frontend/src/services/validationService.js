@@ -1,10 +1,30 @@
+/**
+ * @file validationService.js
+ * @description Service for validating user input and form data
+ * @author LI Ning 25127563d
+ * @author SHEK chinhei 25017482d
+ */
+
+/**
+ * @description Validation service for form and data validation
+ */
 export const validationService = {
+  /**
+   * @description Validates email format
+   * @param {string} email - Email address
+   * @returns {boolean} True if valid
+   */
   validateEmail(email) {
     if (!email) {return false;}
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return emailRegex.test(email.trim());
   },
 
+  /**
+   * @description Validates phone number format
+   * @param {string} phone - Phone number
+   * @returns {boolean} True if valid
+   */
   validatePhone(phone) {
     if (!phone) {return true;}
     const cleanPhone = phone.replace(/\s+/g, "");
@@ -12,6 +32,11 @@ export const validationService = {
     return phoneRegex.test(cleanPhone);
   },
 
+  /**
+   * @description Validates password strength
+   * @param {string} password - Password
+   * @returns {Object} Validation result with valid flag and errors array
+   */
   validatePassword(password) {
     if (!password) {return { valid: false, errors: ["Password is required"] };}
 
@@ -35,6 +60,11 @@ export const validationService = {
     };
   },
 
+  /**
+   * @description Validates user age is at least 13
+   * @param {string} birthdate - Birth date
+   * @returns {boolean} True if age is valid
+   */
   validateAge(birthdate) {
     if (!birthdate) {return false;}
     const today = new Date();
@@ -51,6 +81,11 @@ export const validationService = {
     return age >= 13;
   },
 
+  /**
+   * @description Validates booking data
+   * @param {Object} data - Booking data
+   * @returns {Object} Validation result with valid flag and errors array
+   */
   validateBookingData(data) {
     const errors = [];
 
@@ -94,6 +129,11 @@ export const validationService = {
     };
   },
 
+  /**
+   * @description Validates venue data
+   * @param {Object} data - Venue data
+   * @returns {Object} Validation result with valid flag and errors array
+   */
   validateVenueData(data) {
     const errors = [];
 
@@ -132,6 +172,11 @@ export const validationService = {
     };
   },
 
+  /**
+   * @description Validates performance data
+   * @param {Object} data - Performance data
+   * @returns {Object} Validation result with valid flag and errors array
+   */
   validatePerformanceData(data) {
     const errors = [];
 
@@ -171,6 +216,11 @@ export const validationService = {
     };
   },
 
+  /**
+   * @description Validates user data
+   * @param {Object} data - User data
+   * @returns {Object} Validation result with valid flag and errors array
+   */
   validateUserData(data) {
     const errors = [];
 
@@ -213,6 +263,12 @@ export const validationService = {
     };
   },
 
+  /**
+   * @description Gets validation errors based on rules
+   * @param {Object} data - Data to validate
+   * @param {Object} rules - Validation rules
+   * @returns {Object} Validation result with valid flag and errors array
+   */
   getValidationErrors(data, rules) {
     const errors = [];
 

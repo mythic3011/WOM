@@ -1,7 +1,33 @@
+/**
+ * @file authService.js
+ * @description Authentication service handling user registration, login, and session management
+ * @author LI Ning 25127563d
+ * @author SHEK chinhei 25017482d
+ * @dependency bcryptjs - Password hashing
+ * @dependency jsonwebtoken - JWT token generation
+ * @dependency #models/User.js - User model
+ * @see #controllers/authController.js
+ */
+
 import { User } from "#models/index.js";
 import { hashPassword } from "#utils/hash.js";
 import { ConflictError, UnauthorizedError } from "#utils/errors.js";
 
+/**
+ * @param {Object} userData
+ * @param {string} userData.email
+ * @param {string} userData.username
+ * @param {string} userData.password
+ * @param {string} userData.name
+ * @param {string} userData.phone
+ * @param {string} [userData.role='user']
+ * @param {string} [userData.title]
+ * @param {string} [userData.gender]
+ * @param {string} [userData.birthday]
+ * @param {string} [userData.profileImage]
+ * @returns {Promise<Object>}
+ * @throws {ConflictError}
+ */
 export const register = async (userData) => {
   const { email, username, password, name, phone, role = "user", title, gender, birthday, profileImage } = userData;
 
@@ -48,6 +74,12 @@ export const register = async (userData) => {
   return user.toSafeObject();
 };
 
+/**
+ * @param {string} identifier
+ * @param {string} password
+ * @returns {Promise<Object>}
+ * @throws {UnauthorizedError}
+ */
 export const login = async (identifier, password) => {
   const user = await User.findOne({
     where: {
@@ -76,11 +108,13 @@ export const login = async (identifier, password) => {
     lastLoginAt: new Date(),
   });
 
-  // Return storage-optimized object without large base64 images
-  // This prevents localStorage quota exceeded errors
   return user.toStorageObject();
 };
 
+/**
+ * @param {string} userId
+ * @returns {Promise<Object|null>}
+ */
 export const getUserById = async (userId) => {
   const user = await User.findByPk(userId);
 
@@ -88,13 +122,12 @@ export const getUserById = async (userId) => {
     return null;
   }
 
-  // Return storage-optimized object for session/localStorage
   return user.toStorageObject();
 };
 
 /**
- * Get user with full data including profile image
- * Use this only when you specifically need the image
+ * @param {string} userId
+ * @returns {Promise<Object|null>}
  */
 export const getUserWithImage = async (userId) => {
   const user = await User.findByPk(userId);
@@ -103,6 +136,5 @@ export const getUserWithImage = async (userId) => {
     return null;
   }
 
-  // Return full safe object including profile image
   return user.toSafeObject();
 };

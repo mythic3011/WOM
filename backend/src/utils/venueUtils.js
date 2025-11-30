@@ -1,3 +1,17 @@
+/**
+ * @file venueUtils.js
+ * @description Utilities for venue row label generation and letter-number conversions
+ * @author LI Ning 25127563d
+ * @author SHEK chinhei 25017482d
+ * @see backend/src/services/venueService.js
+ * @see backend/src/utils/SeatNumberingSystem.js
+ */
+
+/**
+ * @param {string} startRow - Starting row label (e.g., "A", "AA")
+ * @param {number} count - Number of row labels to generate
+ * @returns {Array<string>} Array of sequential row labels
+ */
 export function generateRowLabels(startRow, count) {
     const rows = [];
     let current = startRow;
@@ -25,10 +39,18 @@ export function generateRowLabels(startRow, count) {
     return rows;
 }
 
+/**
+ * @param {string} str - Letter string to convert (e.g., "A", "AA", "Z")
+ * @returns {number} Numeric representation of letter string
+ */
 export function toNumber(str) {
     return str.split("").reduce((acc, c) => acc * 26 + (c.charCodeAt(0) - 64), 0);
 }
 
+/**
+ * @param {number} num - Number to convert to letters
+ * @returns {string} Letter representation (e.g., 1 -> "A", 27 -> "AA")
+ */
 export function toLetters(num) {
     let n = num;
     let res = "";

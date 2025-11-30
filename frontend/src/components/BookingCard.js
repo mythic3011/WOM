@@ -1,3 +1,11 @@
+/**
+ * @file BookingCard.js
+ * @description Booking card component for displaying booking information in various layouts
+ * @author LI Ning 25127563d
+ * @author SHEK chinhei 25017482d
+ * @see @components/common/Badge.js
+ * @see @utils/seatIdHelper.js
+ */
 
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
@@ -9,6 +17,10 @@ import { formatCurrency } from "@utils/utils.js";
 dayjs.extend(relativeTime);
 
 export const BookingCard = {
+  /**
+   * @param {Object} booking - Booking data object
+   * @returns {string} HTML string for compact card layout
+   */
   renderCompact(booking) {
     const statusBadge = this.getStatusBadge(booking.status);
     const { seatLabels, ticketInfo, isNewFormat } = this.extractBookingData(booking);
@@ -69,6 +81,12 @@ export const BookingCard = {
     `;
   },
 
+  /**
+   * @param {Object} booking - Booking data object
+   * @param {Object} performance - Performance data object
+   * @param {Object} [showtime=null] - Showtime data object
+   * @returns {string} HTML string for grid card layout
+   */
   renderGrid(booking, performance, showtime = null) {
     const eventDate = showtime
       ? new Date(showtime.dateTime || showtime.datetime)
@@ -232,6 +250,10 @@ export const BookingCard = {
     `;
   },
 
+  /**
+   * @param {Object} booking - Booking data object
+   * @returns {string} HTML string for detailed card layout
+   */
   renderDetailed(booking) {
     const statusBadge = this.getStatusBadge(booking.status);
 
@@ -299,6 +321,10 @@ export const BookingCard = {
     `;
   },
 
+  /**
+   * @param {Array|string} seats - Seat data array or string
+   * @returns {string} HTML string for seat badges
+   */
   renderSeats(seats) {
     if (!seats) {return "";}
 
@@ -317,6 +343,10 @@ export const BookingCard = {
       .join("");
   },
 
+  /**
+   * @param {string} status - Booking status
+   * @returns {string} HTML string for status badge
+   */
   getStatusBadge(status) {
     const statusConfig = {
       confirmed: { text: "Confirmed", color: "green", icon: "fa-check-circle" },
@@ -342,8 +372,8 @@ export const BookingCard = {
   },
 
   /**
-   * Extract booking data from either seatTickets (new format) or seats (old format)
-   * Returns seat labels, ticket info, and format indicator
+   * @param {Object} booking - Booking data object
+   * @returns {Object} Extracted booking data with seat labels and ticket info
    */
   extractBookingData(booking) {
     // Check if using new seatTickets format
@@ -388,7 +418,8 @@ export const BookingCard = {
   },
 
   /**
-   * Render seats from booking data (supports both formats)
+   * @param {Object} booking - Booking data object
+   * @returns {string} HTML string for seat badges
    */
   renderSeatsFromData(booking) {
     // Use new format if available

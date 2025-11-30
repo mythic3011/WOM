@@ -1,18 +1,15 @@
 /**
- * Seat ID Helper Utilities
- * 
- * Provides utilities for parsing and validating seat IDs and seat ticket structures.
- * Seat IDs follow the format: {section}-{row}-{number}
- * Example: "orchestra-A-12"
+ * @file seatIdHelper.js
+ * @description Utilities for parsing, validating, and transforming seat IDs and seat ticket structures
+ * @author LI Ning 25127563d
+ * @author SHEK chinhei 25017482d
+ * @see backend/src/services/bookingService.js
+ * @see backend/src/utils/seatMapBuilder.js
  */
 
 /**
- * Extract section from seat ID
  * @param {string} seatId - Seat ID in format "section-row-number"
  * @returns {string|null} Section name or null if invalid
- * @example
- * extractSection("orchestra-A-12") // returns "orchestra"
- * extractSection("balcony-B-5") // returns "balcony"
  */
 export function extractSection(seatId) {
     if (!seatId || typeof seatId !== 'string') {
@@ -28,12 +25,8 @@ export function extractSection(seatId) {
 }
 
 /**
- * Extract row from seat ID
  * @param {string} seatId - Seat ID in format "section-row-number"
  * @returns {string|null} Row identifier or null if invalid
- * @example
- * extractRow("orchestra-A-12") // returns "A"
- * extractRow("balcony-AA-5") // returns "AA"
  */
 export function extractRow(seatId) {
     if (!seatId || typeof seatId !== 'string') {
@@ -49,12 +42,8 @@ export function extractRow(seatId) {
 }
 
 /**
- * Parse seat ID into its components
  * @param {string} seatId - Seat ID in format "section-row-number"
  * @returns {Object|null} Object with section, row, and number properties, or null if invalid
- * @example
- * parseSeatId("orchestra-A-12") // returns { section: "orchestra", row: "A", number: 12 }
- * parseSeatId("balcony-AA-5") // returns { section: "balcony", row: "AA", number: 5 }
  */
 export function parseSeatId(seatId) {
     if (!seatId || typeof seatId !== 'string') {
@@ -124,11 +113,8 @@ export function parseSeatId(seatId) {
 }
 
 /**
- * Reconstruct seat ID from parsed components
  * @param {Object} components - Object with section, row, and number properties
  * @returns {string|null} Reconstructed seat ID or null if invalid
- * @example
- * reconstructSeatId({ section: "orchestra", row: "A", number: 12 }) // returns "orchestra-A-12"
  */
 export function reconstructSeatId(components) {
     if (!components || typeof components !== 'object') {
@@ -145,19 +131,8 @@ export function reconstructSeatId(components) {
 }
 
 /**
- * Validate seat ticket structure
  * @param {Array} seatTickets - Array of seat ticket objects
  * @returns {boolean} True if valid, false otherwise
- * @example
- * validateSeatTicketStructure([
- *   {
- *     seatId: "orchestra-A-12",
- *     seatLabel: "A12",
- *     ticketTypeId: "adult",
- *     ticketTypeName: "Adult",
- *     price: 500
- *   }
- * ]) // returns true
  */
 export function validateSeatTicketStructure(seatTickets) {
     // Must be an array
@@ -242,12 +217,8 @@ export function validateSeatTicketStructure(seatTickets) {
 }
 
 /**
- * Generate display label from seat ID
  * @param {string} seatId - Seat ID in format "section-row-number"
  * @returns {string|null} Display label (e.g., "A12") or null if invalid
- * @example
- * getDisplayLabel("orchestra-A-12") // returns "A12"
- * getDisplayLabel("balcony-AA-5") // returns "AA5"
  */
 export function getDisplayLabel(seatId) {
     const parsed = parseSeatId(seatId);
@@ -259,20 +230,9 @@ export function getDisplayLabel(seatId) {
 }
 
 /**
- * Transform old seat format to new seatTickets format
  * @param {Array} seats - Array of old format seat objects
- * @param {number} totalAmount - Total booking amount (for price distribution)
+ * @param {number} [totalAmount=null] - Total booking amount (for price distribution)
  * @returns {Array} Array of seat ticket objects in new format
- * @example
- * transformToSeatTickets([
- *   {
- *     fullId: "orchestra-A-12",
- *     label: "A12",
- *     price: 500,
- *     ticketTypeId: "adult",
- *     ticketTypeName: "Adult"
- *   }
- * ], 500) // returns new format array
  */
 export function transformToSeatTickets(seats, totalAmount = null) {
     // Handle null or undefined input
@@ -370,19 +330,8 @@ export function transformToSeatTickets(seats, totalAmount = null) {
 }
 
 /**
- * Create old format (verbose) seat object from seatTicket
  * @param {Object} seatTicket - Compact seat ticket object
  * @returns {Object} Verbose seat object in old format
- * @example
- * createVerboseSeatObject({
- *   seatId: "orchestra-A-12",
- *   seatLabel: "A12",
- *   ticketTypeId: "adult",
- *   ticketTypeName: "Adult",
- *   price: 500,
- *   section: "orchestra",
- *   row: "A"
- * }) // returns verbose seat object with all fields
  */
 export function createVerboseSeatObject(seatTicket) {
     const parsed = parseSeatId(seatTicket.seatId);
@@ -405,33 +354,16 @@ export function createVerboseSeatObject(seatTicket) {
 }
 
 /**
- * Measure JSON size in bytes
  * @param {*} data - Data to measure
  * @returns {number} Size in bytes
- * @example
- * measureJsonSize({ key: "value" }) // returns byte size of JSON string
  */
 export function measureJsonSize(data) {
     return Buffer.byteLength(JSON.stringify(data), 'utf8');
 }
 
 /**
- * Calculate storage efficiency comparison between old and new formats
  * @param {Array} seatTickets - Array of seat tickets in new format
  * @returns {Object} Comparison metrics including sizes and reduction percentage
- * @example
- * calculateStorageEfficiency([
- *   {
- *     seatId: "orchestra-A-12",
- *     seatLabel: "A12",
- *     ticketTypeId: "adult",
- *     ticketTypeName: "Adult",
- *     price: 500,
- *     basePrice: 500,
- *     section: "orchestra",
- *     row: "A"
- *   }
- * ]) // returns { newFormatSize, oldFormatSize, reduction, reductionPercentage, ... }
  */
 export function calculateStorageEfficiency(seatTickets) {
     // Create old format seats array

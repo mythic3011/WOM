@@ -1,6 +1,20 @@
+/**
+ * @file TicketType.js
+ * @description Ticket type model definition for pricing tiers and discount management
+ * @author A: LI Ning 25127563d
+ * @author B: SHEK chinhei 25017482d
+ * @dependency sequelize
+ * @see #config/database.js, #models/Booking.js
+ */
+
 import { DataTypes } from "sequelize";
 import sequelize from "#config/database.js";
 
+/**
+ * TicketType model representing pricing tiers and discount categories
+ * Includes discount multipliers, eligibility criteria, and group booking support
+ * Used to calculate final ticket prices based on base seat prices
+ */
 const TicketType = sequelize.define(
   "TicketType",
   {

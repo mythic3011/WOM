@@ -1,9 +1,26 @@
+/**
+ * @file userService.js
+ * @description User management service handling CRUD operations for users
+ * @author LI Ning 25127563d
+ * @author SHEK chinhei 25017482d
+ * @dependency #models/User.js - User model
+ * @dependency #utils/hash.js - Password hashing utilities
+ * @see #controllers/userController.js
+ */
+
 import { User } from "#models/index.js";
 import { hashPassword, comparePassword } from "#utils/hash.js";
 import { buildWhereClause } from "./helpers/filters.js";
 import { findEntityOrThrow, checkUniqueFields } from "./helpers/entityHelpers.js";
 import { deleteProfileImageFile } from "#utils/fileCleanup.js";
 
+/**
+ * @param {Object} [filters={}]
+ * @param {string} [filters.status]
+ * @param {string} [filters.role]
+ * @param {string} [filters.search]
+ * @returns {Promise<Array>}
+ */
 export const getAllUsers = async (filters = {}) => {
   const where = buildWhereClause(filters, {
     statusField: "status",
@@ -20,6 +37,11 @@ export const getAllUsers = async (filters = {}) => {
   return users;
 };
 
+/**
+ * @param {string} id
+ * @returns {Promise<Object>}
+ * @throws {Error}
+ */
 export const getUserById = async (id) => {
   const user = await User.findByPk(id, {
     attributes: { exclude: ["password"] },
@@ -32,6 +54,14 @@ export const getUserById = async (id) => {
   return user;
 };
 
+/**
+ * @param {Object} userData
+ * @param {string} userData.email
+ * @param {string} userData.username
+ * @param {string} userData.password
+ * @returns {Promise<Object>}
+ * @throws {Error}
+ */
 export const createUser = async (userData) => {
   const { email, username, password, ...rest } = userData;
 
@@ -53,6 +83,16 @@ export const createUser = async (userData) => {
   return user.toSafeObject();
 };
 
+/**
+ * @param {string} id
+ * @param {Object} updates
+ * @param {string} [updates.password]
+ * @param {string} [updates.email]
+ * @param {string} [updates.username]
+ * @param {string} [updates.profileImage]
+ * @returns {Promise<Object>}
+ * @throws {Error}
+ */
 export const updateUser = async (id, updates) => {
   const user = await findEntityOrThrow(User, id, "User not found");
 
@@ -84,6 +124,11 @@ export const updateUser = async (id, updates) => {
   return user.toSafeObject();
 };
 
+/**
+ * @param {string} id
+ * @returns {Promise<boolean>}
+ * @throws {Error}
+ */
 export const deleteUser = async (id) => {
   const user = await findEntityOrThrow(User, id, "User not found");
 
@@ -99,6 +144,12 @@ export const deleteUser = async (id) => {
   return true;
 };
 
+/**
+ * @param {string} id
+ * @param {string} password
+ * @returns {Promise<boolean>}
+ * @throws {Error}
+ */
 export const verifyAndDeleteUser = async (id, password) => {
   const user = await findEntityOrThrow(User, id, "User not found");
 
@@ -118,6 +169,11 @@ export const verifyAndDeleteUser = async (id, password) => {
   return true;
 };
 
+/**
+ * @param {string} userId
+ * @returns {Promise<Array>}
+ * @throws {Error}
+ */
 export const getUserBookings = async (userId) => {
   const user = await User.findByPk(userId, {
     include: ["bookings"],
@@ -130,6 +186,12 @@ export const getUserBookings = async (userId) => {
   return user.bookings;
 };
 
+/**
+ * @param {string} userId
+ * @param {Object} file
+ * @returns {Promise<Object>}
+ * @throws {Error}
+ */
 export const updateProfileImage = async (userId, file) => {
   const user = await findEntityOrThrow(User, userId, "User not found");
 
@@ -147,9 +209,8 @@ export const updateProfileImage = async (userId, file) => {
 };
 
 /**
- * Uploads a profile image file
- * @param {Object} file - Multer file object
- * @returns {Promise<string>} Public URL for the uploaded image
+ * @param {Object} file
+ * @returns {Promise<string>}
  */
 export const uploadProfileImage = async (file) => {
   const { validateImage, processProfileImage, saveImage } = await import("#utils/imageProcessor.js");
@@ -157,20 +218,15 @@ export const uploadProfileImage = async (file) => {
   const { fileURLToPath } = await import("url");
   const { dirname } = path;
 
-  // Validate the image file
   validateImage(file);
 
-  // Process the image (resize and optimize)
   const processedBuffer = await processProfileImage(file.buffer);
 
-  // Determine upload directory
   const __filename = fileURLToPath(import.meta.url);
   const __dirname = dirname(__filename);
   const uploadDir = path.join(__dirname, "../../public/uploads/profiles");
 
-  // Save the processed image
   const { filename } = await saveImage(processedBuffer, uploadDir);
 
-  // Return the public URL
   return `/uploads/profiles/${filename}`;
 };

@@ -1,3 +1,15 @@
+/**
+ * @file pricingSectionBuilder.js
+ * @description Helper for building pricing sections from venue layout
+ * @author LI Ning 25127563d
+ * @author SHEK chinhei 25017482d
+ */
+
+/**
+ * @param {Object} venueLayout
+ * @param {Array} inputPricingSections
+ * @returns {Array}
+ */
 export const buildPricingSectionsFromVenue = (venueLayout, inputPricingSections) => {
   if (!venueLayout?.sections || venueLayout.sections.length === 0) {
     return inputPricingSections;

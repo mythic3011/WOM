@@ -1,14 +1,30 @@
+/**
+ * @file performanceService.js
+ * @description Performance management service handling CRUD operations, seat availability, and pricing
+ * @author LI Ning 25127563d
+ * @author SHEK chinhei 25017482d
+ * @dependency sequelize - Database ORM
+ * @dependency #models/Performance.js - Performance model
+ * @dependency #models/Venue.js - Venue model
+ * @dependency #models/Booking.js - Booking model
+ * @see #controllers/performanceController.js
+ */
+
 import { Op } from "sequelize";
 import { Performance, Venue, Booking } from "#models/index.js";
 import { buildSeatMapFromVenueLayout } from "#utils/seatMapBuilder.js";
 import { buildWhereClause } from "./helpers/filters.js";
-import { findEntityOrThrow, checkRelatedEntitiesCount } from "./helpers/entityHelpers.js";
+import { findEntityOrThrow } from "./helpers/entityHelpers.js";
 import { buildPricingSectionsFromVenue } from "./helpers/pricingSectionBuilder.js";
 import logger from "#config/logger.js";
 
 const availabilityCache = new Map();
 const CACHE_TTL = 30000;
 
+/**
+ * @param {string} performanceId
+ * @returns {Promise<Object|null>}
+ */
 export const updatePerformanceStatusByAvailability = async (performanceId) => {
   try {
     const performance = await Performance.findByPk(performanceId, {
@@ -116,6 +132,15 @@ export const updatePerformanceStatusByAvailability = async (performanceId) => {
   }
 };
 
+/**
+ * @param {Object} [filters={}]
+ * @param {string} [filters.status]
+ * @param {string} [filters.search]
+ * @param {string} [filters.dateFrom]
+ * @param {string} [filters.dateTo]
+ * @param {string} [filters.venueId]
+ * @returns {Promise<Array>}
+ */
 export const getAllPerformances = async (filters = {}) => {
   const where = buildWhereClause(filters, {
     statusField: "status",
@@ -200,6 +225,16 @@ export const getAllPerformances = async (filters = {}) => {
   return performancesWithAvailability;
 };
 
+/**
+ * @param {Object} [filters={}]
+ * @param {string} [filters.status]
+ * @param {string} [filters.genre]
+ * @param {string} [filters.venueId]
+ * @param {string} [filters.search]
+ * @param {string} [filters.dateFrom]
+ * @param {string} [filters.dateTo]
+ * @returns {Promise<Array>}
+ */
 export const filterPerformances = async (filters = {}) => {
   const where = {};
 
@@ -253,6 +288,10 @@ export const filterPerformances = async (filters = {}) => {
   return performances.map((p) => p.toJSON());
 };
 
+/**
+ * @param {string} query
+ * @returns {Promise<Array>}
+ */
 export const autocompletePerformances = async (query) => {
   const where = {
     [Op.or]: [
@@ -278,6 +317,11 @@ export const autocompletePerformances = async (query) => {
   return performances.map((p) => p.toJSON());
 };
 
+/**
+ * @param {string} id
+ * @returns {Promise<Object>}
+ * @throws {Error}
+ */
 export const getPerformanceById = async (id) => {
   const performance = await Performance.findByPk(id, {
     include: [
@@ -295,6 +339,11 @@ export const getPerformanceById = async (id) => {
   return performance;
 };
 
+/**
+ * @param {Array} showtimes
+ * @param {string} performanceId
+ * @returns {Array}
+ */
 const generateShowtimeIds = (showtimes, performanceId) => {
   const timestamp = Date.now();
   return showtimes.map((showtime, index) => ({
@@ -303,6 +352,15 @@ const generateShowtimeIds = (showtimes, performanceId) => {
   }));
 };
 
+/**
+ * @param {Object} performanceData
+ * @param {string} performanceData.title
+ * @param {string} performanceData.venueId
+ * @param {Array} [performanceData.showtimes]
+ * @param {Array} [performanceData.pricingSections]
+ * @returns {Promise<Object>}
+ * @throws {Error}
+ */
 export const createPerformance = async (performanceData) => {
   logger.info("Starting performance creation", {
     title: performanceData.title,
@@ -373,6 +431,14 @@ export const createPerformance = async (performanceData) => {
   return performance;
 };
 
+/**
+ * @param {string} id
+ * @param {Object} updates
+ * @param {string} [updates.image]
+ * @param {string} [updates.venueId]
+ * @returns {Promise<Object>}
+ * @throws {Error}
+ */
 export const updatePerformance = async (id, updates) => {
   const performance = await findEntityOrThrow(Performance, id, "Performance not found");
 
@@ -411,6 +477,11 @@ export const updatePerformance = async (id, updates) => {
 
 const TIME_FIELDS = ["date"];
 
+/**
+ * @param {Object} updates
+ * @param {Object} existingRecord
+ * @returns {Array}
+ */
 const preserveTimeFields = (updates, existingRecord) => {
   const preservedFields = [];
 
@@ -475,6 +546,11 @@ const preserveTimeFields = (updates, existingRecord) => {
   return preservedFields;
 };
 
+/**
+ * @param {string} id
+ * @returns {Promise<boolean>}
+ * @throws {Error}
+ */
 export const deletePerformance = async (id) => {
   const performance = await findEntityOrThrow(Performance, id, "Performance not found");
 
@@ -489,6 +565,12 @@ export const deletePerformance = async (id) => {
   return true;
 };
 
+/**
+ * @param {string} id
+ * @param {string|null} [showtimeId=null]
+ * @returns {Promise<Object>}
+ * @throws {Error}
+ */
 export const getPerformanceAvailability = async (id, showtimeId = null) => {
   const cacheKey = `${id}-${showtimeId || "all"}`;
   const cached = availabilityCache.get(cacheKey);
@@ -566,6 +648,10 @@ export const getPerformanceAvailability = async (id, showtimeId = null) => {
   return result;
 };
 
+/**
+ * @param {string} performanceId
+ * @returns {Promise<Object>}
+ */
 export const updatePerformanceAvailability = async (performanceId) => {
   const cacheKeyPattern = `${performanceId}-`;
   for (const key of availabilityCache.keys()) {
@@ -589,6 +675,13 @@ export const updatePerformanceAvailability = async (performanceId) => {
   return availability;
 };
 
+/**
+ * @param {string} performanceId
+ * @param {string|null} [showtimeId=null]
+ * @param {string} [userRole='user']
+ * @returns {Promise<Object>}
+ * @throws {Error}
+ */
 export const getSeatsWithBookingInfo = async (performanceId, showtimeId = null, userRole = "user") => {
   const performance = await Performance.findByPk(performanceId);
 
@@ -644,6 +737,10 @@ export const getSeatsWithBookingInfo = async (performanceId, showtimeId = null, 
   return seatDetailsMap;
 };
 
+/**
+ * @param {string} name
+ * @returns {string}
+ */
 const maskName = (name) => {
   if (!name || name.length <= 2) {
     return "***";
@@ -651,6 +748,10 @@ const maskName = (name) => {
   return `${name.charAt(0)}${"*".repeat(name.length - 2)}${name.charAt(name.length - 1)}`;
 };
 
+/**
+ * @param {string} phone
+ * @returns {string}
+ */
 const maskPhone = (phone) => {
   if (!phone || phone.length <= 4) {
     return "****";
@@ -658,6 +759,11 @@ const maskPhone = (phone) => {
   return `${phone.substring(0, 2)}****${phone.substring(phone.length - 2)}`;
 };
 
+/**
+ * @param {string} id
+ * @returns {Promise<Object>}
+ * @throws {Error}
+ */
 export const rebuildSeatMap = async (id) => {
   const performance = await Performance.findByPk(id, {
     include: [{ model: Venue, as: "venue" }],
@@ -696,33 +802,27 @@ export const rebuildSeatMap = async (id) => {
 };
 
 /**
- * Calculates the price for a seat based on pricing tiers and zones
- * @param {string} seatId - The seat identifier (e.g., "orchestra-stalls-a1")
- * @param {Object} performance - The performance object with priceTiers, pricingZones, and seatMap
- * @returns {number} Price for the seat
- * 
- * Pricing resolution order:
- * 1. Check if seat is directly referenced in a pricing tier
- * 2. Check if seat is in a pricing zone
- * 3. Fall back to seat's tier default from pricingSections
- * 4. Fall back to default price of 500
+ * @param {string} seatId
+ * @param {Object} performance
+ * @param {Array} [performance.priceTiers]
+ * @param {Array} [performance.pricingZones]
+ * @param {Object} [performance.seatMap]
+ * @param {Array} [performance.pricingSections]
+ * @returns {number}
+ * @throws {Error}
  */
 export const calculateSeatPrice = (seatId, performance) => {
   const { priceTiers = [], pricingZones = [], seatMap, pricingSections = [] } = performance;
 
-  // Normalize seatId to lowercase for comparison
   const normalizedSeatId = seatId.toLowerCase();
 
-  // Find the seat in the seat map
   const seat = seatMap?.indexMap?.[normalizedSeatId];
   if (!seat) {
     throw new Error(`Seat ${seatId} not found in seat map`);
   }
 
-  // 1. Check if seat is directly referenced in a pricing tier
   for (const tier of priceTiers) {
     if (tier.seatRefs && Array.isArray(tier.seatRefs)) {
-      // Normalize seat references for comparison
       const normalizedSeatRefs = tier.seatRefs.map(ref => ref.toLowerCase());
       if (normalizedSeatRefs.includes(normalizedSeatId)) {
         return tier.basePrice;
@@ -730,17 +830,13 @@ export const calculateSeatPrice = (seatId, performance) => {
     }
   }
 
-  // 2. Check if seat is in a pricing zone
   for (const zone of pricingZones) {
-    // Check if seat's section matches zone sections
     const sectionMatch = zone.sections && Array.isArray(zone.sections) &&
       zone.sections.includes(seat.sectionName);
 
-    // Check if seat's row matches zone rows
     const rowMatch = zone.rows && Array.isArray(zone.rows) &&
       zone.rows.includes(seat.rowLabel);
 
-    // Check if seat number is in zone's seat range
     let seatRangeMatch = true;
     if (zone.seatRange) {
       const seatNumber = seat.seatNumber;
@@ -752,7 +848,6 @@ export const calculateSeatPrice = (seatId, performance) => {
       }
     }
 
-    // If all applicable criteria match, find the tier for this zone
     if (sectionMatch && (!zone.rows || rowMatch) && seatRangeMatch) {
       const tier = priceTiers.find(t => t.tier === zone.tier);
       if (tier) {
@@ -761,7 +856,6 @@ export const calculateSeatPrice = (seatId, performance) => {
     }
   }
 
-  // 3. Fall back to seat's tier default from pricingSections
   if (seat.tier && pricingSections.length > 0) {
     const pricingSection = pricingSections.find(ps => ps.tier === seat.tier);
     if (pricingSection && pricingSection.price) {
@@ -769,14 +863,12 @@ export const calculateSeatPrice = (seatId, performance) => {
     }
   }
 
-  // 4. Fall back to default price
   return 500;
 };
 
 /**
- * Uploads a performance image file
- * @param {Object} file - Multer file object
- * @returns {Promise<string>} Public URL for the uploaded image
+ * @param {Object} file
+ * @returns {Promise<string>}
  */
 export const uploadPerformanceImage = async (file) => {
   const { validateImage, processPerformanceImage, saveImage } = await import("#utils/imageProcessor.js");
@@ -784,28 +876,22 @@ export const uploadPerformanceImage = async (file) => {
   const { fileURLToPath } = await import("url");
   const { dirname } = path;
 
-  // Validate the image file
   validateImage(file);
 
-  // Process the image (resize and optimize)
   const processedBuffer = await processPerformanceImage(file.buffer);
 
-  // Determine upload directory
   const __filename = fileURLToPath(import.meta.url);
   const __dirname = dirname(__filename);
   const uploadDir = path.join(__dirname, "../../public/uploads/performances");
 
-  // Save the processed image
   const { filename } = await saveImage(processedBuffer, uploadDir);
 
-  // Return the public URL
   return `/uploads/performances/${filename}`;
 };
 
 /**
- * Deletes a performance image file from the server
- * @param {string} imageUrl - The image URL (e.g., /uploads/performances/abc123.jpg)
- * @returns {Promise<boolean>} True if deleted successfully
+ * @param {string} imageUrl
+ * @returns {Promise<boolean>}
  */
 export const deletePerformanceImage = async (imageUrl) => {
   try {
@@ -814,25 +900,29 @@ export const deletePerformanceImage = async (imageUrl) => {
     const { fileURLToPath } = await import("url");
     const { dirname } = path;
 
-    // Only delete if it's an uploaded file (not an external URL)
     if (!imageUrl || !imageUrl.startsWith("/uploads/")) {
       return false;
     }
 
-    // Determine the file path
     const __filename = fileURLToPath(import.meta.url);
     const __dirname = dirname(__filename);
     const filepath = path.join(__dirname, "../../public", imageUrl);
 
-    // Delete the file
     return await deleteImage(filepath);
   } catch (error) {
-    // Log error but don't throw - deletion failure shouldn't block the update
     console.error(`Failed to delete image ${imageUrl}:`, error.message);
     return false;
   }
 };
 
+/**
+ * @param {string} performanceId
+ * @param {string} showtimeId
+ * @param {Array<string>} seatIds
+ * @param {string} status
+ * @returns {Promise<Object>}
+ * @throws {Error}
+ */
 export const batchUpdateSeatStatus = async (performanceId, showtimeId, seatIds, status) => {
   const performance = await Performance.findByPk(performanceId);
 

@@ -1,3 +1,12 @@
+/**
+ * @file DataTable.js
+ * @description Advanced data table component with sorting, filtering, pagination, and column visibility
+ * @author LI Ning 25127563d
+ * @author SHEK chinhei 25017482d
+ * @see @utils/table/tableFilterUtil.js
+ * @see @utils/table/tableSortUtil.js
+ * @see @components/Table.js
+ */
 
 import dayjs from "dayjs";
 
@@ -8,6 +17,21 @@ import { Avatar } from "./common/Avatar.js";
 import { createTable, initTableFeatures } from "./Table.js";
 
 export class DataTable {
+  /**
+   * @param {string} containerId - ID of the container element
+   * @param {Object} options - Configuration options
+   * @param {Array} options.data - Table data array
+   * @param {Array} options.columns - Column definitions
+   * @param {boolean} [options.sortable=true] - Enable sorting
+   * @param {boolean} [options.filterable=true] - Enable filtering
+   * @param {boolean} [options.paginate=false] - Enable pagination
+   * @param {boolean} [options.selectable=false] - Enable row selection
+   * @param {number} [options.pageSize=10] - Items per page
+   * @param {Object} [options.defaultSort=null] - Default sort configuration
+   * @param {Array} [options.columnFilters=[]] - Column filter definitions
+   * @param {Function} [options.onRowClick=null] - Row click handler
+   * @param {Function} [options.onSelect=null] - Selection change handler
+   */
   constructor(containerId, options) {
     this.containerId = containerId;
     this.options = {
@@ -44,6 +68,9 @@ export class DataTable {
     this.attachEventListeners();
   }
 
+  /**
+   * @returns {void}
+   */
   enhanceColumns() {
     this.options.columns = this.options.columns.map((col) => {
       if (col.render) {return col;}
@@ -173,6 +200,9 @@ export class DataTable {
     });
   }
 
+  /**
+   * @returns {void}
+   */
   restoreState() {
     if (this.options.defaultSort) {
       this.applySorting(
@@ -187,6 +217,11 @@ export class DataTable {
     }
   }
 
+  /**
+   * @param {string} column - Column key to sort by
+   * @param {string} direction - Sort direction (asc or desc)
+   * @returns {void}
+   */
   applySorting(column, direction) {
     if (!column) {return;}
 
@@ -205,6 +240,9 @@ export class DataTable {
     });
   }
 
+  /**
+   * @returns {Array} Filtered data array
+   */
   applyColumnFilters() {
     let filtered = [...this.state.originalData];
 
@@ -220,6 +258,10 @@ export class DataTable {
     return filtered;
   }
 
+  /**
+   * @param {string} searchTerm - Search term to filter by
+   * @returns {void}
+   */
   applyFilter(searchTerm) {
     this.state.searchTerm = searchTerm;
 
@@ -250,6 +292,9 @@ export class DataTable {
     });
   }
 
+  /**
+   * @returns {void}
+   */
   updateDisplayData() {
     if (this.options.paginate) {
       const startIndex = (this.state.currentPage - 1) * this.options.pageSize;
@@ -263,6 +308,9 @@ export class DataTable {
     }
   }
 
+  /**
+   * @returns {string} HTML string for column filters
+   */
   renderColumnFilters() {
     const hasFilters = this.options.columnFilters && this.options.columnFilters.length > 0;
     const hasColumns = this.options.columns && this.options.columns.length > 1;
@@ -355,6 +403,9 @@ export class DataTable {
     `;
   }
 
+  /**
+   * @returns {void}
+   */
   render() {
     const container = document.getElementById(this.containerId);
     if (!container) {
@@ -404,6 +455,9 @@ export class DataTable {
     container.innerHTML = finalHtml;
   }
 
+  /**
+   * @returns {void}
+   */
   attachEventListeners() {
     const tableSelector = `#${this.containerId}`;
 
@@ -499,6 +553,10 @@ export class DataTable {
     });
   }
 
+  /**
+   * @param {Array} newData - New data array to display
+   * @returns {void}
+   */
   updateData(newData) {
     this.state.originalData = [...newData];
     this.applyFilter(this.state.searchTerm);
@@ -506,10 +564,16 @@ export class DataTable {
     this.render();
   }
 
+  /**
+   * @returns {Array} Array of selected row IDs
+   */
   getSelectedRows() {
     return Array.from(this.state.selectedRows);
   }
 
+  /**
+   * @returns {void}
+   */
   clearSelection() {
     this.state.selectedRows.clear();
     const checkboxes = document.querySelectorAll(
@@ -518,10 +582,16 @@ export class DataTable {
     checkboxes.forEach((cb) => (cb.checked = false));
   }
 
+  /**
+   * @returns {void}
+   */
   refresh() {
     this.render();
   }
 
+  /**
+   * @returns {void}
+   */
   destroy() {
     const container = document.getElementById(this.containerId);
     if (container) {
@@ -530,6 +600,11 @@ export class DataTable {
   }
 }
 
+/**
+ * @param {string} containerId - ID of the container element
+ * @param {Object} options - Configuration options
+ * @returns {DataTable} DataTable instance
+ */
 export function createDataTable(containerId, options) {
   return new DataTable(containerId, options);
 }

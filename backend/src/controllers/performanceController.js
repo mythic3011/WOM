@@ -1,5 +1,19 @@
+/**
+ * @file performanceController.js
+ * @description Performance management controller handling CRUD operations, filtering, and seat map management
+ * @author LI Ning 25127563d
+ * @author SHEK chinhei 25017482d
+ * @dependency #services/performanceService.js
+ */
+
 import * as performanceService from "#services/performanceService.js";
 
+/**
+ * @param {Object} req
+ * @param {Object} res
+ * @param {Function} next
+ * @returns {Promise<void>}
+ */
 export const getAllPerformances = async (req, res, next) => {
   try {
     const filters = {
@@ -22,6 +36,12 @@ export const getAllPerformances = async (req, res, next) => {
   }
 };
 
+/**
+ * @param {Object} req
+ * @param {Object} res
+ * @param {Function} next
+ * @returns {Promise<void>}
+ */
 export const filterPerformances = async (req, res, next) => {
   try {
     const filters = {
@@ -45,6 +65,12 @@ export const filterPerformances = async (req, res, next) => {
   }
 };
 
+/**
+ * @param {Object} req
+ * @param {Object} res
+ * @param {Function} next
+ * @returns {Promise<void>}
+ */
 export const autocompletePerformances = async (req, res, next) => {
   try {
     const query = req.query.q;
@@ -67,6 +93,12 @@ export const autocompletePerformances = async (req, res, next) => {
   }
 };
 
+/**
+ * @param {Object} req
+ * @param {Object} res
+ * @param {Function} next
+ * @returns {Promise<void>}
+ */
 export const getPerformanceById = async (req, res, next) => {
   try {
     const performance = await performanceService.getPerformanceById(req.params.id);
@@ -86,6 +118,12 @@ export const getPerformanceById = async (req, res, next) => {
   }
 };
 
+/**
+ * @param {Object} req
+ * @param {Object} res
+ * @param {Function} next
+ * @returns {Promise<void>}
+ */
 export const createPerformance = async (req, res, next) => {
   try {
     const performance = await performanceService.createPerformance(req.body);
@@ -106,6 +144,12 @@ export const createPerformance = async (req, res, next) => {
   }
 };
 
+/**
+ * @param {Object} req
+ * @param {Object} res
+ * @param {Function} next
+ * @returns {Promise<void>}
+ */
 export const updatePerformance = async (req, res, next) => {
   try {
     const performance = await performanceService.updatePerformance(
@@ -132,6 +176,12 @@ export const updatePerformance = async (req, res, next) => {
   }
 };
 
+/**
+ * @param {Object} req
+ * @param {Object} res
+ * @param {Function} next
+ * @returns {Promise<void>}
+ */
 export const deletePerformance = async (req, res, next) => {
   try {
     await performanceService.deletePerformance(req.params.id);
@@ -157,6 +207,12 @@ export const deletePerformance = async (req, res, next) => {
   }
 };
 
+/**
+ * @param {Object} req
+ * @param {Object} res
+ * @param {Function} next
+ * @returns {Promise<void>}
+ */
 export const getPerformanceAvailability = async (req, res, next) => {
   try {
     const availability = await performanceService.getPerformanceAvailability(
@@ -179,6 +235,12 @@ export const getPerformanceAvailability = async (req, res, next) => {
   }
 };
 
+/**
+ * @param {Object} req
+ * @param {Object} res
+ * @param {Function} next
+ * @returns {Promise<void>}
+ */
 export const getPerformanceSeatMap = async (req, res, next) => {
   try {
     const performance = await performanceService.getPerformanceById(req.params.id);
@@ -203,6 +265,12 @@ export const getPerformanceSeatMap = async (req, res, next) => {
   }
 };
 
+/**
+ * @param {Object} req
+ * @param {Object} res
+ * @param {Function} next
+ * @returns {Promise<void>}
+ */
 export const getSeatsWithBookingInfo = async (req, res, next) => {
   try {
     const { id } = req.params;
@@ -230,6 +298,12 @@ export const getSeatsWithBookingInfo = async (req, res, next) => {
   }
 };
 
+/**
+ * @param {Object} req
+ * @param {Object} res
+ * @param {Function} next
+ * @returns {Promise<void>}
+ */
 export const rebuildPerformanceSeatMap = async (req, res, next) => {
   try {
     const result = await performanceService.rebuildSeatMap(req.params.id);
@@ -250,6 +324,12 @@ export const rebuildPerformanceSeatMap = async (req, res, next) => {
   }
 };
 
+/**
+ * @param {Object} req
+ * @param {Object} res
+ * @param {Function} next
+ * @returns {Promise<void>}
+ */
 export const uploadPerformanceImage = async (req, res, next) => {
   try {
     if (!req.file) {
@@ -277,6 +357,12 @@ export const uploadPerformanceImage = async (req, res, next) => {
   }
 };
 
+/**
+ * @param {Object} req
+ * @param {Object} res
+ * @param {Function} next
+ * @returns {Promise<void>}
+ */
 export const batchUpdateSeats = async (req, res, next) => {
   try {
     const { id } = req.params;

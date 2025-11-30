@@ -1,10 +1,28 @@
+/**
+ * @file bookingService.js
+ * @description Service for managing booking data and operations
+ * @author LI Ning 25127563d
+ * @author SHEK chinhei 25017482d
+ * @dependency dayjs
+ * @dependency ./apiClient.js
+ * @dependency ./responseExtractor.js
+ * @see apiClient.js
+ * @see bookingHelpers.js
+ */
 
 import dayjs from "dayjs";
 
 import { bookingAPI, handleApiError } from "./apiClient.js";
 import { ResponseExtractor } from "./responseExtractor.js";
 
+/**
+ * @description Booking service for managing booking data
+ */
 export const bookingService = {
+  /**
+   * @description Gets all bookings
+   * @returns {Promise<Array>} Array of bookings
+   */
   async getAll() {
     try {
       const response = await bookingAPI.getAll();
@@ -15,6 +33,11 @@ export const bookingService = {
     }
   },
 
+  /**
+   * @description Gets a booking by ID
+   * @param {number|string} bookingId - Booking ID
+   * @returns {Promise<Object|null>} Booking data or null
+   */
   async getById(bookingId) {
     try {
       const response = await bookingAPI.getById(bookingId);
@@ -25,6 +48,12 @@ export const bookingService = {
     }
   },
 
+  /**
+   * @description Filters bookings for a specific user
+   * @param {Array} bookings - Bookings array
+   * @param {number|string} userId - User ID
+   * @returns {Array} Filtered user bookings
+   */
   filterUserBookings(bookings, userId) {
     if (!userId || !Array.isArray(bookings)) {return [];}
 
@@ -38,11 +67,21 @@ export const bookingService = {
     });
   },
 
+  /**
+   * @description Gets all bookings for a specific user
+   * @param {number|string} userId - User ID
+   * @returns {Promise<Array>} User bookings
+   */
   async getUserBookings(userId) {
     const allBookings = await this.getAll();
     return this.filterUserBookings(allBookings, userId);
   },
 
+  /**
+   * @description Gets upcoming confirmed bookings
+   * @param {Array} bookings - Bookings array
+   * @returns {Array} Upcoming bookings
+   */
   getUpcomingBookings(bookings) {
     const now = dayjs();
     return bookings.filter(
@@ -50,23 +89,48 @@ export const bookingService = {
     );
   },
 
+  /**
+   * @description Gets past bookings
+   * @param {Array} bookings - Bookings array
+   * @returns {Array} Past bookings
+   */
   getPastBookings(bookings) {
     const now = dayjs();
     return bookings.filter((b) => dayjs(b.performanceDate).isBefore(now));
   },
 
+  /**
+   * @description Gets confirmed bookings
+   * @param {Array} bookings - Bookings array
+   * @returns {Array} Confirmed bookings
+   */
   getConfirmedBookings(bookings) {
     return bookings.filter((b) => b.status === "confirmed");
   },
 
+  /**
+   * @description Gets pending bookings
+   * @param {Array} bookings - Bookings array
+   * @returns {Array} Pending bookings
+   */
   getPendingBookings(bookings) {
     return bookings.filter((b) => b.status === "pending");
   },
 
+  /**
+   * @description Gets cancelled bookings
+   * @param {Array} bookings - Bookings array
+   * @returns {Array} Cancelled bookings
+   */
   getCancelledBookings(bookings) {
     return bookings.filter((b) => b.status === "cancelled");
   },
 
+  /**
+   * @description Calculates total amount spent on confirmed bookings
+   * @param {Array} bookings - Bookings array
+   * @returns {number} Total amount spent
+   */
   calculateTotalSpent(bookings) {
     return bookings
       .filter((b) => b.status === "confirmed")
@@ -76,11 +140,21 @@ export const bookingService = {
       }, 0);
   },
 
+  /**
+   * @description Calculates average amount spent per booking
+   * @param {Array} bookings - Bookings array
+   * @returns {number} Average amount spent
+   */
   calculateAverageSpent(bookings) {
     if (!bookings.length) {return 0;}
     return this.calculateTotalSpent(bookings) / bookings.length;
   },
 
+  /**
+   * @description Gets comprehensive statistics for a user
+   * @param {number|string} userId - User ID
+   * @returns {Promise<Object>} User booking statistics
+   */
   async getUserStats(userId) {
     const userBookings = await this.getUserBookings(userId);
 
@@ -98,6 +172,12 @@ export const bookingService = {
     };
   },
 
+  /**
+   * @description Filters bookings by status
+   * @param {Array} bookings - Bookings array
+   * @param {string} status - Status filter
+   * @returns {Array} Filtered bookings
+   */
   filterByStatus(bookings, status) {
     if (!status || status === "all") {return bookings;}
 
@@ -111,6 +191,12 @@ export const bookingService = {
     return filterFn ? filterFn.call(this, bookings) : bookings;
   },
 
+  /**
+   * @description Searches bookings by term
+   * @param {Array} bookings - Bookings array
+   * @param {string} searchTerm - Search term
+   * @returns {Array} Matching bookings
+   */
   searchBookings(bookings, searchTerm) {
     if (!searchTerm || !searchTerm.trim()) {return bookings;}
 
@@ -143,6 +229,12 @@ export const bookingService = {
     });
   },
 
+  /**
+   * @description Filters and searches bookings
+   * @param {Array} bookings - Bookings array
+   * @param {Object} filters - Filter criteria
+   * @returns {Array} Filtered bookings
+   */
   filterAndSearch(bookings, filters = {}) {
     let filtered = bookings;
 
@@ -157,6 +249,12 @@ export const bookingService = {
     return filtered;
   },
 
+  /**
+   * @description Sorts bookings by date
+   * @param {Array} bookings - Bookings array
+   * @param {boolean} ascending - Sort order
+   * @returns {Array} Sorted bookings
+   */
   sortByDate(bookings, ascending = false) {
     return [...bookings].sort((a, b) => {
       const dateA = dayjs(a.performanceDate || a.bookingDate);
@@ -167,6 +265,12 @@ export const bookingService = {
     });
   },
 
+  /**
+   * @description Sorts bookings by amount
+   * @param {Array} bookings - Bookings array
+   * @param {boolean} ascending - Sort order
+   * @returns {Array} Sorted bookings
+   */
   sortByAmount(bookings, ascending = true) {
     return [...bookings].sort((a, b) => {
       const amountA = a.amount || 0;
@@ -175,6 +279,11 @@ export const bookingService = {
     });
   },
 
+  /**
+   * @description Groups bookings by status
+   * @param {Array} bookings - Bookings array
+   * @returns {Object} Bookings grouped by status
+   */
   groupByStatus(bookings) {
     return {
       confirmed: this.getConfirmedBookings(bookings),
@@ -183,6 +292,11 @@ export const bookingService = {
     };
   },
 
+  /**
+   * @description Groups bookings by month
+   * @param {Array} bookings - Bookings array
+   * @returns {Object} Bookings grouped by month
+   */
   groupByMonth(bookings) {
     const grouped = {};
 
@@ -201,6 +315,12 @@ export const bookingService = {
     return grouped;
   },
 
+  /**
+   * @description Gets bookings for a specific performance
+   * @param {Array} bookings - Bookings array
+   * @param {number|string} performanceId - Performance ID
+   * @returns {Array} Performance bookings
+   */
   getBookingsByPerformance(bookings, performanceId) {
     return bookings.filter(
       (b) =>
@@ -209,6 +329,11 @@ export const bookingService = {
     );
   },
 
+  /**
+   * @description Calculates total seats booked
+   * @param {Array} bookings - Bookings array
+   * @returns {number} Total seats booked
+   */
   getTotalSeatsBooked(bookings) {
     return bookings.reduce((total, booking) => {
       const seats = booking.seats || [];
@@ -216,6 +341,11 @@ export const bookingService = {
     }, 0);
   },
 
+  /**
+   * @description Calculates revenue by performance
+   * @param {Array} bookings - Bookings array
+   * @returns {Array} Revenue data by performance
+   */
   getRevenueByPerformance(bookings) {
     const revenueMap = {};
 
@@ -240,14 +370,12 @@ export const bookingService = {
   },
 
   /**
-   * Fetch bookings for a specific performance with retry logic
+   * @description Fetches bookings for a specific performance from API with retry logic
    * @param {number} performanceId - Performance ID
    * @param {Object} options - Options for retry behavior
-   * @param {number} options.maxRetries - Maximum number of retry attempts (default: 3)
-   * @param {number} options.retryDelay - Delay between retries in ms (default: 1000)
    * @returns {Promise<Array>} Array of bookings with seatTickets
    */
-  async getBookingsByPerformance(performanceId, options = {}) {
+  async fetchBookingsByPerformance(performanceId, options = {}) {
     const { maxRetries = 3, retryDelay = 1000 } = options;
     let lastError = null;
 
@@ -285,15 +413,13 @@ export const bookingService = {
   },
 
   /**
-   * Fetch bookings for a specific showtime with retry logic
+   * @description Fetches bookings for a specific showtime from API with retry logic
    * @param {number} performanceId - Performance ID
    * @param {string} showtimeId - Showtime ID
    * @param {Object} options - Options for retry behavior
-   * @param {number} options.maxRetries - Maximum number of retry attempts (default: 3)
-   * @param {number} options.retryDelay - Delay between retries in ms (default: 1000)
    * @returns {Promise<Array>} Array of bookings for the showtime
    */
-  async getBookingsByShowtime(performanceId, showtimeId, options = {}) {
+  async fetchBookingsByShowtime(performanceId, showtimeId, options = {}) {
     const { maxRetries = 3, retryDelay = 1000 } = options;
     let lastError = null;
 

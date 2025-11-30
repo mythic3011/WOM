@@ -1,7 +1,24 @@
+/**
+ * @file SeatMap.js
+ * @description Seat map component for rendering interactive and static venue seat layouts
+ * @author LI Ning 25127563d
+ * @author SHEK chinhei 25017482d
+ * @dependency panzoom
+ * @see @utils/booking/seatMapGenerator.js
+ * @see @utils/colors.js
+ */
+
 import { seatMapGenerator } from "@utils/booking/seatMapGenerator.js";
 import { getSectionColor, getSeatStatusColor } from "@utils/colors.js";
 
 export const SeatMap = {
+  /**
+   * @param {Object} layoutConfig - Venue layout configuration
+   * @param {Object} seatDetails - Details for each seat including status and section
+   * @param {Array} selectedSeats - Array of currently selected seat IDs
+   * @param {boolean} [interactive=false] - Whether the seat map should be interactive
+   * @returns {string} HTML string for the seat map
+   */
   generateFromLayout(
     layoutConfig,
     seatDetails,
@@ -16,6 +33,14 @@ export const SeatMap = {
     );
   },
 
+  /**
+   * @param {number} rows - Number of rows in the venue
+   * @param {number} seats - Number of seats per row
+   * @param {Object} seatDetails - Details for each seat
+   * @param {Array} selectedSeats - Array of selected seat IDs
+   * @param {Function} getSeatColorFn - Function to determine seat color
+   * @returns {string} HTML string for interactive seat map
+   */
   generateInteractive(rows, seats, seatDetails, selectedSeats, getSeatColorFn) {
     return seatMapGenerator.generateInteractiveSeatMap(
       rows,
@@ -26,6 +51,13 @@ export const SeatMap = {
     );
   },
 
+  /**
+   * @param {number} rows - Number of rows in the venue
+   * @param {number} seats - Number of seats per row
+   * @param {Object} seatDetails - Details for each seat
+   * @param {Function} getSeatColorFn - Function to determine seat color
+   * @returns {string} HTML string for static seat map
+   */
   generateStatic(rows, seats, seatDetails, getSeatColorFn) {
     return seatMapGenerator.generateStaticSeatMap(
       rows,
@@ -35,6 +67,13 @@ export const SeatMap = {
     );
   },
 
+  /**
+   * @param {number} rows - Number of rows in the venue
+   * @param {number} seats - Number of seats per row
+   * @param {Object} [seatDetails={}] - Details for each seat
+   * @param {Function} getSeatColorFn - Function to determine seat color
+   * @returns {string} SVG string for seat map preview
+   */
   generatePreview(rows, seats, seatDetails = {}, getSeatColorFn) {
     return seatMapGenerator.generatePreviewSVG(
       rows,
@@ -44,6 +83,15 @@ export const SeatMap = {
     );
   },
 
+  /**
+   * @param {number} rows - Number of rows in the venue
+   * @param {number} seats - Number of seats per row
+   * @param {Object} seatDetails - Details for each seat
+   * @param {Array} sections - Pricing sections configuration
+   * @param {Array} [selectedSeats=[]] - Array of selected seat IDs
+   * @param {boolean} [interactive=false] - Whether the seat map should be interactive
+   * @returns {string} HTML string for seat map with section details
+   */
   generateWithDetails(
     rows,
     seats,
@@ -75,11 +123,21 @@ export const SeatMap = {
     }
   },
 
+  /**
+   * @param {number} rows - Number of rows in the venue
+   * @param {number} seats - Number of seats per row
+   * @returns {string} SVG string for simple seat map preview
+   */
   generateSimplePreview(rows, seats) {
     const getSeatColorFn = () => getSeatStatusColor("available");
     return seatMapGenerator.generatePreviewSVG(rows, seats, {}, getSeatColorFn);
   },
 
+  /**
+   * @param {Array} sections - Pricing sections to display in legend
+   * @param {boolean} [showSystemColors=true] - Whether to show seat status colors
+   * @returns {string} HTML string for seat map legend
+   */
   createLegend(sections, showSystemColors = true) {
     let legendHTML = "<div class=\"legend-container space-y-3\">";
 
@@ -155,6 +213,13 @@ export const SeatMap = {
     return legendHTML;
   },
 
+  /**
+   * @param {number} rows - Number of rows in the venue
+   * @param {number} seats - Number of seats per row
+   * @param {Object} seatDetails - Details for each seat
+   * @param {Array} sections - Pricing sections configuration
+   * @returns {string} HTML string for seat plan with statistics and legend
+   */
   createSeatPlanWithStats(rows, seats, seatDetails, sections) {
     const totalSeats = rows * seats;
     const getSeatColorFn = (seatDetail) => {
@@ -187,6 +252,11 @@ export const SeatMap = {
     `;
   },
 
+  /**
+   * @param {number} rows - Number of rows in the venue
+   * @param {number} seats - Number of seats per row
+   * @returns {Object} Initialized seat details object
+   */
   initializeSeatDetails(rows, seats) {
     return seatMapGenerator.initializeSeatDetails(rows, seats);
   },

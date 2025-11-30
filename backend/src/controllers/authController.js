@@ -1,5 +1,17 @@
+/**
+ * @file authController.js
+ * @description Authentication controller handling user registration, login, logout, and session management
+ * @author LI Ning 25127563d
+ * @author SHEK chinhei 25017482d
+ * @dependency #services/authService.js
+ */
+
 import * as authService from "#services/authService.js";
 
+/**
+ * @param {Object} user
+ * @returns {Object}
+ */
 const serializeUserData = (user) => ({
   id: user.id,
   userId: user.userId,
@@ -10,12 +22,26 @@ const serializeUserData = (user) => ({
   profileImage: user.profileImage || null,
 });
 
+/**
+ * @param {Object} req
+ * @param {Object} user
+ * @returns {void}
+ */
 const setUserSession = (req, user) => {
   req.session.userId = user.id;
   req.session.userRole = user.role;
   req.session.userName = user.name;
 };
 
+/**
+ * @param {Object} req
+ * @param {Object} res
+ * @param {Function} next
+ * @param {number} statusCode
+ * @param {string} message
+ * @param {Object} user
+ * @returns {void}
+ */
 const saveSessionAndRespond = (req, res, next, statusCode, message, user) => {
   req.session.save((err) => {
     if (err) {
@@ -31,6 +57,12 @@ const saveSessionAndRespond = (req, res, next, statusCode, message, user) => {
   });
 };
 
+/**
+ * @param {Object} req
+ * @param {Object} res
+ * @param {Function} next
+ * @returns {Promise<void>}
+ */
 export const register = async (req, res, next) => {
   try {
     const user = await authService.register(req.body);
@@ -43,6 +75,12 @@ export const register = async (req, res, next) => {
   }
 };
 
+/**
+ * @param {Object} req
+ * @param {Object} res
+ * @param {Function} next
+ * @returns {Promise<void>}
+ */
 export const login = async (req, res, next) => {
   try {
     const { username, email, password } = req.body;
@@ -71,6 +109,12 @@ export const login = async (req, res, next) => {
   }
 };
 
+/**
+ * @param {Object} req
+ * @param {Object} res
+ * @param {Function} next
+ * @returns {Promise<void>}
+ */
 export const logout = async (req, res, next) => {
   try {
     req.session.destroy((err) => {
@@ -90,6 +134,12 @@ export const logout = async (req, res, next) => {
   }
 };
 
+/**
+ * @param {Object} req
+ * @param {Object} res
+ * @param {Function} next
+ * @returns {Promise<void>}
+ */
 export const getCurrentUser = async (req, res, next) => {
   try {
     const user = await authService.getUserById(req.session.userId);
@@ -110,6 +160,12 @@ export const getCurrentUser = async (req, res, next) => {
   }
 };
 
+/**
+ * @param {Object} req
+ * @param {Object} res
+ * @param {Function} next
+ * @returns {Promise<void>}
+ */
 export const checkSession = async (req, res, next) => {
   try {
     if (req.session && req.session.userId) {
@@ -138,6 +194,12 @@ export const checkSession = async (req, res, next) => {
   }
 };
 
+/**
+ * @param {Object} req
+ * @param {Object} res
+ * @param {Function} next
+ * @returns {Promise<void>}
+ */
 export const getProfileImage = async (req, res, next) => {
   try {
     const user = await authService.getUserById(req.session.userId);
@@ -149,7 +211,6 @@ export const getProfileImage = async (req, res, next) => {
       });
     }
 
-    // Get the full user object with profile image
     const fullUser = await authService.getUserWithImage(req.session.userId);
 
     res.json({

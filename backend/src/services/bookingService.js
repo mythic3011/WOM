@@ -1,3 +1,15 @@
+/**
+ * @file bookingService.js
+ * @description Booking management service handling seat reservations and ticket operations
+ * @author LI Ning 25127563d
+ * @author SHEK chinhei 25017482d
+ * @dependency sequelize - Database ORM
+ * @dependency #models/Booking.js - Booking model
+ * @dependency #models/Performance.js - Performance model
+ * @dependency #models/User.js - User model
+ * @see #controllers/bookingController.js
+ */
+
 import { Op } from "sequelize";
 import sequelize from "#config/database.js";
 import { Booking, Performance, User } from "#models/index.js";
@@ -20,12 +32,28 @@ import {
 } from "#utils/seatIdHelper.js";
 import logger from "#config/logger.js";
 
+/**
+ * @returns {string}
+ */
 const generateBookingReference = () => {
   const timestamp = Date.now().toString(36).toUpperCase();
   const random = Math.random().toString(36).substring(2, 6).toUpperCase();
   return `BK${timestamp}${random}`;
 };
 
+/**
+ * @param {Object} bookingData
+ * @param {string} bookingData.performanceId
+ * @param {string} bookingData.showtimeId
+ * @param {Array} [bookingData.seats]
+ * @param {Array} [bookingData.seatTickets]
+ * @param {number} bookingData.amount
+ * @param {string} bookingData.paymentMethod
+ * @param {Object} bookingData.customerInfo
+ * @param {string} userId
+ * @returns {Promise<Object>}
+ * @throws {BadRequestError}
+ */
 export const createBooking = async (bookingData, userId) => {
   const { performanceId, showtimeId, seats, seatTickets, amount, paymentMethod, customerInfo } =
     bookingData;
@@ -347,6 +375,16 @@ export const createBooking = async (bookingData, userId) => {
   return booking;
 };
 
+/**
+ * @param {Object} [filters={}]
+ * @param {string} [filters.status]
+ * @param {string} [filters.dateFrom]
+ * @param {string} [filters.dateTo]
+ * @param {string} [filters.performanceId]
+ * @param {string|null} [userId=null]
+ * @param {boolean} [isAdmin=false]
+ * @returns {Promise<Array>}
+ */
 export const getAllBookings = async (filters = {}, userId = null, isAdmin = false) => {
   const where = buildWhereClause(filters, {
     statusField: "status",
@@ -380,30 +418,31 @@ export const getAllBookings = async (filters = {}, userId = null, isAdmin = fals
     order: [["bookingDate", "DESC"]],
   });
 
-  // Process bookings to ensure seatTickets is populated
-  // Prioritize seatTickets over seats, with fallback transformation
   const processedBookings = bookings.map(booking => {
     const bookingData = booking.toJSON();
 
-    // If seatTickets is empty but seats exists, transform on-the-fly
     if ((!bookingData.seatTickets || bookingData.seatTickets.length === 0) &&
       bookingData.seats && Array.isArray(bookingData.seats) && bookingData.seats.length > 0) {
       try {
         bookingData.seatTickets = transformToSeatTickets(bookingData.seats, bookingData.totalAmount);
       } catch (error) {
-        // If transformation fails, log error but continue
         console.error(`Failed to transform seats for booking ${bookingData.id}:`, error.message);
-        // Keep original seats data
       }
     }
 
-    // Ensure backward compatibility by including both fields during transition
     return bookingData;
   });
 
   return processedBookings;
 };
 
+/**
+ * @param {string} id
+ * @param {string|null} [userId=null]
+ * @param {boolean} [isAdmin=false]
+ * @returns {Promise<Object>}
+ * @throws {NotFoundError}
+ */
 export const getBookingById = async (id, userId = null, isAdmin = false) => {
   const where = { id };
 
@@ -432,23 +471,27 @@ export const getBookingById = async (id, userId = null, isAdmin = false) => {
 
   const bookingData = booking.toJSON();
 
-  // Prioritize seatTickets over seats
-  // If seatTickets is empty but seats exists, transform on-the-fly
   if ((!bookingData.seatTickets || bookingData.seatTickets.length === 0) &&
     bookingData.seats && Array.isArray(bookingData.seats) && bookingData.seats.length > 0) {
     try {
       bookingData.seatTickets = transformToSeatTickets(bookingData.seats, bookingData.totalAmount);
     } catch (error) {
-      // If transformation fails, log error but continue
       console.error(`Failed to transform seats for booking ${bookingData.id}:`, error.message);
-      // Keep original seats data
     }
   }
 
-  // Ensure backward compatibility by including both fields during transition
   return bookingData;
 };
 
+/**
+ * @param {string} id
+ * @param {Object} updates
+ * @param {string} [updates.status]
+ * @param {string|null} [userId=null]
+ * @param {boolean} [isAdmin=false]
+ * @returns {Promise<Object>}
+ * @throws {NotFoundError|BadRequestError}
+ */
 export const updateBooking = async (id, updates, userId = null, isAdmin = false) => {
   const where = { id };
 
@@ -480,6 +523,12 @@ export const updateBooking = async (id, updates, userId = null, isAdmin = false)
   return booking;
 };
 
+/**
+ * @param {string} id
+ * @param {string|null} [userId=null]
+ * @param {boolean} [isAdmin=false]
+ * @returns {Promise<Object>}
+ */
 export const cancelBooking = async (id, userId = null, isAdmin = false) =>
   updateBooking(
     id,
@@ -488,6 +537,11 @@ export const cancelBooking = async (id, userId = null, isAdmin = false) =>
     isAdmin
   );
 
+/**
+ * @param {string} id
+ * @returns {Promise<Object>}
+ * @throws {Error}
+ */
 export const confirmBooking = async (id) => {
   const booking = await findEntityOrThrow(Booking, id, "Booking not found");
 
@@ -499,6 +553,12 @@ export const confirmBooking = async (id) => {
   return booking;
 };
 
+/**
+ * @param {Object} [filters={}]
+ * @param {string} [filters.dateFrom]
+ * @param {string} [filters.dateTo]
+ * @returns {Promise<Object>}
+ */
 export const getBookingStats = async (filters = {}) => {
   const where = {};
   applyDateRangeFilter(where, "bookingDate", filters.dateFrom, filters.dateTo);
@@ -517,39 +577,20 @@ export const getBookingStats = async (filters = {}) => {
 };
 
 /**
- * Get bookings by ticket type ID using JSONB queries
- * 
- * This function uses PostgreSQL's JSONB containment operator (@>) with GIN indexes
- * for efficient querying of bookings that contain a specific ticket type.
- * 
- * @param {string} ticketTypeId - The ticket type ID to filter by (e.g., 'adult', 'student')
- * @param {Object} filters - Optional filters (dateFrom, dateTo, status, performanceId)
- * @returns {Promise<Array>} Array of bookings containing the specified ticket type
- * 
- * @example
- * // Get all bookings with student tickets
- * const studentBookings = await getBookingsByTicketType('student');
- * 
- * @example
- * // Get confirmed bookings with adult tickets for a specific performance
- * const adultBookings = await getBookingsByTicketType('adult', {
- *   status: 'confirmed',
- *   performanceId: 123
- * });
- * 
- * @example
- * // Get bookings with senior tickets within a date range
- * const seniorBookings = await getBookingsByTicketType('senior', {
- *   dateFrom: '2024-01-01',
- *   dateTo: '2024-12-31'
- * });
+ * @param {string} ticketTypeId
+ * @param {Object} [filters={}]
+ * @param {string} [filters.status]
+ * @param {string} [filters.dateFrom]
+ * @param {string} [filters.dateTo]
+ * @param {string} [filters.performanceId]
+ * @returns {Promise<Array>}
+ * @throws {BadRequestError}
  */
 export const getBookingsByTicketType = async (ticketTypeId, filters = {}) => {
   if (!ticketTypeId || typeof ticketTypeId !== 'string') {
     throw new BadRequestError('ticketTypeId is required and must be a string');
   }
 
-  // Build base where clause with filters
   const where = buildWhereClause(filters, {
     statusField: "status",
     dateField: "bookingDate",
@@ -562,9 +603,6 @@ export const getBookingsByTicketType = async (ticketTypeId, filters = {}) => {
     },
   });
 
-  // Add JSONB containment query for ticket type
-  // The @> operator checks if the left JSONB value contains the right JSONB value
-  // This uses the GIN index on seatTickets for efficient querying
   where[Op.and] = [
     ...(where[Op.and] || []),
     sequelize.literal(
@@ -593,45 +631,14 @@ export const getBookingsByTicketType = async (ticketTypeId, filters = {}) => {
 };
 
 /**
- * Get ticket type distribution across all bookings for analytics
- * 
- * This function aggregates ticket type data from all bookings to provide
- * insights into ticket sales patterns. It returns counts and revenue for
- * each ticket type.
- * 
- * @param {Object} filters - Optional filters (dateFrom, dateTo, status, performanceId)
- * @returns {Promise<Object>} Distribution object with ticket type statistics
- * 
- * @example
- * // Get overall ticket distribution
- * const distribution = await getTicketTypeDistribution();
- * // Returns:
- * // {
- * //   byTicketType: {
- * //     adult: { count: 150, revenue: 75000, percentage: 60 },
- * //     student: { count: 75, revenue: 26250, percentage: 30 },
- * //     senior: { count: 25, revenue: 8750, percentage: 10 }
- * //   },
- * //   totalTickets: 250,
- * //   totalRevenue: 110000
- * // }
- * 
- * @example
- * // Get ticket distribution for a specific performance
- * const perfDistribution = await getTicketTypeDistribution({
- *   performanceId: 123
- * });
- * 
- * @example
- * // Get ticket distribution for confirmed bookings in date range
- * const dateDistribution = await getTicketTypeDistribution({
- *   status: 'confirmed',
- *   dateFrom: '2024-01-01',
- *   dateTo: '2024-12-31'
- * });
+ * @param {Object} [filters={}]
+ * @param {string} [filters.status]
+ * @param {string} [filters.dateFrom]
+ * @param {string} [filters.dateTo]
+ * @param {string} [filters.performanceId]
+ * @returns {Promise<Object>}
  */
 export const getTicketTypeDistribution = async (filters = {}) => {
-  // Build where clause with filters
   const where = buildWhereClause(filters, {
     statusField: "status",
     dateField: "bookingDate",
@@ -644,44 +651,36 @@ export const getTicketTypeDistribution = async (filters = {}) => {
     },
   });
 
-  // Fetch all bookings matching the filters
   const bookings = await Booking.findAll({
     where,
     attributes: ["id", "seatTickets", "totalAmount"],
   });
 
-  // Initialize distribution map
   const distribution = new Map();
   let totalTickets = 0;
   let totalRevenue = 0;
 
-  // Aggregate ticket type data from all bookings
   for (const booking of bookings) {
     const bookingData = booking.toJSON();
 
-    // Handle both new format (seatTickets) and old format (seats) with fallback
     let seatTickets = bookingData.seatTickets;
 
-    // If seatTickets is empty but seats exists, transform on-the-fly
     if ((!seatTickets || seatTickets.length === 0) &&
       bookingData.seats && Array.isArray(bookingData.seats) && bookingData.seats.length > 0) {
       try {
         seatTickets = transformToSeatTickets(bookingData.seats, bookingData.totalAmount);
       } catch (error) {
-        // If transformation fails, skip this booking
         console.error(`Failed to transform seats for booking ${bookingData.id}:`, error.message);
         continue;
       }
     }
 
-    // Process each seat ticket
     if (seatTickets && Array.isArray(seatTickets)) {
       for (const seatTicket of seatTickets) {
         const ticketTypeId = seatTicket.ticketTypeId;
         const ticketTypeName = seatTicket.ticketTypeName || ticketTypeId;
         const price = seatTicket.price || 0;
 
-        // Get or initialize ticket type entry
         if (!distribution.has(ticketTypeId)) {
           distribution.set(ticketTypeId, {
             ticketTypeId,
@@ -691,7 +690,6 @@ export const getTicketTypeDistribution = async (filters = {}) => {
           });
         }
 
-        // Update counts and revenue
         const entry = distribution.get(ticketTypeId);
         entry.count += 1;
         entry.revenue += price;
@@ -702,7 +700,6 @@ export const getTicketTypeDistribution = async (filters = {}) => {
     }
   }
 
-  // Convert map to object and calculate percentages
   const byTicketType = {};
   for (const [ticketTypeId, data] of distribution.entries()) {
     byTicketType[ticketTypeId] = {

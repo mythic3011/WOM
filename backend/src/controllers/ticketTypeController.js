@@ -1,5 +1,19 @@
+/**
+ * @file ticketTypeController.js
+ * @description Ticket type management controller handling CRUD operations for ticket types
+ * @author LI Ning 25127563d
+ * @author SHEK chinhei 25017482d
+ * @dependency #services/ticketTypeService.js
+ */
+
 import * as ticketTypeService from "#services/ticketTypeService.js";
 
+/**
+ * @param {Object} req
+ * @param {Object} res
+ * @param {Function} next
+ * @returns {Promise<void>}
+ */
 export const getAllTicketTypes = async (req, res, next) => {
   try {
     const ticketTypes = await ticketTypeService.getAllTicketTypes();
@@ -14,6 +28,12 @@ export const getAllTicketTypes = async (req, res, next) => {
   }
 };
 
+/**
+ * @param {Object} req
+ * @param {Object} res
+ * @param {Function} next
+ * @returns {Promise<void>}
+ */
 export const getTicketTypeById = async (req, res, next) => {
   try {
     const ticketType = await ticketTypeService.getTicketTypeById(req.params.id);
@@ -33,6 +53,12 @@ export const getTicketTypeById = async (req, res, next) => {
   }
 };
 
+/**
+ * @param {Object} req
+ * @param {Object} res
+ * @param {Function} next
+ * @returns {Promise<void>}
+ */
 export const createTicketType = async (req, res, next) => {
   try {
     const ticketType = await ticketTypeService.createTicketType(req.body);
@@ -47,6 +73,12 @@ export const createTicketType = async (req, res, next) => {
   }
 };
 
+/**
+ * @param {Object} req
+ * @param {Object} res
+ * @param {Function} next
+ * @returns {Promise<void>}
+ */
 export const updateTicketType = async (req, res, next) => {
   try {
     const ticketType = await ticketTypeService.updateTicketType(
@@ -70,6 +102,12 @@ export const updateTicketType = async (req, res, next) => {
   }
 };
 
+/**
+ * @param {Object} req
+ * @param {Object} res
+ * @param {Function} next
+ * @returns {Promise<void>}
+ */
 export const deleteTicketType = async (req, res, next) => {
   try {
     await ticketTypeService.deleteTicketType(req.params.id);

@@ -1,3 +1,13 @@
+/**
+ * @file venueService.js
+ * @description Venue management service handling venue CRUD operations and layout validation
+ * @author LI Ning 25127563d
+ * @author SHEK chinhei 25017482d
+ * @dependency #models/Venue.js - Venue model
+ * @dependency #models/Performance.js - Performance model
+ * @see #controllers/venueController.js
+ */
+
 import { Venue, Performance } from "#models/index.js";
 import { ValidationError } from "#utils/errors.js";
 import { toNumber, toLetters } from "#utils/venueUtils.js";
@@ -7,6 +17,12 @@ import { findEntityOrThrow } from "./helpers/entityHelpers.js";
 const validationCache = new Map();
 const VALIDATION_CACHE_MAX = 50;
 
+/**
+ * @param {Object} [filters={}]
+ * @param {string} [filters.status]
+ * @param {string} [filters.search]
+ * @returns {Promise<Array>}
+ */
 export const getAllVenues = async (filters = {}) => {
   const where = buildWhereClause(filters, {
     statusField: "status",
@@ -21,6 +37,11 @@ export const getAllVenues = async (filters = {}) => {
   return venues;
 };
 
+/**
+ * @param {string} id
+ * @returns {Promise<Object>}
+ * @throws {Error}
+ */
 export const getVenueById = async (id) => {
   const venue = await Venue.findByPk(id, {
     include: [
@@ -39,6 +60,15 @@ export const getVenueById = async (id) => {
   return venue;
 };
 
+/**
+ * @param {Object} venueData
+ * @param {string} venueData.name
+ * @param {string} venueData.address
+ * @param {number} venueData.capacity
+ * @param {Object} [venueData.layout]
+ * @returns {Promise<Object>}
+ * @throws {ValidationError}
+ */
 export const createVenue = async (venueData) => {
   if (venueData.layout) {
     const semantic = validateLayoutSemantics(venueData.layout, venueData.capacity);
@@ -51,12 +81,20 @@ export const createVenue = async (venueData) => {
     }
   }
   
-  const { id, ...dataWithoutId } = venueData;
+  const { id: _id, ...dataWithoutId } = venueData;
   
   const venue = await Venue.create(dataWithoutId);
   return venue;
 };
 
+/**
+ * @param {string} id
+ * @param {Object} updates
+ * @param {Object} [updates.layout]
+ * @param {number} [updates.capacity]
+ * @returns {Promise<Object>}
+ * @throws {Error|ValidationError}
+ */
 export const updateVenue = async (id, updates) => {
   const venue = await findEntityOrThrow(Venue, id, "Venue not found");
 
@@ -78,10 +116,14 @@ export const updateVenue = async (id, updates) => {
   return venue;
 };
 
+/**
+ * @param {string} id
+ * @returns {Promise<boolean>}
+ * @throws {Error}
+ */
 export const deleteVenue = async (id) => {
   const venue = await findEntityOrThrow(Venue, id, "Venue not found");
 
-  // Check for linked performances before deletion
   const performanceCount = await Performance.count({ where: { venueId: id } });
 
   if (performanceCount > 0) {
@@ -96,6 +138,11 @@ export const deleteVenue = async (id) => {
   return true;
 };
 
+/**
+ * @param {Object} layout
+ * @param {number} capacity
+ * @returns {Object}
+ */
 function validateLayoutSemantics(layout, capacity) {
   const cacheKey = JSON.stringify({ layout, capacity });
   const cached = validationCache.get(cacheKey);
@@ -364,6 +411,11 @@ function validateLayoutSemantics(layout, capacity) {
 
 const rowLabelCache = new Map();
 
+/**
+ * @param {string} startRow
+ * @param {number} offset
+ * @returns {string}
+ */
 function deriveRowLabel(startRow, offset) {
   const cacheKey = `${startRow}-${offset}`;
   const cached = rowLabelCache.get(cacheKey);
@@ -382,13 +434,16 @@ function deriveRowLabel(startRow, offset) {
   return result;
 }
 
+/**
+ * @param {string} id
+ * @returns {Promise<Object>}
+ * @throws {Error}
+ */
 export const getVenuePreview = async (id) => {
   const venue = await findEntityOrThrow(Venue, id, "Venue not found");
 
-  // Import buildSeatMapFromVenueLayout
   const { buildSeatMapFromVenueLayout } = await import("#utils/seatMapBuilder.js");
 
-  // Generate seat map from venue layout
   const seatMap = buildSeatMapFromVenueLayout(venue.layout || {});
 
   return {
@@ -400,7 +455,6 @@ export const getVenuePreview = async (id) => {
       total: seatMap.total,
       version: seatMap.version,
     },
-    // Include seat positions and labels for preview rendering
     seats: Object.values(seatMap.indexMap || {}).map(seat => ({
       id: seat.fullId,
       label: seat.displayLabel,

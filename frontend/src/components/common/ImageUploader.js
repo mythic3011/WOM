@@ -1,6 +1,32 @@
+/**
+ * @file ImageUploader.js
+ * @description Common image uploader component with drag-and-drop and URL input support
+ * @author LI Ning 25127563d
+ * @author SHEK chinhei 25017482d
+ * @see @components/admin/ImageUploader.js
+ */
+
 import $ from "jquery";
 
 export const ImageUploader = {
+  /**
+   * @param {Object} [options={}] - Configuration options
+   * @param {string} [options.id="image-uploader"] - Component ID
+   * @param {string} [options.label="Upload Image"] - Label text
+   * @param {string} [options.accept] - Accepted file types
+   * @param {number} [options.maxSize] - Maximum file size in bytes
+   * @param {number} [options.maxSizeMB=5] - Maximum file size in MB
+   * @param {boolean} [options.multiple=false] - Allow multiple file selection
+   * @param {boolean} [options.showPreview=true] - Show image preview
+   * @param {boolean} [options.showUrlInput=true] - Show URL input field
+   * @param {string} [options.previewUrl=null] - Initial preview URL
+   * @param {string} [options.previewAlt="Preview"] - Preview image alt text
+   * @param {string} [options.height="200px"] - Component height
+   * @param {string} [options.className=""] - Additional CSS classes
+   * @param {string} [options.helpText] - Help text to display
+   * @param {string} [options.dragDropText] - Drag and drop instruction text
+   * @returns {string} HTML string for the image uploader component
+   */
   render(options = {}) {
     const {
       id = "image-uploader",
@@ -102,6 +128,16 @@ export const ImageUploader = {
     `;
   },
 
+  /**
+   * @param {string} uploaderId - ID of the uploader container element
+   * @param {Object} [callbacks={}] - Event callbacks
+   * @param {Function} [callbacks.onUpload] - Called when file is uploaded
+   * @param {Function} [callbacks.onRemove] - Called when image is removed
+   * @param {Function} [callbacks.onError] - Called when error occurs
+   * @param {number} [callbacks.maxSize=5242880] - Maximum file size in bytes
+   * @param {Function} [callbacks.validateFile] - Custom file validation function
+   * @returns {Object} Control methods (reset, showError, hideError, cleanup)
+   */
   initialize(uploaderId, callbacks = {}) {
     const {
       onUpload,

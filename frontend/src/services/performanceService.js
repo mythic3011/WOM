@@ -1,10 +1,29 @@
+/**
+ * @file performanceService.js
+ * @description Service for managing performance data and operations
+ * @author LI Ning 25127563d
+ * @author SHEK chinhei 25017482d
+ * @dependency dayjs
+ * @dependency ./apiClient.js
+ * @dependency ./responseExtractor.js
+ * @see apiClient.js
+ * @see performanceHelpers.js
+ */
 
 import dayjs from "dayjs";
 
 import { performanceAPI, handleApiError } from "./apiClient.js";
 import { ResponseExtractor } from "./responseExtractor.js";
 
+/**
+ * @description Performance service for managing performance data
+ */
 export const performanceService = {
+  /**
+   * @description Gets all performances with optional filters
+   * @param {Object} params - Query parameters
+   * @returns {Promise<Array>} Array of performances
+   */
   async getAll(params = {}) {
     try {
       const response = await performanceAPI.getAll(params);
@@ -16,6 +35,12 @@ export const performanceService = {
     }
   },
 
+  /**
+   * @description Gets a performance by ID
+   * @param {number|string} id - Performance ID
+   * @returns {Promise<Object>} Performance data
+   * @throws {Error} When fetch fails
+   */
   async getById(id) {
     try {
       const response = await performanceAPI.getById(id);
@@ -26,6 +51,12 @@ export const performanceService = {
     }
   },
 
+  /**
+   * @description Creates a new performance
+   * @param {Object} performanceData - Performance data
+   * @returns {Promise<Object>} Created performance
+   * @throws {Error} When creation fails
+   */
   async create(performanceData) {
     try {
       const response = await performanceAPI.create(performanceData);
@@ -36,6 +67,13 @@ export const performanceService = {
     }
   },
 
+  /**
+   * @description Updates a performance
+   * @param {number|string} id - Performance ID
+   * @param {Object} performanceData - Updated performance data
+   * @returns {Promise<Object>} Updated performance
+   * @throws {Error} When update fails
+   */
   async update(id, performanceData) {
     try {
       const response = await performanceAPI.update(id, performanceData);
@@ -46,6 +84,12 @@ export const performanceService = {
     }
   },
 
+  /**
+   * @description Deletes a performance
+   * @param {number|string} id - Performance ID
+   * @returns {Promise<Object>} Deletion response
+   * @throws {Error} When deletion fails
+   */
   async delete(id) {
     try {
       const response = await performanceAPI.delete(id);
@@ -56,6 +100,13 @@ export const performanceService = {
     }
   },
 
+  /**
+   * @description Gets seat availability for a performance
+   * @param {number|string} id - Performance ID
+   * @param {number|string|null} showtimeId - Optional showtime ID
+   * @returns {Promise<Object>} Availability data
+   * @throws {Error} When fetch fails
+   */
   async getAvailability(id, showtimeId = null) {
     try {
       const response = await performanceAPI.getAvailability(id, showtimeId);
@@ -69,6 +120,11 @@ export const performanceService = {
     }
   },
 
+  /**
+   * @description Gets upcoming performances
+   * @param {Array|null} performances - Optional performances array
+   * @returns {Promise<Array>|Array} Upcoming performances
+   */
   getUpcoming(performances = null) {
     if (performances) {
       return this.filterUpcoming(performances);
@@ -76,6 +132,11 @@ export const performanceService = {
     return this.getAll().then((perfs) => this.filterUpcoming(perfs));
   },
 
+  /**
+   * @description Filters performances to only upcoming ones
+   * @param {Array} performances - Performances array
+   * @returns {Array} Filtered upcoming performances
+   */
   filterUpcoming(performances) {
     const now = dayjs();
     return performances.filter(
@@ -83,18 +144,33 @@ export const performanceService = {
     );
   },
 
+  /**
+   * @description Gets performances that are on sale
+   * @param {Array} performances - Performances array
+   * @returns {Array} On sale performances
+   */
   getOnSale(performances) {
     return performances.filter(
       (p) => p.ticketingInfo?.status === "on_sale" || p.status === "on_sale"
     );
   },
 
+  /**
+   * @description Gets sold out performances
+   * @param {Array} performances - Performances array
+   * @returns {Array} Sold out performances
+   */
   getSoldOut(performances) {
     return performances.filter(
       (p) => p.ticketingInfo?.status === "sold_out" || p.status === "sold_out"
     );
   },
 
+  /**
+   * @description Calculates statistics for performances
+   * @param {Array} performances - Performances array
+   * @returns {Object} Statistics including total, onSale, upcoming, soldOut, and priceRange
+   */
   getPerformanceStats(performances) {
     const onSale = this.getOnSale(performances).length;
     const upcoming = performances.filter(
@@ -164,6 +240,12 @@ export const performanceService = {
     };
   },
 
+  /**
+   * @description Filters performances based on criteria
+   * @param {Array} performances - Performances array
+   * @param {Object} filters - Filter criteria
+   * @returns {Array} Filtered performances
+   */
   filterPerformances(performances, filters = {}) {
     let filtered = performances;
 
@@ -228,6 +310,12 @@ export const performanceService = {
     return filtered;
   },
 
+  /**
+   * @description Sorts performances by specified criteria
+   * @param {Array} performances - Performances array
+   * @param {string} sortBy - Sort criteria
+   * @returns {Array} Sorted performances
+   */
   sortPerformances(performances, sortBy = "date-asc") {
     const sorted = [...performances];
 
@@ -263,6 +351,13 @@ export const performanceService = {
     }
   },
 
+  /**
+   * @description Filters and sorts performances
+   * @param {Array} performances - Performances array
+   * @param {Object} filters - Filter criteria
+   * @param {string} sortBy - Sort criteria
+   * @returns {Array} Filtered and sorted performances
+   */
   filterAndSort(performances, filters = {}, sortBy = "date-asc") {
     const filtered = this.filterPerformances(performances, filters);
     return this.sortPerformances(filtered, sortBy);

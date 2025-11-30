@@ -1,7 +1,21 @@
+/**
+ * @file Performance.js
+ * @description Performance model definition for orchestral music concerts with seat management
+ * @author A: LI Ning 25127563d
+ * @author B: SHEK chinhei 25017482d
+ * @dependency dayjs, sequelize
+ * @see #config/database.js, #models/Venue.js, #models/Booking.js
+ */
+
 import dayjs from "dayjs";
 import { DataTypes, Op } from "sequelize";
 import sequelize from "#config/database.js";
 
+/**
+ * Performance model representing orchestral music concerts
+ * Includes venue information, showtimes, pricing, seat management, and booking status
+ * Supports multiple performance statuses and real-time seat availability tracking
+ */
 const Performance = sequelize.define(
   "Performance",
   {
@@ -201,24 +215,45 @@ const Performance = sequelize.define(
   }
 );
 
+/**
+ * Checks if performance has available seats for booking
+ * @returns {boolean} True if available seats count is greater than zero
+ */
 Performance.prototype.hasAvailableSeats = function () {
   return this.availableSeats > 0;
 };
 
+/**
+ * Calculates venue occupancy rate as percentage
+ * @returns {number} Occupancy percentage (0-100), returns 0 if no seats
+ */
 Performance.prototype.getOccupancyRate = function () {
   if (!this.totalSeats || this.totalSeats === 0) { return 0; }
   const occupied = this.totalSeats - this.availableSeats;
   return Math.round((occupied / this.totalSeats) * 100);
 };
 
+/**
+ * Checks if performance date has passed
+ * @returns {boolean} True if performance date is in the past
+ */
 Performance.prototype.isExpired = function () {
   return dayjs(this.date).isBefore(dayjs());
 };
 
+/**
+ * Checks if performance date is in the future
+ * @returns {boolean} True if performance date is upcoming
+ */
 Performance.prototype.isUpcoming = function () {
   return dayjs(this.date).isAfter(dayjs());
 };
 
+/**
+ * Checks if performance is available for booking
+ * Requires available seats, upcoming date, and bookable status
+ * @returns {boolean} True if performance can be booked
+ */
 Performance.prototype.canBook = function () {
   return (
     this.hasAvailableSeats() &&

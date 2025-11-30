@@ -1,13 +1,33 @@
+/**
+ * @file cache.js
+ * @description In-memory caching utilities with TTL support and cache middleware
+ * @author LI Ning 25127563d
+ * @author SHEK chinhei 25017482d
+ * @see backend/src/services
+ */
+
+/**
+ * @class MemoryCache
+ */
 class MemoryCache {
   constructor() {
     this.cache = new Map();
   }
 
+  /**
+   * @param {string} key - Cache key
+   * @param {*} value - Value to cache
+   * @param {number} [ttl=300000] - Time to live in milliseconds (default 5 minutes)
+   */
   set(key, value, ttl = 300000) {
     const expiresAt = Date.now() + ttl;
     this.cache.set(key, { value, expiresAt });
   }
 
+  /**
+   * @param {string} key - Cache key
+   * @returns {*|null} Cached value or null if not found or expired
+   */
   get(key) {
     const item = this.cache.get(key);
     
@@ -23,6 +43,9 @@ class MemoryCache {
     return item.value;
   }
 
+  /**
+   * @param {string} key - Cache key to delete
+   */
   delete(key) {
     this.cache.delete(key);
   }
@@ -31,6 +54,10 @@ class MemoryCache {
     this.cache.clear();
   }
 
+  /**
+   * @param {string} key - Cache key to check
+   * @returns {boolean} True if key exists and not expired
+   */
   has(key) {
     const item = this.cache.get(key);
     
@@ -62,6 +89,10 @@ setInterval(() => {
   cache.cleanup();
 }, 60000);
 
+/**
+ * @param {number} [ttl=300000] - Time to live in milliseconds (default 5 minutes)
+ * @returns {Function} Express middleware function
+ */
 export const cacheMiddleware = (ttl = 300000) => (req, res, next) => {
     if (req.method !== "GET") {
       return next();

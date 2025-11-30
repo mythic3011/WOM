@@ -1,6 +1,20 @@
+/**
+ * @file Booking.js
+ * @description Booking model definition for performance seat reservations with ticket management
+ * @author A: LI Ning 25127563d
+ * @author B: SHEK chinhei 25017482d
+ * @dependency sequelize
+ * @see #config/database.js, #models/User.js, #models/Performance.js
+ */
+
 import { DataTypes } from "sequelize";
 import sequelize from "#config/database.js";
 
+/**
+ * Booking model representing seat reservations for performances
+ * Includes seat-ticket assignments, payment tracking, and booking status management
+ * Uses seatTickets JSONB field for flexible seat and ticket type associations
+ */
 const Booking = sequelize.define(
   "Booking",
   {

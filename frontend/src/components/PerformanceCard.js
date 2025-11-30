@@ -1,3 +1,12 @@
+/**
+ * @file PerformanceCard.js
+ * @description Performance card component for displaying performance information in grid and list layouts
+ * @author LI Ning 25127563d
+ * @author SHEK chinhei 25017482d
+ * @see @utils/performanceUtils.js
+ * @see @utils/status.js
+ * @see @utils/imageUtils.js
+ */
 
 import dayjs from "dayjs";
 
@@ -7,8 +16,8 @@ import { getPerformanceImageUrl, getImageFallbackSvg } from "@utils/imageUtils.j
 
 export const PerformanceCard = {
   /**
-   * Get the minimum price from performance data
-   * Checks ticketTypes, pricingSections, and basePrice
+   * @param {Object} performance - Performance data object
+   * @returns {number|null} Minimum price or null
    */
   getMinPrice(performance) {
     let minPrice = null;
@@ -42,6 +51,10 @@ export const PerformanceCard = {
     return minPrice || null;
   },
 
+  /**
+   * @param {Object} performance - Performance data object
+   * @returns {Object} Date display information
+   */
   getDateDisplay(performance) {
     if (!performance.showtimes || performance.showtimes.length === 0) {
       return {
@@ -83,6 +96,10 @@ export const PerformanceCard = {
     };
   },
 
+  /**
+   * @param {Object} dateInfo - Date information object
+   * @returns {string} HTML string for date badge
+   */
   renderDateBadge(dateInfo) {
     if (dateInfo.single) {
       return `
@@ -127,6 +144,10 @@ export const PerformanceCard = {
     `;
   },
 
+  /**
+   * @param {Object} performance - Performance data object
+   * @returns {string} HTML string for grid card layout
+   */
   renderGridCard(performance) {
     const statusBadge = getStatusBadge(
       performance.ticketingInfo?.status || performance.status || "upcoming",
@@ -236,6 +257,10 @@ export const PerformanceCard = {
     `;
   },
 
+  /**
+   * @param {Object} performance - Performance data object
+   * @returns {string} HTML string for list card layout
+   */
   renderListCard(performance) {
     const statusBadge = getStatusBadge(
       performance.ticketingInfo?.status || performance.status || "upcoming",

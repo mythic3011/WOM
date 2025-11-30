@@ -1,3 +1,14 @@
+/**
+ * @file seatMapBuilder.js
+ * @description Builds seat maps from venue layouts with position calculation, caching, and seat resolution utilities
+ * @author LI Ning 25127563d
+ * @author SHEK chinhei 25017482d
+ * @dependency backend/src/utils/SeatNumberingSystem.js
+ * @dependency backend/src/utils/stringUtils.js
+ * @see backend/src/services/venueService.js
+ * @see backend/src/services/performanceService.js
+ */
+
 import { SeatNumberingSystem } from "./SeatNumberingSystem.js";
 import { slugify } from "./stringUtils.js";
 
@@ -5,13 +16,16 @@ const seatMapCache = new Map();
 const CACHE_MAX_SIZE = 100;
 
 /**
- * Calculates seat position accounting for gaps and variable seat widths
  * @param {number} rowIndex - Index of the row in the section
  * @param {number} seatIndex - Index of the seat in the row
  * @param {Object} section - Section configuration object
  * @param {Array} rowSeats - All seats in the row (from enumerateRow, including gaps/empty)
- * @param {string} rowLabel - Current row label (e.g., "A", "B")
- * @returns {Object} {x, y, width, height} coordinates and dimensions
+ * @param {string} _rowLabel - Current row label (e.g., "A", "B")
+ * @returns {Object} Seat position and dimensions object
+ * @returns {number} returns.x - X coordinate in pixels
+ * @returns {number} returns.y - Y coordinate in pixels
+ * @returns {number} returns.width - Seat width in pixels
+ * @returns {number} returns.height - Seat height in pixels
  */
 export function calculateSeatPosition(rowIndex, seatIndex, section, rowSeats, _rowLabel) {
   const SEAT_WIDTH = 40;
@@ -64,6 +78,15 @@ export function calculateSeatPosition(rowIndex, seatIndex, section, rowSeats, _r
   return { x, y, width, height };
 }
 
+/**
+ * @param {Object} [layout={}] - Venue layout configuration
+ * @param {Array} layout.sections - Array of section configurations
+ * @returns {Object} Complete seat map with sections, index map, and metadata
+ * @returns {Array} returns.sections - Mapped sections with positioned seats
+ * @returns {Object} returns.indexMap - Lookup map from seat ID to seat object
+ * @returns {number} returns.total - Total number of seats
+ * @returns {number} returns.version - Seat map version number
+ */
 export function buildSeatMapFromVenueLayout(layout = {}) {
   const sections = layout?.sections || [];
   if (!sections.length) {
@@ -141,6 +164,12 @@ export function buildSeatMapFromVenueLayout(layout = {}) {
   return result;
 }
 
+/**
+ * @param {Object} seatMap - Seat map object from buildSeatMapFromVenueLayout
+ * @param {Array} seatMap.sections - Array of sections
+ * @param {number} [seatMap.total] - Cached total count
+ * @returns {number} Total number of seats in the seat map
+ */
 export function countSeats(seatMap) {
   if (!seatMap?.sections?.length) { return 0; }
   if (seatMap.total !== undefined) {
@@ -152,6 +181,12 @@ export function countSeats(seatMap) {
   );
 }
 
+/**
+ * @param {Object} seatMap - Seat map object with indexMap
+ * @param {Object} seatMap.indexMap - Lookup map from seat ID to seat object
+ * @param {string} inputId - Seat identifier to resolve (full or partial)
+ * @returns {Object|null} Resolved seat object or null if not found
+ */
 export function resolveSeatId(seatMap, inputId) {
   if (!seatMap?.indexMap) {
     return null;

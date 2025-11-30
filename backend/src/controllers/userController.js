@@ -1,5 +1,19 @@
+/**
+ * @file userController.js
+ * @description User management controller handling CRUD operations and user-related actions
+ * @author LI Ning 25127563d
+ * @author SHEK chinhei 25017482d
+ * @dependency #services/userService.js
+ */
+
 import * as userService from "#services/userService.js";
 
+/**
+ * @param {Object} req
+ * @param {Object} res
+ * @param {Function} next
+ * @returns {Promise<void>}
+ */
 export const getAllUsers = async (req, res, next) => {
   try {
     const filters = {
@@ -20,6 +34,12 @@ export const getAllUsers = async (req, res, next) => {
   }
 };
 
+/**
+ * @param {Object} req
+ * @param {Object} res
+ * @param {Function} next
+ * @returns {Promise<void>}
+ */
 export const getUserById = async (req, res, next) => {
   try {
     const user = await userService.getUserById(req.params.id);
@@ -39,6 +59,12 @@ export const getUserById = async (req, res, next) => {
   }
 };
 
+/**
+ * @param {Object} req
+ * @param {Object} res
+ * @param {Function} next
+ * @returns {Promise<void>}
+ */
 export const createUser = async (req, res, next) => {
   try {
     const user = await userService.createUser(req.body);
@@ -59,6 +85,12 @@ export const createUser = async (req, res, next) => {
   }
 };
 
+/**
+ * @param {Object} req
+ * @param {Object} res
+ * @param {Function} next
+ * @returns {Promise<void>}
+ */
 export const updateUser = async (req, res, next) => {
   try {
     const user = await userService.updateUser(req.params.id, req.body);
@@ -85,6 +117,12 @@ export const updateUser = async (req, res, next) => {
   }
 };
 
+/**
+ * @param {Object} req
+ * @param {Object} res
+ * @param {Function} next
+ * @returns {Promise<void>}
+ */
 export const deleteUser = async (req, res, next) => {
   try {
     await userService.deleteUser(req.params.id);
@@ -104,6 +142,12 @@ export const deleteUser = async (req, res, next) => {
   }
 };
 
+/**
+ * @param {Object} req
+ * @param {Object} res
+ * @param {Function} next
+ * @returns {Promise<void>}
+ */
 export const deleteSelf = async (req, res, next) => {
   try {
     const userId = req.session?.userId;
@@ -133,6 +177,12 @@ export const deleteSelf = async (req, res, next) => {
   }
 };
 
+/**
+ * @param {Object} req
+ * @param {Object} res
+ * @param {Function} next
+ * @returns {Promise<void>}
+ */
 export const getUserBookings = async (req, res, next) => {
   try {
     const bookings = await userService.getUserBookings(req.params.id);
@@ -153,6 +203,12 @@ export const getUserBookings = async (req, res, next) => {
   }
 };
 
+/**
+ * @param {Object} req
+ * @param {Object} res
+ * @param {Function} next
+ * @returns {Promise<void>}
+ */
 export const uploadProfileImage = async (req, res, next) => {
   try {
     if (!req.file) {

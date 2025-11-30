@@ -1,7 +1,21 @@
+/**
+ * @file Venue.js
+ * @description Venue model definition for performance locations with seat layout management
+ * @author A: LI Ning 25127563d
+ * @author B: SHEK chinhei 25017482d
+ * @dependency sequelize
+ * @see #config/database.js, #models/Performance.js, #utils/seatMapBuilder.js
+ */
+
 import { DataTypes } from "sequelize";
 import sequelize from "#config/database.js";
 import { buildSeatMapFromVenueLayout } from "#utils/seatMapBuilder.js";
 
+/**
+ * Venue model representing performance locations
+ * Includes seat layout configuration and automatic seat map propagation to performances
+ * Updates all associated performances when venue layout changes
+ */
 const Venue = sequelize.define(
   "Venue",
   {

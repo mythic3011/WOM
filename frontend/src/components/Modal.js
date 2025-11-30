@@ -1,3 +1,22 @@
+/**
+ * @file Modal.js
+ * @description Modal component utilities for creating and managing modal dialogs
+ * @author LI Ning 25127563d
+ * @author SHEK chinhei 25017482d
+ * @dependency sweetalert2
+ * @see @components/common
+ */
+
+/**
+ * @param {Object} config - Modal configuration object
+ * @param {string} config.id - Unique identifier for the modal
+ * @param {string} config.title - Modal title text
+ * @param {string} [config.subtitle=""] - Optional subtitle text
+ * @param {string} [config.body=""] - Modal body HTML content
+ * @param {string} [config.footer=""] - Modal footer HTML content
+ * @param {string} [config.size="md"] - Modal size (sm, md, lg, xl, full)
+ * @returns {string} HTML string for the modal element
+ */
 export function createModal({
   id,
   title,
@@ -43,6 +62,12 @@ export function createModal({
   `;
 }
 
+/**
+ * @param {string} modalId - ID of the modal to open
+ * @param {Object} [options={}] - Optional configuration
+ * @param {Function} [options.onOpen] - Callback function executed after modal opens
+ * @returns {void}
+ */
 export function openModal(modalId, options = {}) {
   const { onOpen } = options;
   const $modal = $(`#${modalId}`);
@@ -64,6 +89,12 @@ export function openModal(modalId, options = {}) {
   });
 }
 
+/**
+ * @param {string} modalId - ID of the modal to close
+ * @param {Object} [options={}] - Optional configuration
+ * @param {Function} [options.onClose] - Callback function executed after modal closes
+ * @returns {void}
+ */
 export function closeModal(modalId, options = {}) {
   const { onClose } = options;
   const $modal = $(`#${modalId}`);
@@ -85,6 +116,9 @@ export function closeModal(modalId, options = {}) {
   });
 }
 
+/**
+ * @returns {void}
+ */
 export function initModalCloseHandlers() {
   $(document).off(".modal");
 
@@ -120,15 +154,27 @@ export function initModalCloseHandlers() {
   });
 }
 
+/**
+ * @returns {void}
+ */
 export function cleanupModalHandlers() {
   $(document).off(".modal");
 }
 
+/**
+ * @param {string} modalId - ID of the modal to check
+ * @returns {boolean} True if modal is currently visible
+ */
 export function isModalOpen(modalId) {
   const $modal = $(`#${modalId}`);
   return $modal.length && $modal.is(":visible");
 }
 
+/**
+ * @param {string} modalId - ID of the modal to toggle
+ * @param {Object} [options={}] - Optional configuration passed to open/close functions
+ * @returns {void}
+ */
 export function toggleModal(modalId, options = {}) {
   if (isModalOpen(modalId)) {
     closeModal(modalId, options);

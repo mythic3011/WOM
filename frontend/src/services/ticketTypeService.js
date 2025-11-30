@@ -1,7 +1,24 @@
+/**
+ * @file ticketTypeService.js
+ * @description Service for managing ticket type data and operations
+ * @author LI Ning 25127563d
+ * @author SHEK chinhei 25017482d
+ * @dependency ./apiClient.js
+ * @dependency ./responseExtractor.js
+ * @see apiClient.js
+ */
+
 import { ticketTypeAPI } from "./apiClient.js";
 import { ResponseExtractor } from "./responseExtractor.js";
 
+/**
+ * @description Ticket type service for managing ticket types
+ */
 export const ticketTypeService = {
+  /**
+   * @description Gets all active ticket types
+   * @returns {Promise<Array>} Array of active ticket types
+   */
   async getAll() {
     try {
       const response = await ticketTypeAPI.getAll();
@@ -15,6 +32,11 @@ export const ticketTypeService = {
     }
   },
 
+  /**
+   * @description Gets a ticket type by ID
+   * @param {number|string} id - Ticket type ID
+   * @returns {Promise<Object|null>} Ticket type data or null
+   */
   async getById(id) {
     try {
       const response = await ticketTypeAPI.getById(id);
@@ -25,6 +47,12 @@ export const ticketTypeService = {
     }
   },
 
+  /**
+   * @description Creates a new ticket type
+   * @param {Object} typeData - Ticket type data
+   * @returns {Promise<Object|null>} Created ticket type or null
+   * @throws {Error} When creation fails
+   */
   async create(typeData) {
     try {
       const response = await ticketTypeAPI.create(typeData);
@@ -35,6 +63,13 @@ export const ticketTypeService = {
     }
   },
 
+  /**
+   * @description Updates a ticket type
+   * @param {number|string} id - Ticket type ID
+   * @param {Object} typeData - Updated ticket type data
+   * @returns {Promise<Object|null>} Updated ticket type or null
+   * @throws {Error} When update fails
+   */
   async update(id, typeData) {
     try {
       const response = await ticketTypeAPI.update(id, typeData);
@@ -45,6 +80,12 @@ export const ticketTypeService = {
     }
   },
 
+  /**
+   * @description Deletes a ticket type
+   * @param {number|string} id - Ticket type ID
+   * @returns {Promise<boolean>} Success status
+   * @throws {Error} When deletion fails
+   */
   async delete(id) {
     try {
       const response = await ticketTypeAPI.delete(id);

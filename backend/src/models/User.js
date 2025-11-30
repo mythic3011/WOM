@@ -1,7 +1,21 @@
+/**
+ * @file User.js
+ * @description User model definition with authentication and profile management
+ * @author A: LI Ning 25127563d
+ * @author B: SHEK chinhei 25017482d
+ * @dependency bcryptjs, sequelize
+ * @see #config/database.js, #models/Booking.js
+ */
+
 import bcrypt from "bcryptjs";
 import { DataTypes } from "sequelize";
 import sequelize from "#config/database.js";
 
+/**
+ * User model representing system users with authentication and profile data
+ * Supports two roles: admin and user
+ * Includes automatic password hashing and email normalization
+ */
 const User = sequelize.define(
   "User",
   {
@@ -129,6 +143,11 @@ const User = sequelize.define(
   }
 );
 
+/**
+ * Converts user instance to safe object without password
+ * Removes empty string fields for cleaner data
+ * @returns {Object} User object without password and empty fields
+ */
 User.prototype.toSafeObject = function () {
   const { password: _password, ...safeUser } = this.toJSON();
 
@@ -142,11 +161,20 @@ User.prototype.toSafeObject = function () {
   return safeUser;
 };
 
+/**
+ * Converts user instance to storage-safe object
+ * Uses toSafeObject to ensure password is excluded
+ * @returns {Object} User object suitable for storage
+ */
 User.prototype.toStorageObject = function () {
   const safeUser = this.toSafeObject();
   return safeUser;
 };
 
+/**
+ * Checks if profile image is stored as base64 data URL
+ * @returns {boolean} True if profile image is base64 encoded
+ */
 User.prototype.isBase64ProfileImage = function () {
   if (!this.profileImage) {
     return false;
@@ -154,6 +182,10 @@ User.prototype.isBase64ProfileImage = function () {
   return this.profileImage.startsWith("data:image/");
 };
 
+/**
+ * Gets profile image URL if it's a file path (not base64)
+ * @returns {string|null} Profile image URL or null if base64 or missing
+ */
 User.prototype.getProfileImageUrl = function () {
   if (!this.profileImage) {
     return null;
@@ -164,18 +196,35 @@ User.prototype.getProfileImageUrl = function () {
   return this.profileImage;
 };
 
+/**
+ * Compares plain text password with hashed password
+ * @param {string} password - Plain text password to compare
+ * @returns {Promise<boolean>} True if password matches
+ */
 User.prototype.comparePassword = async function (password) {
   return bcrypt.compare(password, this.password);
 };
 
+/**
+ * Checks if user has admin role
+ * @returns {boolean} True if user is an admin
+ */
 User.prototype.isAdmin = function () {
   return this.role === "admin";
 };
 
+/**
+ * Checks if user account is active
+ * @returns {boolean} True if user status is active
+ */
 User.prototype.isActive = function () {
   return this.status === "active";
 };
 
+/**
+ * Gets user's full name with title if available
+ * @returns {string} Full name with title (e.g., "Mr. John Doe") or just name
+ */
 User.prototype.getFullName = function () {
   return this.title ? `${this.title} ${this.name}` : this.name;
 };

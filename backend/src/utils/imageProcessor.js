@@ -1,3 +1,15 @@
+/**
+ * @file imageProcessor.js
+ * @description Image processing utilities for handling profile, performance, and venue images with validation, resizing, and format conversion
+ * @author LI Ning 25127563d
+ * @author SHEK chinhei 25017482d
+ * @dependency sharp
+ * @dependency uuid
+ * @see backend/src/config/multer.js
+ * @see backend/src/controllers/userController.js
+ * @see backend/src/controllers/performanceController.js
+ */
+
 import sharp from "sharp";
 import path from "path";
 import { v4 as uuidv4 } from "uuid";
@@ -6,6 +18,13 @@ import fs from "fs/promises";
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
 const ALLOWED_MIME_TYPES = ["image/jpeg", "image/png", "image/webp"];
 
+/**
+ * @param {Object} file - Multer file object
+ * @param {string} file.mimetype - MIME type of the file
+ * @param {number} file.size - File size in bytes
+ * @returns {boolean} True if validation passes
+ * @throws {Error} If file is missing, has invalid type, or exceeds size limit
+ */
 export const validateImage = (file) => {
   if (!file) {
     throw new Error("No file provided");
@@ -22,6 +41,11 @@ export const validateImage = (file) => {
   return true;
 };
 
+/**
+ * @param {Buffer} buffer - Image buffer to process
+ * @returns {Promise<Buffer>} Processed image buffer (300x300 JPEG at 90% quality)
+ * @throws {Error} If image processing fails
+ */
 export const processProfileImage = async (buffer) => {
   try {
     const processed = await sharp(buffer)
@@ -38,6 +62,11 @@ export const processProfileImage = async (buffer) => {
   }
 };
 
+/**
+ * @param {Buffer} buffer - Image buffer to process
+ * @returns {Promise<Buffer>} Processed image buffer (800x600 JPEG at 85% quality)
+ * @throws {Error} If image processing fails
+ */
 export const processPerformanceImage = async (buffer) => {
   try {
     const processed = await sharp(buffer)
@@ -54,6 +83,11 @@ export const processPerformanceImage = async (buffer) => {
   }
 };
 
+/**
+ * @param {Buffer} buffer - Image buffer to process
+ * @returns {Promise<Buffer>} Processed image buffer (1200x800 JPEG at 85% quality)
+ * @throws {Error} If image processing fails
+ */
 export const processVenueImage = async (buffer) => {
   try {
     const processed = await sharp(buffer)
@@ -70,6 +104,13 @@ export const processVenueImage = async (buffer) => {
   }
 };
 
+/**
+ * @param {Buffer} buffer - Image buffer to process
+ * @param {number} [width=150] - Thumbnail width in pixels
+ * @param {number} [height=150] - Thumbnail height in pixels
+ * @returns {Promise<Buffer>} Thumbnail image buffer (JPEG at 80% quality)
+ * @throws {Error} If thumbnail generation fails
+ */
 export const generateThumbnail = async (buffer, width = 150, height = 150) => {
   try {
     const thumbnail = await sharp(buffer)
@@ -86,6 +127,11 @@ export const generateThumbnail = async (buffer, width = 150, height = 150) => {
   }
 };
 
+/**
+ * @param {Buffer} buffer - Image buffer to convert
+ * @returns {Promise<Buffer>} WebP format image buffer at 85% quality
+ * @throws {Error} If WebP conversion fails
+ */
 export const convertToWebP = async (buffer) => {
   try {
     const converted = await sharp(buffer).webp({ quality: 85 }).toBuffer();
@@ -96,6 +142,16 @@ export const convertToWebP = async (buffer) => {
   }
 };
 
+/**
+ * @param {Buffer} buffer - Image buffer to analyze
+ * @returns {Promise<Object>} Image metadata object
+ * @returns {number} returns.width - Image width in pixels
+ * @returns {number} returns.height - Image height in pixels
+ * @returns {string} returns.format - Image format (jpeg, png, webp, etc.)
+ * @returns {number} returns.size - Image size in bytes
+ * @returns {boolean} returns.hasAlpha - Whether image has alpha channel
+ * @throws {Error} If metadata reading fails
+ */
 export const getImageMetadata = async (buffer) => {
   try {
     const metadata = await sharp(buffer).metadata();
@@ -111,6 +167,15 @@ export const getImageMetadata = async (buffer) => {
   }
 };
 
+/**
+ * @param {Buffer} buffer - Image buffer to save
+ * @param {string} directory - Target directory path
+ * @param {string|null} [filename=null] - Optional filename (generates UUID if not provided)
+ * @returns {Promise<Object>} Save result object
+ * @returns {string} returns.filepath - Full path to saved file
+ * @returns {string} returns.filename - Filename used for saving
+ * @throws {Error} If image saving fails
+ */
 export const saveImage = async (buffer, directory, filename = null) => {
   try {
     const name = filename || `${uuidv4()}.jpg`;
@@ -126,6 +191,11 @@ export const saveImage = async (buffer, directory, filename = null) => {
   }
 };
 
+/**
+ * @param {string} filepath - Path to image file to delete
+ * @returns {Promise<boolean>} True if deleted, false if file not found
+ * @throws {Error} If deletion fails for reasons other than file not found
+ */
 export const deleteImage = async (filepath) => {
   try {
     await fs.unlink(filepath);
@@ -138,6 +208,11 @@ export const deleteImage = async (filepath) => {
   }
 };
 
+/**
+ * @param {Buffer} buffer - Image buffer to convert
+ * @returns {Promise<string>} Base64 encoded data URI string
+ * @throws {Error} If base64 conversion fails
+ */
 export const imageToBase64 = async (buffer) => {
   try {
     const base64 = buffer.toString("base64");

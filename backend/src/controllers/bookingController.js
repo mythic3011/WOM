@@ -1,12 +1,32 @@
+/**
+ * @file bookingController.js
+ * @description Booking management controller handling booking creation, retrieval, updates, and cancellations
+ * @author LI Ning 25127563d
+ * @author SHEK chinhei 25017482d
+ * @dependency #services/bookingService.js
+ * @dependency #middleware/asyncHandler.js
+ * @dependency #utils/response.js
+ */
+
 import * as bookingService from "#services/bookingService.js";
 import { asyncHandler } from "#middleware/asyncHandler.js";
 import { successResponse } from "#utils/response.js";
 
+/**
+ * @param {Object} req
+ * @param {Object} res
+ * @returns {Promise<Object>}
+ */
 export const createBooking = asyncHandler(async (req, res) => {
   const booking = await bookingService.createBooking(req.body, req.session.userId);
   return successResponse(res, { booking }, "Booking created successfully", 201);
 });
 
+/**
+ * @param {Object} req
+ * @param {Object} res
+ * @returns {Promise<Object>}
+ */
 export const getAllBookings = asyncHandler(async (req, res) => {
   const filters = {
     status: req.query.status,
@@ -23,6 +43,12 @@ export const getAllBookings = asyncHandler(async (req, res) => {
   return successResponse(res, { bookings, count: bookings.length });
 });
 
+/**
+ * @param {Object} req
+ * @param {Object} res
+ * @param {Function} next
+ * @returns {Promise<void>}
+ */
 export const getBookingById = async (req, res, next) => {
   try {
     const isAdmin = req.session.userRole === "admin";
@@ -45,6 +71,12 @@ export const getBookingById = async (req, res, next) => {
   }
 };
 
+/**
+ * @param {Object} req
+ * @param {Object} res
+ * @param {Function} next
+ * @returns {Promise<void>}
+ */
 export const updateBooking = async (req, res, next) => {
   try {
     const isAdmin = req.session.userRole === "admin";
@@ -82,6 +114,12 @@ export const updateBooking = async (req, res, next) => {
   }
 };
 
+/**
+ * @param {Object} req
+ * @param {Object} res
+ * @param {Function} next
+ * @returns {Promise<void>}
+ */
 export const cancelBooking = async (req, res, next) => {
   try {
     const isAdmin = req.session.userRole === "admin";
@@ -105,6 +143,12 @@ export const cancelBooking = async (req, res, next) => {
   }
 };
 
+/**
+ * @param {Object} req
+ * @param {Object} res
+ * @param {Function} next
+ * @returns {Promise<void>}
+ */
 export const confirmBooking = async (req, res, next) => {
   try {
     const booking = await bookingService.confirmBooking(req.params.id);
@@ -125,6 +169,12 @@ export const confirmBooking = async (req, res, next) => {
   }
 };
 
+/**
+ * @param {Object} req
+ * @param {Object} res
+ * @param {Function} next
+ * @returns {Promise<void>}
+ */
 export const getBookingStats = async (req, res, next) => {
   try {
     const filters = {

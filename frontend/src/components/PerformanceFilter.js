@@ -1,3 +1,11 @@
+/**
+ * @file PerformanceFilter.js
+ * @description Performance filter component with fuzzy search, autocomplete, and URL synchronization
+ * @author LI Ning 25127563d
+ * @author SHEK chinhei 25017482d
+ * @see @utils/core/URLQueryManager.js
+ */
+
 import Fuse from "fuse.js";
 import { URLQueryManager } from "@utils/core/URLQueryManager.js";
 
@@ -52,6 +60,18 @@ const STATUS_OPTIONS = [
 
 
 class PerformanceFilter {
+  /**
+   * @param {string|HTMLElement} container - Container element or selector
+   * @param {Object} [options={}] - Configuration options
+   * @param {boolean} [options.enableURLSync=true] - Enable URL synchronization
+   * @param {number} [options.debounceDelay=300] - Debounce delay for search input
+   * @param {boolean} [options.showGenreFilter=true] - Show genre filter
+   * @param {boolean} [options.showStatusFilter=true] - Show status filter
+   * @param {boolean} [options.showDateFilter=true] - Show date filter
+   * @param {boolean} [options.showVenueFilter=true] - Show venue filter
+   * @param {Array} [options.venues=[]] - Venue options
+   * @param {Array} [options.performances=[]] - Performance data
+   */
   constructor(container, options = {}) {
     this.container = typeof container === "string"
       ? document.querySelector(container)
@@ -87,6 +107,9 @@ class PerformanceFilter {
     }
   }
 
+  /**
+   * @returns {void}
+   */
   syncFiltersFromURL() {
     if (!this.urlManager) {return;}
     const params = this.urlManager.getParams();
@@ -97,11 +120,18 @@ class PerformanceFilter {
     });
   }
 
+  /**
+   * @returns {void}
+   */
   syncFiltersToURL() {
     if (!this.urlManager) {return;}
     this.urlManager.setParams(this.filters, { replaceState: true });
   }
 
+  /**
+   * @param {Array} data - Performance data array
+   * @returns {void}
+   */
   initFuzzySearch(data) {
     const processedData = data.map((item) => ({
       ...item,
@@ -154,6 +184,10 @@ class PerformanceFilter {
     return result;
   }
 
+  /**
+   * @param {string} query - Search query string
+   * @returns {Array} Filtered performance array
+   */
   search(query) {
     if (!this.fuse || !query || query.trim() === "") {
       return this.options.performances;

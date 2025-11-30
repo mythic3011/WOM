@@ -1,5 +1,19 @@
+/**
+ * @file venueController.js
+ * @description Venue management controller handling CRUD operations and venue preview
+ * @author LI Ning 25127563d
+ * @author SHEK chinhei 25017482d
+ * @dependency #services/venueService.js
+ */
+
 import * as venueService from "#services/venueService.js";
 
+/**
+ * @param {Object} req
+ * @param {Object} res
+ * @param {Function} next
+ * @returns {Promise<void>}
+ */
 export const getAllVenues = async (req, res, next) => {
   try {
     const filters = {
@@ -19,6 +33,12 @@ export const getAllVenues = async (req, res, next) => {
   }
 };
 
+/**
+ * @param {Object} req
+ * @param {Object} res
+ * @param {Function} next
+ * @returns {Promise<void>}
+ */
 export const getVenueById = async (req, res, next) => {
   try {
     const venue = await venueService.getVenueById(req.params.id);
@@ -38,6 +58,12 @@ export const getVenueById = async (req, res, next) => {
   }
 };
 
+/**
+ * @param {Object} req
+ * @param {Object} res
+ * @param {Function} next
+ * @returns {Promise<void>}
+ */
 export const createVenue = async (req, res, next) => {
   try {
     const venue = await venueService.createVenue(req.body);
@@ -52,6 +78,12 @@ export const createVenue = async (req, res, next) => {
   }
 };
 
+/**
+ * @param {Object} req
+ * @param {Object} res
+ * @param {Function} next
+ * @returns {Promise<void>}
+ */
 export const updateVenue = async (req, res, next) => {
   try {
     const venue = await venueService.updateVenue(req.params.id, req.body);
@@ -72,6 +104,12 @@ export const updateVenue = async (req, res, next) => {
   }
 };
 
+/**
+ * @param {Object} req
+ * @param {Object} res
+ * @param {Function} next
+ * @returns {Promise<void>}
+ */
 export const deleteVenue = async (req, res, next) => {
   try {
     await venueService.deleteVenue(req.params.id);
@@ -97,6 +135,12 @@ export const deleteVenue = async (req, res, next) => {
   }
 };
 
+/**
+ * @param {Object} req
+ * @param {Object} res
+ * @param {Function} next
+ * @returns {Promise<void>}
+ */
 export const getVenuePreview = async (req, res, next) => {
   try {
     const preview = await venueService.getVenuePreview(req.params.id);

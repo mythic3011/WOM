@@ -1,4 +1,21 @@
+/**
+ * @file responseExtractor.js
+ * @description Utility class for extracting data from API responses
+ * @author LI Ning 25127563d
+ * @author SHEK chinhei 25017482d
+ */
+
+/**
+ * @class ResponseExtractor
+ * @description Extracts data from standardized API responses
+ */
 export class ResponseExtractor {
+  /**
+   * @description Extracts array data from response
+   * @param {Object} response - API response
+   * @param {string} resourceKey - Key for resource in response
+   * @returns {Array} Extracted array data
+   */
   static extract(response, resourceKey) {
     if (!response?.success || !response?.data) {
       console.warn(`Invalid response structure for ${resourceKey}`, response);
@@ -9,6 +26,12 @@ export class ResponseExtractor {
     return Array.isArray(extracted) ? extracted : [];
   }
 
+  /**
+   * @description Extracts single object from response
+   * @param {Object} response - API response
+   * @param {string} resourceKey - Key for resource in response
+   * @returns {Object|null} Extracted object or null
+   */
   static extractSingle(response, resourceKey) {
     if (!response?.success || !response?.data) {
       console.warn(`Invalid response structure for ${resourceKey}`, response);
@@ -18,6 +41,12 @@ export class ResponseExtractor {
     return response.data[resourceKey] || response.data || null;
   }
 
+  /**
+   * @description Extracts paginated data from response
+   * @param {Object} response - API response
+   * @param {string} resourceKey - Key for resource in response
+   * @returns {Object} Paginated data with items, total, page, limit, totalPages
+   */
   static extractPaginated(response, resourceKey) {
     if (!response?.success || !response?.data) {
       console.warn(`Invalid paginated response for ${resourceKey}`, response);

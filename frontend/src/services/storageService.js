@@ -1,3 +1,13 @@
+/**
+ * @file storageService.js
+ * @description Service for managing browser local storage with encryption and compression
+ * @author LI Ning 25127563d
+ * @author SHEK chinhei 25017482d
+ * @dependency lz-string
+ * @dependency @utils/core/crypto.js
+ * @see sessionStorageService
+ */
+
 import LZString from "lz-string";
 import { encrypt, decrypt } from "@utils/core/crypto.js";
 
@@ -19,12 +29,22 @@ const COMPRESSION_THRESHOLD = 1024;
 const SECURE_KEYS = ["TOKEN"];
 const IGNORED_KEYS = ["wom_remembered_user"];
 
+/**
+ * @class StorageService
+ * @description Manages browser local storage with encryption, compression, and expiration
+ */
 class StorageService {
+  /**
+   * @description Creates an instance of StorageService
+   */
   constructor() {
     this.listeners = new Map();
     this.initStorage();
   }
 
+  /**
+   * @description Initializes storage and performs migrations
+   */
   initStorage() {
     const version = this.get("storageVersion");
     if (version !== STORAGE_VERSION) {
@@ -32,19 +52,16 @@ class StorageService {
       this.set("storageVersion", STORAGE_VERSION);
     }
 
-    // Clean up legacy "user" key (without namespace)
     const oldUserKey = "user";
     const oldUser = localStorage.getItem(oldUserKey);
 
     if (oldUser !== null) {
-      // If empty or whitespace, just remove it
       if (!oldUser.trim()) {
         console.warn(
           "[StorageService] Legacy user data is empty, removing invalid entry"
         );
         localStorage.removeItem(oldUserKey);
       } else if (!this.has("USER")) {
-        // Only migrate if we don't already have a USER in new storage
         try {
           const userData = JSON.parse(oldUser);
           if (userData && typeof userData === "object" && userData.id) {
@@ -67,13 +84,11 @@ class StorageService {
           localStorage.removeItem(oldUserKey);
         }
       } else {
-        // We have new USER storage, remove the old key
         localStorage.removeItem(oldUserKey);
         console.info("[StorageService] Removed legacy user key (already migrated)");
       }
     }
 
-    // Clean up any corrupted entries in localStorage
     this.cleanCorrupted();
 
     this.set(STORAGE_KEYS.LAST_VISIT, new Date().toISOString());
@@ -845,7 +860,17 @@ class StorageService {
   }
 }
 
+/**
+ * @class SessionStorageService
+ * @description Manages browser session storage
+ */
 class SessionStorageService {
+  /**
+   * @description Gets a value from session storage
+   * @param {string} key - Storage key
+   * @param {*} defaultValue - Default value if key not found
+   * @returns {*} Stored value or default
+   */
   get(key, defaultValue = null) {
     try {
       const item = sessionStorage.getItem(key);
