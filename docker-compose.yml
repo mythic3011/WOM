@@ -85,6 +85,7 @@ services:
     image: dpage/pgadmin4:latest
     container_name: orchestral_pgadmin
     restart: unless-stopped
+    user: root
     ports:
       - "${PHPPGADMIN_PORT:-5050}:80"
     environment:
@@ -100,6 +101,12 @@ services:
         condition: service_healthy
     networks:
       - orchestral_network
+    entrypoint: >
+      /bin/sh -c "
+      chown -R pgadmin:pgadmin /var/lib/pgadmin &&
+      chmod -R 700 /var/lib/pgadmin &&
+      /entrypoint.sh
+      "
 
 networks:
   orchestral_network:
