@@ -71,7 +71,7 @@ export default {
 
         ${FormComponents.filterBar({
       searchId: "searchBookings",
-      searchPlaceholder: "Search by booking ID or performance...",
+      searchPlaceholder: "Search by booking reference or performance...",
       filters: [
         {
           id: "statusFilter",
@@ -104,7 +104,10 @@ export default {
     ).length;
     const totalSpent = this.bookings
       .filter((b) => b.status === "confirmed")
-      .reduce((sum, b) => sum + b.amount, 0);
+      .reduce((sum, b) => {
+        const amount = parseFloat(b.totalAmount || b.amount || 0);
+        return sum + (isNaN(amount) ? 0 : amount);
+      }, 0);
 
     const stats = [
       {
@@ -351,8 +354,8 @@ export default {
           <div class="bg-indigo-600 text-white rounded-xl p-4 shadow-lg border-2 border-indigo-700">
             <div class="flex justify-between items-start mb-2">
               <div>
-                <p class="text-xs font-semibold uppercase tracking-wider opacity-90 mb-1">Booking ID</p>
-                <p class="text-lg font-mono font-bold">${booking.id}</p>
+                <p class="text-xs font-semibold uppercase tracking-wider opacity-90 mb-1">Booking Reference</p>
+                <p class="text-lg font-mono font-bold">${booking.bookingReference || booking.id}</p>
               </div>
               <span class="px-3 py-1.5 rounded-lg text-xs font-bold ${statusStyle.bg
         } ${statusStyle.text} shadow-md">
