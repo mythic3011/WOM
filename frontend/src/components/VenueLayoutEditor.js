@@ -4,7 +4,7 @@ export const VenueLayoutEditor = {
   create(layoutConfig = null, sectionIndex = 0) {
     const config = layoutConfig || { sections: [], globalAisles: [] };
     const section = config.sections[sectionIndex] || {
-      name: "Main Section",
+      name: "Section 1",
       rows: 10,
       seatsPerRow: 20,
       startRow: "A",

@@ -18,6 +18,7 @@ import {
   getDisplayLabel,
   transformToSeatTickets
 } from "#utils/seatIdHelper.js";
+import logger from "#config/logger.js";
 
 const generateBookingReference = () => {
   const timestamp = Date.now().toString(36).toUpperCase();
@@ -29,6 +30,27 @@ export const createBooking = async (bookingData, userId) => {
   const { performanceId, showtimeId, seats, seatTickets, amount, paymentMethod, customerInfo } =
     bookingData;
 
+  logger.info("Booking request initiated", {
+    userId,
+    performanceId,
+    showtimeId,
+    seatCount: seatTickets?.length || seats?.length || 0,
+    amount,
+    paymentMethod,
+  });
+
+  logger.debug("Booking payload structure", {
+    performanceId,
+    showtimeId,
+    hasSeatTickets: !!seatTickets,
+    hasSeats: !!seats,
+    seatTicketsCount: seatTickets?.length || 0,
+    seatsCount: seats?.length || 0,
+    amount,
+    paymentMethod,
+    hasCustomerInfo: !!customerInfo,
+  });
+
   const performance = await findEntityOrThrow(
     Performance,
     performanceId,
@@ -36,6 +58,11 @@ export const createBooking = async (bookingData, userId) => {
   );
 
   if (!performance.seatMap?.indexMap) {
+    logger.error("Performance seat map not initialized", {
+      performanceId,
+      hasSeatMap: !!performance.seatMap,
+      hasIndexMap: !!performance.seatMap?.indexMap,
+    });
     throw new BadRequestError("Performance seat map not initialized");
   }
 
@@ -46,11 +73,36 @@ export const createBooking = async (bookingData, userId) => {
   const resolvedSeats = [];
 
   if (seatTickets && Array.isArray(seatTickets) && seatTickets.length > 0) {
-    // New format: validate seatTickets structure
+    logger.debug("Validating seatTickets structure", {
+      performanceId,
+      showtimeId,
+      seatTicketsCount: seatTickets.length,
+      seatTicketsSample: seatTickets[0],
+    });
+
     if (!validateSeatTicketStructure(seatTickets)) {
-      console.error('Invalid seatTickets structure:', JSON.stringify(seatTickets, null, 2));
+      logger.error("Invalid seatTickets structure", {
+        performanceId,
+        showtimeId,
+        seatTickets: JSON.stringify(seatTickets, null, 2),
+        validationErrors: seatTickets.map((st, index) => {
+          const errors = [];
+          if (!st.seatId) {errors.push("missing seatId");}
+          if (!st.seatLabel) {errors.push("missing seatLabel");}
+          if (!st.ticketTypeId) {errors.push("missing ticketTypeId");}
+          if (!st.ticketTypeName) {errors.push("missing ticketTypeName");}
+          if (typeof st.price !== "number" || st.price <= 0) {errors.push("invalid price");}
+          return errors.length > 0 ? { index, errors } : null;
+        }).filter(e => e !== null),
+      });
       throw new BadRequestError("Invalid seatTickets structure");
     }
+
+    logger.debug("SeatTickets validation passed", {
+      performanceId,
+      showtimeId,
+      seatTicketsCount: seatTickets.length,
+    });
 
     // Resolve seats and calculate prices using pricing calculator
     finalSeatTickets = [];
@@ -78,22 +130,38 @@ export const createBooking = async (bookingData, userId) => {
       });
     }
   } else if (seats && Array.isArray(seats) && seats.length > 0) {
-    // Old format: transform seats to seatTickets
+    logger.debug("Processing old format (seats array)", {
+      performanceId,
+      showtimeId,
+      seatsCount: seats.length,
+      seatsSample: seats[0],
+    });
+
     for (const seatInput of seats) {
       const seatId =
         typeof seatInput === "string" ? seatInput : seatInput.seatId || seatInput.fullId;
       const resolved = resolveSeatId(performance.seatMap, seatId);
       if (!resolved) {
+        logger.error("Seat not found in performance seat map", {
+          performanceId,
+          showtimeId,
+          seatId,
+          seatInput,
+        });
         throw new BadRequestError(`Seat ${seatId} not found in performance seat map`);
       }
       resolvedSeats.push(resolved);
     }
 
-    // Transform old format to new format with pricing calculator
+    logger.debug("Transforming seats to seatTickets format", {
+      performanceId,
+      showtimeId,
+      resolvedSeatsCount: resolvedSeats.length,
+    });
+
     finalSeatTickets = resolvedSeats.map(seat => {
       const parsed = parseSeatId(seat.fullId);
 
-      // Calculate price using pricing calculator
       let price;
       try {
         price = calculateSeatPrice(seat.fullId, performance);
@@ -113,20 +181,49 @@ export const createBooking = async (bookingData, userId) => {
       };
     });
 
-    // Validate transformed structure
     if (!validateSeatTicketStructure(finalSeatTickets)) {
+      logger.error("Failed to transform seats to valid seatTickets structure", {
+        performanceId,
+        showtimeId,
+        transformedSeatTickets: JSON.stringify(finalSeatTickets, null, 2),
+      });
       throw new BadRequestError("Failed to transform seats to valid seatTickets structure");
     }
+
+    logger.debug("Seats transformation successful", {
+      performanceId,
+      showtimeId,
+      finalSeatTicketsCount: finalSeatTickets.length,
+    });
   } else {
+    logger.error("Neither seats nor seatTickets provided", {
+      performanceId,
+      showtimeId,
+      hasSeats: !!seats,
+      hasSeatTickets: !!seatTickets,
+    });
     throw new BadRequestError("Either seats or seatTickets must be provided");
   }
 
-  // Calculate totalAmount from seatTickets array
   const calculatedTotal = finalSeatTickets.reduce((sum, st) => sum + st.price, 0);
   const totalAmount = parseFloat(calculatedTotal.toFixed(2));
 
-  // Validate that calculated total matches provided amount (with small tolerance for rounding)
+  logger.debug("Calculated booking total", {
+    performanceId,
+    showtimeId,
+    calculatedTotal: totalAmount,
+    providedAmount: amount,
+    seatTicketsCount: finalSeatTickets.length,
+  });
+
   if (amount && Math.abs(totalAmount - amount) > 0.01) {
+    logger.error("Total amount mismatch", {
+      performanceId,
+      showtimeId,
+      calculatedTotal: totalAmount,
+      providedAmount: amount,
+      difference: Math.abs(totalAmount - amount),
+    });
     throw new BadRequestError(
       `Total amount mismatch: calculated ${totalAmount} from seatTickets, but received ${amount}`
     );
@@ -134,7 +231,22 @@ export const createBooking = async (bookingData, userId) => {
 
   const availability = await getPerformanceAvailability(performanceId, showtimeId);
 
+  logger.debug("Checking seat availability", {
+    performanceId,
+    showtimeId,
+    requestedSeats: finalSeatTickets.length,
+    availableSeats: availability.availableSeats,
+    totalSeats: availability.totalSeats,
+    bookedSeats: availability.bookedSeats,
+  });
+
   if (availability.availableSeats < finalSeatTickets.length) {
+    logger.error("Not enough seats available", {
+      performanceId,
+      showtimeId,
+      requestedSeats: finalSeatTickets.length,
+      availableSeats: availability.availableSeats,
+    });
     throw new BadRequestError("Not enough seats available");
   }
 
@@ -169,9 +281,24 @@ export const createBooking = async (bookingData, userId) => {
 
   for (const seatTicket of finalSeatTickets) {
     if (bookedSeatIds.has(seatTicket.seatId.toLowerCase())) {
+      logger.error("Seat already booked", {
+        performanceId,
+        showtimeId,
+        seatId: seatTicket.seatId,
+        requestedSeatIds: finalSeatTickets.map(st => st.seatId),
+        bookedSeatIds: Array.from(bookedSeatIds),
+      });
       throw new BadRequestError(`Seat ${seatTicket.seatId} is already booked`);
     }
   }
+
+  logger.debug("All validation checks passed, creating booking", {
+    performanceId,
+    showtimeId,
+    userId,
+    seatCount: finalSeatTickets.length,
+    totalAmount,
+  });
 
   const booking = await Booking.create({
     bookingReference: generateBookingReference(),
@@ -186,8 +313,8 @@ export const createBooking = async (bookingData, userId) => {
     showtime: showtimeId
       ? performance.showtimes?.find((st) => st.id === showtimeId)?.dateTime
       : performance.date,
-    seats: resolvedSeats, // Keep for backward compatibility during transition
-    seatTickets: finalSeatTickets, // New optimized structure
+    seats: resolvedSeats,
+    seatTickets: finalSeatTickets,
     seatCount: finalSeatTickets.length,
     amount: totalAmount,
     totalAmount: totalAmount,
@@ -198,8 +325,24 @@ export const createBooking = async (bookingData, userId) => {
     customerInfo,
   });
 
+  logger.info("Booking created successfully", {
+    bookingId: booking.id,
+    bookingReference: booking.bookingReference,
+    performanceId,
+    showtimeId,
+    userId,
+    seatCount: finalSeatTickets.length,
+    totalAmount,
+    paymentMethod,
+  });
+
   await updatePerformanceAvailability(performanceId);
   await updatePerformanceStatusByAvailability(performanceId);
+
+  logger.debug("Performance availability updated after booking", {
+    bookingId: booking.id,
+    performanceId,
+  });
 
   return booking;
 };

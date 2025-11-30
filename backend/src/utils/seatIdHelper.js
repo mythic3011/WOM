@@ -70,15 +70,29 @@ export function parseSeatId(seatId) {
         const number = parseInt(parts[2], 10);
 
         // Validate that number is a valid positive integer
-        if (isNaN(number) || number <= 0) {
-            return null;
+        if (!isNaN(number) && number > 0) {
+            return {
+                section,
+                row,
+                number
+            };
         }
 
-        return {
-            section,
-            row,
-            number
-        };
+        // If third part is not a number, try parsing it as rowNumber format
+        // Handle format: section-sectionId-rowNumber (e.g., "section-1-a16")
+        const rowAndNumber = parts[2];
+        const match = rowAndNumber.match(/^([a-z]+)(\d+)$/i);
+        if (match) {
+            const number = parseInt(match[2], 10);
+
+            if (!isNaN(number) && number > 0) {
+                return {
+                    section: parts[0],
+                    row: match[1].toLowerCase(),
+                    number
+                };
+            }
+        }
     }
 
     // Handle format: section-rowNumber (e.g., "stalls-g5")

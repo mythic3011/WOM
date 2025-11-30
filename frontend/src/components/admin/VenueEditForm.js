@@ -44,7 +44,7 @@ export const VenueEditForm = {
             layout: {
                 sections: [
                     {
-                        name: "Main Section",
+                        name: "Section 1",
                         rows: 10,
                         seatsPerRow: 20,
                         tier: "standard",

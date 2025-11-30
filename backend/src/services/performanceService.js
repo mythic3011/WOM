@@ -4,6 +4,7 @@ import { buildSeatMapFromVenueLayout } from "#utils/seatMapBuilder.js";
 import { buildWhereClause } from "./helpers/filters.js";
 import { findEntityOrThrow, checkRelatedEntitiesCount } from "./helpers/entityHelpers.js";
 import logger from "#config/logger.js";
+import { buildPricingSectionsFromVenue } from "./helpers/pricingSectionBuilder.js";
 
 const availabilityCache = new Map();
 const CACHE_TTL = 30000;
@@ -294,23 +295,80 @@ export const getPerformanceById = async (id) => {
   return performance;
 };
 
+const generateShowtimeIds = (showtimes, performanceId) => {
+  const timestamp = Date.now();
+  return showtimes.map((showtime, index) => ({
+    ...showtime,
+    id: `showtime_${performanceId}_${timestamp}_${index}`,
+  }));
+};
+
 export const createPerformance = async (performanceData) => {
+  logger.info("Starting performance creation", {
+    title: performanceData.title,
+    venueId: performanceData.venueId,
+    showtimeCount: performanceData.showtimes?.length || 0,
+  });
+
   const venue = await findEntityOrThrow(Venue, performanceData.venueId, "Venue not found");
 
   const seatMap = buildSeatMapFromVenueLayout(venue.layout || {});
   const total = seatMap.total || 0;
 
-  const { id, ...dataWithoutId } = performanceData;
+  const { id: _id, ...dataWithoutId } = performanceData;
+
+  const pricingSections = buildPricingSectionsFromVenue(
+    venue.layout,
+    performanceData.pricingSections || []
+  );
 
   const performance = await Performance.create({
     ...dataWithoutId,
     venueName: venue.name,
     seatMap,
+    pricingSections,
     totalSeats: total,
     availableSeats: total,
     bookedSeats: 0,
     seatMapVersion: 1,
   });
+
+  logger.info("Performance created successfully", {
+    performanceId: performance.id,
+    title: performance.title,
+    totalSeats: total,
+  });
+
+  if (performance.showtimes && Array.isArray(performance.showtimes) && performance.showtimes.length > 0) {
+    logger.debug("Generating showtime IDs", {
+      performanceId: performance.id,
+      showtimeCount: performance.showtimes.length,
+      showtimesBeforeGeneration: performance.showtimes.map(st => ({
+        dateTime: st.dateTime,
+        hasId: !!st.id,
+      })),
+    });
+
+    const showtimesWithIds = generateShowtimeIds(performance.showtimes, performance.id);
+    await performance.update({ showtimes: showtimesWithIds });
+    
+    logger.info("Showtime IDs generated and saved", {
+      performanceId: performance.id,
+      showtimeCount: showtimesWithIds.length,
+      showtimeIds: showtimesWithIds.map(st => st.id),
+      showtimes: showtimesWithIds.map(st => ({
+        id: st.id,
+        dateTime: st.dateTime,
+        totalSeats: st.totalSeats,
+        availableSeats: st.availableSeats,
+      })),
+    });
+  } else {
+    logger.warn("Performance created without showtimes", {
+      performanceId: performance.id,
+      title: performance.title,
+    });
+  }
 
   return performance;
 };
