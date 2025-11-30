@@ -2701,7 +2701,7 @@ const PerformanceDetailsPage = {
     }
 
     try {
-      const bookings = await bookingService.getBookingsByPerformance(performance.id, {
+      const bookings = await bookingService.fetchBookingsByPerformance(performance.id, {
         maxRetries: maxRetries,
         retryDelay: 1000
       });

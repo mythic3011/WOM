@@ -215,6 +215,10 @@ class PerformanceFilter {
       .map((r) => r.item);
   }
 
+  /**
+   * @param {Array} [performances=null] - Performance data array
+   * @returns {Array} Filtered performance array
+   */
   applyFilters(performances = null) {
     const data = performances || this.options.performances;
     let filtered = [...data];
@@ -268,6 +272,9 @@ class PerformanceFilter {
   }
 
 
+  /**
+   * @returns {void}
+   */
   render() {
     if (!this.container) {return;}
 
