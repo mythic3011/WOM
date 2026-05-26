@@ -1,156 +1,154 @@
-# Western Orchestral Music Performance Seat Booking System
+# Orchestra Seat Booking System
 
-A full-stack web application for managing classical music concert bookings with interactive seat selection, user authentication, and comprehensive admin tools.
+[![Node.js](https://img.shields.io/badge/Node.js-18%2B-339933?logo=node.js&logoColor=white)](https://nodejs.org/)
+[![Express.js](https://img.shields.io/badge/Express.js-4.x-000000?logo=express&logoColor=white)](https://expressjs.com/)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-14%2B-4169E1?logo=postgresql&logoColor=white)](https://www.postgresql.org/)
+[![Sequelize](https://img.shields.io/badge/Sequelize-ORM-52B0E7?logo=sequelize&logoColor=white)](https://sequelize.org/)
+[![Vite](https://img.shields.io/badge/Vite-7.x-646CFF?logo=vite&logoColor=white)](https://vite.dev/)
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-3.x-06B6D4?logo=tailwindcss&logoColor=white)](https://tailwindcss.com/)
+[![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white)](https://www.docker.com/)
+[![OpenAPI](https://img.shields.io/badge/OpenAPI-3.1-6BA539?logo=openapiinitiative&logoColor=white)](https://www.openapis.org/)
+[![Jest](https://img.shields.io/badge/Jest-Test-C21325?logo=jest&logoColor=white)](https://jestjs.io/)
+[![Vitest](https://img.shields.io/badge/Vitest-Test-6E9F18?logo=vitest&logoColor=white)](https://vitest.dev/)
+[![Playwright](https://img.shields.io/badge/Playwright-E2E-2EAD33?logo=playwright&logoColor=white)](https://playwright.dev/)
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/mythic3011/orchestra-seat-booking-system)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-## Overview
+Full-stack concert ticket booking system for western orchestral performances. Built with Node.js, Express, PostgreSQL, Vite, and Docker.
 
-This system provides a complete solution for orchestral performance ticket booking, featuring:
+> [!NOTE]
+> Portfolio project demonstrating backend API design, database modelling, frontend integration, authentication flow, admin tooling, file upload handling, and Docker-based local deployment.
 
-- Interactive seat map visualization and selection
-- Real-time seat availability tracking
-- User authentication with role-based access control
-- Admin dashboard for managing performances, venues, and bookings
-- Responsive design for desktop and mobile devices
-- RESTful API with comprehensive documentation
+> [!IMPORTANT]
+> Before running the backend, create a valid `.env` and set `SESSION_SECRET` to at least 32 characters. The app rejects weak session config by design.
 
-## Tech Stack
+> [!WARNING]
+> Seeded demo accounts are for local development only. Do not reuse default credentials in any public or production deployment.
 
-### Backend
-- **Runtime**: Node.js 18+ with ES modules
-- **Framework**: Express.js 4.x
-- **Database**: PostgreSQL 14+ with Sequelize ORM
-- **Authentication**: Session-based with express-session
-- **Validation**: Joi + express-validator
-- **Security**: helmet, cors, bcryptjs, rate limiting
-- **File Upload**: multer + sharp (image processing)
-- **Testing**: Jest + fast-check (property-based testing)
+> [!CAUTION]
+> Production requires extra hardening: HTTPS, persistent session store, reviewed CORS, secure DB credentials, restricted upload handling, and environment-specific rate limits.
 
-### Frontend
-- **Build Tool**: Vite 7.x
-- **JavaScript**: Vanilla JS (ES6+) with jQuery 3.7
-- **Routing**: page.js (client-side SPA routing)
-- **Styling**: Tailwind CSS 3.x
-- **UI Libraries**: sweetalert2, notyf, panzoom, sortablejs
-- **Testing**: Vitest + jsdom
+## Features
 
-### Infrastructure
-- **Containerization**: Docker + Docker Compose
-- **Database Admin**: pgAdmin 4
-- **API Documentation**: Scalar (OpenAPI 3.1)
+### User
+- Browse upcoming orchestral performances
+- Interactive seat map with real-time availability
+- Multiple ticket types (Adult, Student, Senior, etc.)
+- Booking history and management
+- Profile with image upload
+- Session-based authentication
+
+### Admin
+- Performance, venue, and ticket type management
+- Customisable seat layouts per venue
+- Booking oversight and user management
+- Dashboard with statistics
+
+### Technical
+- RESTful API with OpenAPI 3.1 + Scalar docs
+- Session-based auth with secure cookies and RBAC
+- Image upload and processing via Sharp (resize to 300×300, JPEG)
+- Helmet, CORS, bcryptjs, input validation, rate limiting
+- JSONB fields for complex data structures
+- Property-based testing with fast-check
+- Backend (Jest), frontend (Vitest), and E2E (Playwright) test coverage
+
+## Architecture
+
+```
+Browser (Vite SPA)
+    ↓ REST API / Session Cookie
+Express.js Backend
+    ↓ Sequelize ORM
+PostgreSQL Database
+```
 
 ## Quick Start
 
 ### Prerequisites
 
-- Node.js 18 or higher
-- PostgreSQL 14 or higher
-- npm or yarn package manager
-- Docker and Docker Compose (optional, for containerized setup)
+- Node.js 18+
+- PostgreSQL 14+
+- npm or yarn
+- Docker + Docker Compose (optional)
 
-### Installation
+---
 
-#### Option 1: Local Development Setup
+### Option A: Local Development
 
-**1. Clone the repository**
+**1. Clone**
 
 ```bash
-git clone https://github.com/mythic3011/WOM
-cd WOM
+git clone https://github.com/mythic3011/orchestra-seat-booking-system
+cd orchestra-seat-booking-system
 ```
 
-**2. Backend Setup**
+**2. Backend**
 
 ```bash
 cd backend
 npm install
-```
-
-**3. Configure Environment Variables**
-
-Copy the example environment file:
-
-```bash
 cp .env.example .env
 ```
 
-Edit `.env` and configure the following required variables:
+Edit `.env`:
 
 ```env
-# Database Configuration
 DB_NAME=wom_booking
 DB_USER=postgres
 DB_PASSWORD=your-secure-password-here
 DB_HOST=localhost
 DB_PORT=5432
 
-# Session Secret (REQUIRED - minimum 32 characters)
+# Minimum 32 characters
 SESSION_SECRET=your-session-secret-32-chars-minimum-here
 
-# CORS Configuration
 CORS_ORIGIN=http://localhost:5173
 ```
 
-**Generate a secure session secret:**
+Generate a strong session secret:
 
 ```bash
 node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 ```
 
-**4. Create Database**
+**3. Create database**
 
 ```bash
 createdb wom_booking
+# or via psql: CREATE DATABASE wom_booking;
 ```
 
-Or using PostgreSQL CLI:
-
-```sql
-CREATE DATABASE wom_booking;
-```
-
-**5. Create Uploads Directory**
+**4. Create upload directories**
 
 ```bash
 mkdir -p backend/public/uploads/profiles
 mkdir -p backend/public/uploads/performances
 ```
 
-**6. Setup Database Schema and Seed Data**
+**5. Initialise schema**
 
-Choose one of the following methods:
-
-**Method A: Production Setup (Migrations + Seeders)**
 ```bash
+# Production (migrations + seeders)
 npm run db:setup
-```
 
-**Method B: Development Setup (Drop & Recreate with Mock Data)**
-```bash
+# Dev (drop, recreate, seed with mock data)
 npm run db:fresh
 ```
 
-**7. Start Backend Server**
+**6. Start backend**
 
 ```bash
 npm run dev
+# http://localhost:3000
+# API docs: http://localhost:3000/docs
 ```
 
-Backend will be available at: http://localhost:3000
-
-API Documentation: http://localhost:3000/docs
-
-**8. Frontend Setup**
-
-Open a new terminal:
+**7. Frontend**
 
 ```bash
-cd frontend
+cd ../frontend
 npm install
-```
-
-Configure frontend environment:
-
-```bash
 cp .env.example .env
 ```
 
@@ -161,322 +159,237 @@ VITE_API_URL=http://localhost:3000/api
 VITE_BACKEND_URL=http://localhost:3000
 ```
 
-**9. Start Frontend Development Server**
-
 ```bash
 npm run dev
+# http://localhost:5173
 ```
 
-Frontend will be available at: http://localhost:5173
+---
 
-#### Option 2: Docker Setup
+### Option B: Docker
 
-**1. Clone the repository**
-
-```bash
-git clone https://github.com/mythic3011/WOM
-cd WOM
-```
-
-**2. Configure Environment**
-
-Create `.env` file in project root:
+**1. Clone and configure**
 
 ```bash
+git clone https://github.com/mythic3011/orchestra-seat-booking-system
+cd orchestra-seat-booking-system
 cp backend/.env.example .env
 ```
 
-Update the environment variables as needed.
-
-**3. Start All Services**
+**2. Start all services**
 
 ```bash
 docker-compose up
 ```
 
-This starts:
-- PostgreSQL database on port 5432
-- Backend API on port 3000
-- Frontend on port 5173
-- pgAdmin on port 5050
+Services started:
+| Service | Port |
+|---|---|
+| PostgreSQL | 5432 |
+| Backend API | 3000 |
+| Frontend | 5173 |
+| pgAdmin | 5050 |
 
-**4. Setup Database (in Docker)**
-
-In a new terminal:
+**3. Initialise database**
 
 ```bash
 docker-compose exec backend npm run db:setup
 ```
 
-**5. Access the Application**
-
-- Frontend: http://localhost:5173
-- Backend API: http://localhost:3000
-- API Documentation: http://localhost:3000/docs
-- pgAdmin: http://localhost:5050
-
-**Stop Services:**
+**4. Stop / clean up**
 
 ```bash
-docker-compose down
+docker-compose down        # Stop services
+docker-compose down -v     # Also remove volumes
 ```
 
-**Remove Volumes:**
-
-```bash
-docker-compose down -v
-```
+---
 
 ## Default Accounts
 
-After seeding the database, you can log in with these accounts:
+Seeded after running `db:setup` or `db:fresh`.
 
-**Admin Account:**
-- Email: admin@wom.hk / admin
-- Password: adminpass
+| Role | Email | Password |
+|---|---|---|
+| Admin | admin@wom.hk | adminpass |
+| User | user@example.com | userpass |
 
-**Regular User Account:**
-- Email: user@example.com /user
-- Password: userpass
+> [!WARNING]
+> Do not use these credentials outside local development.
 
 ## Project Structure
 
 ```
 project-root/
-├── backend/              # Express.js API server
+├── backend/
 │   ├── src/
-│   │   ├── config/      # Configuration files
-│   │   ├── models/      # Sequelize models
-│   │   ├── controllers/ # Request handlers
-│   │   ├── services/    # Business logic
-│   │   ├── routes/      # API routes
-│   │   ├── middleware/  # Auth, validation, error handling
-│   │   ├── utils/       # Helper functions
-│   │   └── db/          # Migrations and seeders
-│   ├── public/
-│   │   └── uploads/     # User-uploaded files
+│   │   ├── config/
+│   │   ├── models/          # Sequelize models
+│   │   ├── controllers/
+│   │   ├── services/        # Business logic
+│   │   ├── routes/
+│   │   ├── middleware/      # Auth, validation, error handling
+│   │   ├── utils/
+│   │   └── db/              # Migrations and seeders
+│   ├── public/uploads/      # User-uploaded files
 │   └── package.json
 │
-├── frontend/            # Vite SPA application
+├── frontend/
 │   ├── src/
-│   │   ├── components/  # UI components
-│   │   ├── pages/       # Page components
-│   │   ├── services/    # API services
-│   │   ├── utils/       # Utility functions
-│   │   ├── router/      # Client-side routing
-│   │   └── store/       # State management
+│   │   ├── components/
+│   │   ├── pages/
+│   │   ├── services/        # API clients
+│   │   ├── utils/
+│   │   ├── router/
+│   │   └── store/
 │   └── package.json
 │
-├── e2e-role-tests/      # Playwright E2E tests
-├── docker/              # Docker data volumes
-├── docs/                # Documentation
-├── docker-compose.yml   # Development stack
+├── e2e-role-tests/          # Playwright tests
+├── docker/                  # Volume data
+├── docs/
+├── docker-compose.yml
 └── docker-compose.prod.yml
 ```
 
-## Key Features
+## Development Commands
 
-### User Features
-- Browse upcoming orchestral performances
-- Interactive seat map with real-time availability
-- Multiple ticket types (Adult, Student, Senior, etc.)
-- Booking management and history
-- User profile with image upload
-- Secure authentication and session management
-
-### Admin Features
-- Performance management (create, edit, delete)
-- Venue management with customizable seat layouts
-- Booking oversight and management
-- User management
-- Ticket type configuration
-- Dashboard with statistics and analytics
-
-### Technical Features
-- RESTful API with OpenAPI documentation
-- Session-based authentication with secure cookies
-- Role-based access control (admin/user)
-- Image upload and processing with Sharp
-- Rate limiting and security headers
-- Input validation and sanitization
-- JSONB fields for complex data structures
-- Property-based testing with fast-check
-
-## Profile Image Upload System
-
-The application uses a URL-based profile image system:
-
-**Features:**
-- Upload via multipart/form-data
-- Automatic image processing (resize to 300x300, JPEG conversion)
-- Secure filename generation
-- Old image cleanup on update
-- Static file serving with browser caching
-
-**Endpoint:**
-- POST /api/users/upload-profile-image
-- Accepts: JPEG, JPG, PNG, WebP
-- Maximum size: 5MB
-- Returns: URL path to uploaded image
-
-**Storage:**
-- Location: `backend/public/uploads/profiles/`
-- Served via: `/uploads/profiles/{filename}`
-- Cache: 1-year max-age for optimal performance
-
-## API Documentation
-
-Interactive API documentation is available using Scalar:
-
-- Development: http://localhost:3000/docs
-- Features: Interactive testing, request/response examples, code generation
-
-## Development
-
-### Backend Commands
+### Backend
 
 ```bash
 cd backend
 
-# Development
-npm run dev              # Start with nodemon hot-reload
-npm start                # Production mode
+npm run dev              # Nodemon hot-reload
+npm start                # Production
 
-# Database
 npm run db:migrate       # Run migrations
 npm run db:seed:all      # Run seeders
-npm run db:setup         # Migrate + seed (production)
-npm run db:fresh         # Drop/recreate with mock data (dev)
+npm run db:setup         # Migrate + seed
+npm run db:fresh         # Drop/recreate with mock data
 npm run db:reset         # Undo all, re-migrate, re-seed
 
-# Code Quality
-npm run lint             # Check code
-npm run lint:fix         # Auto-fix issues
-npm run format           # Format with Prettier
-npm run format:check     # Check formatting
+npm run lint             # ESLint check
+npm run lint:fix
+npm run format           # Prettier
+npm run format:check
 ```
 
-### Frontend Commands
+### Frontend
 
 ```bash
 cd frontend
 
-# Development
-npm run dev              # Start Vite dev server (port 5173)
-npm run build            # Production build
-npm run preview          # Preview production build
+npm run dev              # Vite dev server (port 5173)
+npm run build
+npm run preview
 
-# Testing
-npm run test             # Run tests once
-npm run test:watch       # Watch mode
+npm run test
+npm run test:watch
 npm run test:ui          # Vitest UI
 
-# Code Quality
-npm run lint             # ESLint check
-npm run lint:fix         # Auto-fix
-npm run format           # Prettier format
-npm run format:check     # Check formatting
+npm run lint
+npm run lint:fix
+npm run format
+npm run format:check
 ```
 
-### E2E Tests
+### E2E
 
 ```bash
 cd e2e-role-tests
 
-npm test                 # Run all Playwright tests
-npm run test:headed      # Run with browser visible
+npm test                 # All Playwright tests
+npm run test:headed      # With visible browser
 npm run test:ui          # Playwright UI mode
 ```
 
 ## Environment Variables
 
-### Backend (.env)
+### Backend (`backend/.env`)
 
 ```env
-# Application
 NODE_ENV=development
 PORT=3000
 
-# Database
 DB_NAME=wom_booking
 DB_USER=postgres
 DB_PASSWORD=your-secure-password-here
 DB_HOST=localhost
 DB_PORT=5432
 
-# Session (REQUIRED - minimum 32 characters)
 SESSION_SECRET=your-session-secret-32-chars-minimum-here
 
-# CORS
 CORS_ORIGIN=http://localhost:5173
 
-# Rate Limiting
 RATE_LIMIT_WINDOW=15
 RATE_LIMIT_MAX=100
 
-# Mock Data (optional)
+# Optional mock data controls
 MOCK_DATA_MODE=standard
 MOCK_DATA_SEED=12345
 MOCK_BOOKINGS_COUNT=50
 MOCK_BOOKING_OCCUPANCY=0.3
 ```
 
-### Frontend (.env)
+### Frontend (`frontend/.env`)
 
 ```env
 VITE_API_URL=http://localhost:3000/api
 VITE_BACKEND_URL=http://localhost:3000
 ```
 
+## Profile Image Upload
+
+- **Endpoint**: `POST /api/users/upload-profile-image`
+- **Accepted formats**: JPEG, JPG, PNG, WebP
+- **Max size**: 5MB
+- **Processing**: Resized to 300×300, converted to JPEG, secure filename generated
+- **Storage**: `backend/public/uploads/profiles/`
+- **Served at**: `/uploads/profiles/{filename}` with 1-year cache
+
+Old images are deleted on update.
+
+## API Documentation
+
+Interactive docs via Scalar at `http://localhost:3000/docs`. Supports request testing, response examples, and code generation.
+
 ## Security
 
-**Critical Security Requirements:**
+| Requirement | Detail |
+|---|---|
+| SESSION_SECRET | Minimum 32 characters — enforced at startup |
+| Password policy | 8+ chars, mixed case, numbers |
+| Rate limiting | Brute force protection on all endpoints |
+| Input sanitisation | All user input sanitised automatically |
+| HTTPS | Required for production |
 
-1. **Session Secret**: Minimum 32 characters required
-2. **Password Policy**: 8+ characters with uppercase, lowercase, and numbers
-3. **Rate Limiting**: Automatic protection against brute force attacks
-4. **Input Sanitization**: All inputs automatically sanitized
-5. **HTTPS**: Required for production deployment
-
-**Before Production:**
-- Set strong SESSION_SECRET (32+ characters)
-- Use Redis or PostgreSQL session store (not memory store)
+**Before deploying to production:**
+- Set a strong `SESSION_SECRET` (32+ chars)
+- Replace memory session store with Redis or PostgreSQL
 - Enable HTTPS/SSL
-- Review security checklist in backend/SECURITY.md
+- Review `backend/SECURITY.md`
 
 ## Troubleshooting
 
-### Database Connection Issues
-
-**Error: "database does not exist"**
+**`database does not exist`**
 ```bash
 createdb wom_booking
 ```
 
-**Error: "password authentication failed"**
-- Check DB_PASSWORD in .env matches PostgreSQL user password
-- Verify DB_USER has proper permissions
+**`password authentication failed`**
+Check `DB_PASSWORD` and `DB_USER` permissions in `.env`.
 
-### Session Secret Error
-
-**Error: "SESSION_SECRET must be at least 32 characters"**
+**`SESSION_SECRET must be at least 32 characters`**
 ```bash
 node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 ```
-Copy the output to SESSION_SECRET in .env
 
-### Port Already in Use
-
-**Error: "Port 3000 is already in use"**
+**`Port 3000 is already in use`**
 ```bash
 lsof -ti:3000 | xargs kill -9
+# or change PORT in .env
 ```
 
-Or change PORT in .env to a different value
-
-### Uploads Directory Issues
-
-**Error: "ENOENT: no such file or directory"**
+**`ENOENT: no such file or directory` (uploads)**
 ```bash
 mkdir -p backend/public/uploads/profiles
 mkdir -p backend/public/uploads/performances
@@ -484,20 +397,16 @@ mkdir -p backend/public/uploads/performances
 
 ## Contributing
 
-1. Follow the code style guidelines in `.prettierrc` and `.eslintrc`
-2. No code comments (code should be self-documenting)
-3. No symbols or emojis in code or output
-4. Use meaningful commit messages following conventional commits
-5. Test thoroughly before submitting pull requests
+- Follow `.prettierrc` and `.eslintrc` for code style
+- Code should be self-documenting — no inline comments
+- No emojis or decorative symbols in code or output
+- Use conventional commit messages
+- Test before opening a pull request
 
 ## License
 
 MIT
 
-## Support
+---
 
-For issues and questions:
-- Check the API documentation at http://localhost:3000/docs
-- Review backend/README.md for detailed backend information
-- Review frontend/README.md for detailed frontend information
-- Check the troubleshooting section above
+> Use the **Ask DeepWiki** badge at the top to inspect repository structure, source flow, and implementation details.
